@@ -1,0 +1,196 @@
+<%- include('../partials/header') %>
+
+<div class="container py-4">
+    <div class="row">
+        <!-- Perfil -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user me-2"></i>
+                        Mi Perfil
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="profileForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="nombre" class="form-label">Nombre *</label>
+                                <input type="text" class="form-control" id="nombre" name="nombre" 
+                                       value="<%= user.nombre %>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="apellido" class="form-label">Apellido *</label>
+                                <input type="text" class="form-control" id="apellido" name="apellido" 
+                                       value="<%= user.apellido %>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="email" class="form-label">Email *</label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="<%= user.email %>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="telefono" class="form-label">Teléfono</label>
+                                <input type="tel" class="form-control" id="telefono" name="telefono" 
+                                       value="<%= user.telefono || '' %>">
+                            </div>
+                            <div class="col-12">
+                                <hr>
+                                <h6 class="mb-3">Cambiar Contraseña</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="password" class="form-label">Nueva Contraseña</label>
+                                        <input type="password" class="form-control" id="password" name="password" 
+                                               minlength="6">
+                                        <small class="text-muted">Dejar en blanco para mantener la actual</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="confirmPassword" class="form-label">Confirmar Contraseña</label>
+                                        <input type="password" class="form-control" id="confirmPassword" 
+                                               name="confirmPassword" minlength="6">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <hr>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        Miembro desde <%= new Date(user.fecha_registro).toLocaleDateString('es-AR') %>
+                                    </small>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>
+                                        Guardar Cambios
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pedidos Recientes -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        Pedidos Recientes
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <% if (orders && orders.length > 0) { %>
+                        <div class="list-group list-group-flush">
+                            <% orders.forEach(order => { %>
+                                <a href="/orders/<%= order.id %>" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">#<%= order.numero_pedido %></h6>
+                                            <small class="text-muted">
+                                                <%= order.restaurante_nombre %>
+                                            </small>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge status-<%= order.estado %>">
+                                                <%= order.estado.charAt(0).toUpperCase() + order.estado.slice(1) %>
+                                            </span>
+                                            <div class="mt-1">
+                                                <small class="text-muted">
+                                                    $<%= parseFloat(order.total).toFixed(2) %>
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            <% }); %>
+                        </div>
+                        <div class="card-footer bg-transparent text-center">
+                            <a href="/orders" class="btn btn-outline-primary btn-sm">
+                                Ver Todos los Pedidos
+                            </a>
+                        </div>
+                    <% } else { %>
+                        <div class="text-center py-4">
+                            <i class="fas fa-shopping-cart text-muted fs-1 mb-3"></i>
+                            <p class="text-muted">No tienes pedidos recientes</p>
+                            <a href="/restaurants" class="btn btn-primary btn-sm">
+                                <i class="fas fa-utensils me-2"></i>
+                                Ver Restaurantes
+                            </a>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const formData = new FormData(form);
+    
+    // Disable submit button and show loading
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+    
+    try {
+        const response = await fetch('/auth/profile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(Object.fromEntries(formData))
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Perfil actualizado exitosamente', 'success');
+            
+            // Clear password fields
+            form.password.value = '';
+            form.confirmPassword.value = '';
+        } else {
+            showNotification(data.message || 'Error actualizando el perfil', 'error');
+        }
+    } catch (error) {
+        showNotification('Error actualizando el perfil', 'error');
+    } finally {
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Cambios';
+    }
+});
+
+// Función para mostrar notificaciones
+function showNotification(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toast);
+    });
+}
+</script>
+
+<%- include('../partials/footer') %> 

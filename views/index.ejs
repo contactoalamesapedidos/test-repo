@@ -1,0 +1,417 @@
+<%- contentFor('body') %>
+
+<!-- Hero Section -->
+<section class="hero-section position-relative overflow-hidden">
+    <div class="hero-bg"></div>
+    <div class="container position-relative z-2">
+        <div class="row justify-content-center min-vh-75">
+            <div class="col-lg-8">
+                <h1 class="display-4 fw-bold text-white mb-4 text-center">
+                    Deliciosa comida <br>
+                    <span class="text-warning">a tu mesa</span>
+                </h1>
+                <p class="lead text-white-50 mb-4 text-center">
+                    Descubre los mejores restaurantes de tu ciudad y recibe tu comida favorita 
+                    en la comodidad de tu hogar.
+                </p>
+                
+                <!-- Search bar -->
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-4">
+                        <!-- Location Section -->
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <label class="form-label text-muted mb-0">
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    Tu ubicación
+                                </label>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="getLocationBtn">
+                                    <i class="fas fa-crosshairs me-1"></i>
+                                    Usar mi ubicación
+                                </button>
+                            </div>
+                            
+                            <input type="text" class="form-control address-autocomplete" 
+                                   id="userLocation" 
+                                   placeholder="Ingresa tu dirección para mejores resultados">
+                            
+                            <div id="currentLocation" class="mt-2 text-success small" style="display: none;"></div>
+                        </div>
+                        
+                        <!-- Search Form -->
+                        <form action="/search" method="GET">
+                            <input type="hidden" name="location" id="searchLocation">
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-0">
+                                            <i class="fas fa-search text-muted"></i>
+                                        </span>
+                                        <input type="text" class="form-control form-control-lg border-0 bg-light" 
+                                               name="q" placeholder="¿Qué te gustaría comer hoy?">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                                        <i class="fas fa-search me-2"></i>
+                                        Buscar
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        <!-- Quick categories -->
+                        <div class="mt-3">
+                            <small class="text-muted">Búsquedas populares:</small>
+                            <div class="mt-2">
+                                <% const popularSearches = ['Pizza', 'Hamburguesas', 'Sushi', 'Empanadas', 'Pasta'] %>
+                                <% popularSearches.forEach((search, index) => { %>
+                                    <a href="/search?q=<%= encodeURIComponent(search) %>" 
+                                       class="badge bg-light text-dark me-2 text-decoration-none">
+                                        <%= search %>
+                                    </a>
+                                <% }) %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Categories Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-12 text-center">
+                <h2 class="fw-bold mb-3">Explora por Categorías</h2>
+                <p class="text-muted">Encuentra exactamente lo que buscas</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <% categories.forEach(category => { %>
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a href="/search?category=<%= encodeURIComponent(category.nombre) %>" 
+                       class="text-decoration-none">
+                        <div class="card h-100 shadow-sm border-0 card-hover">
+                            <div class="card-body text-center p-4">
+                                <div class="category-icon mb-3">
+                                    <% if (category.nombre.toLowerCase().includes('pizza')) { %>
+                                        <img src="https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=200&h=200&q=80" 
+                                             alt="<%= category.nombre %>" 
+                                             class="rounded-circle" 
+                                             width="60" 
+                                             height="60">
+                                    <% } else if (category.nombre.toLowerCase().includes('asiática')) { %>
+                                        <img src="https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=200&h=200&q=80" 
+                                             alt="<%= category.nombre %>" 
+                                             class="rounded-circle" 
+                                             width="60" 
+                                             height="60">
+                                    <% } else if (category.nombre.toLowerCase().includes('italiana')) { %>
+                                        <img src="https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=200&h=200&q=80" 
+                                             alt="<%= category.nombre %>" 
+                                             class="rounded-circle" 
+                                             width="60" 
+                                             height="60">
+                                    <% } else if (category.nombre.toLowerCase().includes('mexicana')) { %>
+                                        <img src="https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=200&h=200&q=80" 
+                                             alt="<%= category.nombre %>" 
+                                             class="rounded-circle" 
+                                             width="60" 
+                                             height="60">
+                                    <% } else if (category.nombre.toLowerCase().includes('saludable')) { %>
+                                        <img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=200&h=200&q=80" 
+                                             alt="<%= category.nombre %>" 
+                                             class="rounded-circle" 
+                                             width="60" 
+                                             height="60">
+                                    <% } else if (category.nombre.toLowerCase().includes('postres')) { %>
+                                        <img src="https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=200&h=200&q=80" 
+                                             alt="<%= category.nombre %>" 
+                                             class="rounded-circle" 
+                                             width="60" 
+                                             height="60">
+                                    <% } else if (category.nombre.toLowerCase().includes('rápida')) { %>
+                                        <img src="https://images.unsplash.com/photo-1551782450-a2132b4ba21d?auto=format&fit=crop&w=200&h=200&q=80" 
+                                             alt="<%= category.nombre %>" 
+                                             class="rounded-circle" 
+                                             width="60" 
+                                             height="60">
+                                    <% } else if (category.nombre.toLowerCase().includes('parrilla')) { %>
+                                        <img src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=200&h=200&q=80" 
+                                             alt="<%= category.nombre %>" 
+                                             class="rounded-circle" 
+                                             width="60" 
+                                             height="60">
+                                    <% } else { %>
+                                        <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=200&h=200&q=80" 
+                                             alt="<%= category.nombre %>" 
+                                             class="rounded-circle" 
+                                             width="60" 
+                                             height="60">
+                                    <% } %>
+                                </div>
+                                <h6 class="fw-semibold text-dark"><%= category.nombre %></h6>
+                                <% if (category.descripcion) { %>
+                                    <small class="text-muted"><%= category.descripcion %></small>
+                                <% } %>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            <% }); %>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Restaurants -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-12 text-center">
+                <h2 class="fw-bold mb-3">Restaurantes Destacados</h2>
+                <p class="text-muted">Los mejores restaurantes con las mejores calificaciones</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <% restaurants.forEach(restaurant => { %>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm border-0 restaurant-card">
+                        <!-- Restaurant image -->
+                        <div class="position-relative">
+                            <img src="/uploads/<%= restaurant.imagen_banner || 'no-image.png' %>" 
+                                 class="restaurant-banner card-img-top restaurant-image" 
+                                 alt="<%= restaurant.nombre %>"
+                                 onerror="this.src='/images/no-image.png'">
+                            
+                            <!-- Rating badge -->
+                            <div class="position-absolute top-0 end-0 m-2">
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-star"></i> <%= restaurant.calificacion_promedio || '0.0' %>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="d-flex align-items-start justify-content-between mb-2">
+                                <h6 class="fw-bold mb-0"><%= restaurant.nombre %></h6>
+                                <% if (restaurant.categorias) { %>
+                                    <small class="badge bg-light text-muted">
+                                        <% if (restaurant.categorias.split(',').length > 1) { %>
+                                            <%= restaurant.categorias.split(',').join(' • ') %>
+                                        <% } else { %>
+                                            <%= restaurant.categorias %>
+                                        <% } %>
+                                    </small>
+                                <% } %>
+                            </div>
+                            
+                            <p class="text-muted small mb-3"><%= restaurant.descripcion %></p>
+                            
+                            <div class="d-flex align-items-center justify-content-between text-small">
+                                <span class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <%= restaurant.tiempo_entrega_min %>-<%= restaurant.tiempo_entrega_max %> min
+                                </span>
+                                <span class="text-muted">
+                                    <i class="fas fa-truck me-1"></i>
+                                    $<%= restaurant.costo_delivery || '0' %>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer bg-transparent border-0 pt-0">
+                            <a href="/restaurants/<%= restaurant.id %>" class="btn btn-primary w-100">
+                                Ver Menú
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+        
+        <div class="text-center mt-5">
+            <a href="/search" class="btn btn-outline-primary btn-lg">
+                Ver Todos los Restaurantes
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-12 text-center">
+                <h2 class="fw-bold mb-3">¿Por qué elegir A la Mesa?</h2>
+                <p class="text-muted">La mejor experiencia de delivery</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4 text-center">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-shipping-fast fs-1 text-primary"></i>
+                </div>
+                <h5 class="fw-semibold">Entrega Rápida</h5>
+                <p class="text-muted">Recibe tu pedido en 30-45 minutos en promedio</p>
+            </div>
+            
+            <div class="col-md-4 text-center">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-shield-alt fs-1 text-success"></i>
+                </div>
+                <h5 class="fw-semibold">Pago Seguro</h5>
+                <p class="text-muted">Múltiples métodos de pago seguros y confiables</p>
+            </div>
+            
+            <div class="col-md-4 text-center">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-star fs-1 text-warning"></i>
+                </div>
+                <h5 class="fw-semibold">Calidad Garantizada</h5>
+                <p class="text-muted">Solo trabajamos con los mejores restaurantes</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<%- include('partials/footer') %>
+
+<style>
+.hero-section {
+    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+    min-height: 50vh;
+}
+
+.hero-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0.1;
+    background-image: url('/images/hero-pattern.png');
+    background-size: cover;
+    background-position: center;
+}
+
+.min-vh-75 {
+    min-height: 50vh;
+}
+
+.hero-image {
+    max-height: 250px;
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3));
+}
+
+.card-hover {
+    transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+}
+
+.restaurant-image {
+    height: 200px;
+    object-fit: cover;
+}
+
+.restaurant-card {
+    transition: all 0.3s ease;
+}
+
+.restaurant-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+}
+
+.category-icon {
+    transition: transform 0.3s ease;
+}
+
+.card-hover:hover .category-icon {
+    transform: scale(1.1);
+}
+
+.feature-icon {
+    transition: transform 0.3s ease;
+}
+
+.feature-icon:hover {
+    transform: scale(1.1);
+}
+
+.address-suggestions {
+    top: 100%;
+    left: 0;
+    right: 0;
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Ajuste para dispositivos móviles */
+@media (max-width: 768px) {
+    .hero-image {
+        max-height: 180px;
+    }
+    
+    .hero-section {
+        min-height: 40vh;
+    }
+    
+    .min-vh-75 {
+        min-height: 40vh;
+    }
+}
+</style>
+
+<script>
+// Sync location with search form
+document.addEventListener('DOMContentLoaded', function() {
+    const locationInput = document.getElementById('userLocation');
+    const searchLocationInput = document.getElementById('searchLocation');
+    const searchForm = document.querySelector('form[action="/search"]');
+    
+    // Sync location input with hidden field
+    if (locationInput && searchLocationInput) {
+        locationInput.addEventListener('input', function() {
+            searchLocationInput.value = this.value;
+        });
+    }
+    
+    // Load saved location on page load
+    const saved = localStorage.getItem('alamesa_location');
+    if (saved && locationInput && !locationInput.value.trim()) {
+        try {
+            const locationData = JSON.parse(saved);
+            const isOld = Date.now() - locationData.timestamp > 24 * 60 * 60 * 1000;
+            
+            if (!isOld) {
+                locationInput.value = locationData.address;
+                searchLocationInput.value = locationData.address;
+                updateLocationDisplay(locationData.address);
+            }
+        } catch (error) {
+            console.error('Error loading saved location:', error);
+        }
+    }
+    
+    // Update search location when form is submitted
+    if (searchForm) {
+        searchForm.addEventListener('submit', function() {
+            if (locationInput && searchLocationInput) {
+                searchLocationInput.value = locationInput.value;
+            }
+        });
+    }
+});
+</script>

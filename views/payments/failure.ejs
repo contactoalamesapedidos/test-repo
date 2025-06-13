@@ -1,0 +1,203 @@
+<%- include('../partials/header') %>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="text-center">
+                <!-- Error Icon -->
+                <div class="error-icon mb-4">
+                    <i class="fas fa-times-circle text-danger" style="font-size: 5rem;"></i>
+                </div>
+
+                <h1 class="text-danger mb-3">Pago No Procesado</h1>
+                <p class="lead text-muted mb-4">
+                    Hubo un problema al procesar tu pago. No te preocupes, no se ha realizado ningún cargo.
+                </p>
+
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-3">
+                            <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                            Información del Error
+                        </h5>
+
+                        <% if (paymentId) { %>
+                        <div class="mb-3">
+                            <strong>ID de Transacción:</strong> 
+                            <span class="text-muted">#<%= paymentId %></span>
+                        </div>
+                        <% } %>
+
+                        <% if (orderId) { %>
+                        <div class="mb-3">
+                            <strong>Número de Pedido:</strong> 
+                            <span class="text-muted">#<%= orderId %></span>
+                        </div>
+                        <% } %>
+
+                        <div class="mb-3">
+                            <strong>Estado:</strong> 
+                            <span class="badge bg-danger">
+                                <i class="fas fa-times me-1"></i>
+                                Rechazado
+                            </span>
+                        </div>
+
+                        <div class="mb-3">
+                            <strong>Fecha:</strong> 
+                            <span class="text-muted"><%= new Date().toLocaleDateString('es-AR') %></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Common Reasons -->
+                <div class="alert alert-warning mt-4">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        Posibles Causas
+                    </h6>
+                    <ul class="list-unstyled mb-0">
+                        <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.5rem;"></i> Fondos insuficientes</li>
+                        <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.5rem;"></i> Datos de tarjeta incorrectos</li>
+                        <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.5rem;"></i> Límite de compra excedido</li>
+                        <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.5rem;"></i> Tarjeta vencida o bloqueada</li>
+                        <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.5rem;"></i> Problemas temporales del banco</li>
+                    </ul>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex gap-3 justify-content-center mt-4 flex-wrap">
+                    <% if (orderId) { %>
+                    <a href="/orders/<%= orderId %>" class="btn btn-primary">
+                        <i class="fas fa-redo me-2"></i>
+                        Intentar Nuevamente
+                    </a>
+                    <% } %>
+                    
+                    <a href="/cart" class="btn btn-outline-primary">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        Ver Carrito
+                    </a>
+                    
+                    <a href="/" class="btn btn-outline-secondary">
+                        <i class="fas fa-home me-2"></i>
+                        Inicio
+                    </a>
+                </div>
+
+                <!-- Help Section -->
+                <div class="card border-0 bg-light mt-5">
+                    <div class="card-body p-4">
+                        <h5 class="card-title">
+                            <i class="fas fa-question-circle text-primary me-2"></i>
+                            ¿Necesitas Ayuda?
+                        </h5>
+                        <p class="card-text text-muted mb-3">
+                            Si continúas teniendo problemas con el pago, no dudes en contactarnos.
+                        </p>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <a href="/contact" class="btn btn-outline-primary w-100">
+                                    <i class="fas fa-envelope me-2"></i>
+                                    Contactar Soporte
+                                </a>
+                            </div>
+                            <div class="col-md-6">
+                                <a href="https://wa.me/5491123456789" class="btn btn-outline-success w-100" target="_blank">
+                                    <i class="fab fa-whatsapp me-2"></i>
+                                    WhatsApp
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-phone me-1"></i>
+                                También puedes llamarnos al: +54 9 11 2345-6789
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alternative Payment Methods -->
+                <div class="mt-4">
+                    <h5 class="mb-3">Métodos de Pago Alternativos</h5>
+                    <div class="row g-3">
+                        <div class="col-4">
+                            <div class="payment-method">
+                                <i class="fas fa-credit-card text-primary fs-2"></i>
+                                <small class="d-block mt-2">Tarjeta de Crédito</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="payment-method">
+                                <i class="fas fa-university text-success fs-2"></i>
+                                <small class="d-block mt-2">Transferencia</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="payment-method">
+                                <i class="fas fa-money-bill-wave text-warning fs-2"></i>
+                                <small class="d-block mt-2">Efectivo</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-icon {
+    animation: errorAnimation 0.6s ease-in-out;
+}
+
+@keyframes errorAnimation {
+    0% {
+        transform: scale(0) rotate(0deg);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.1) rotate(180deg);
+    }
+    100% {
+        transform: scale(1) rotate(180deg);
+        opacity: 1;
+    }
+}
+
+.payment-method {
+    text-align: center;
+    padding: 1rem;
+    border-radius: 8px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.payment-method:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+}
+
+.payment-method i {
+    transition: transform 0.3s ease;
+}
+
+.payment-method:hover i {
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .d-flex.gap-3 {
+        flex-direction: column;
+    }
+    
+    .d-flex.gap-3 .btn {
+        margin-bottom: 0.5rem;
+    }
+}
+</style>
+
+<%- include('../partials/footer') %>

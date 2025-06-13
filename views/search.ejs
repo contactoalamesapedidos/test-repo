@@ -1,0 +1,198 @@
+<%- include('partials/header') %>
+
+<div class="container mt-4">
+    <div class="row">
+        <!-- Filtros -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Filtros</h5>
+                </div>
+                <div class="card-body">
+                    <form id="filterForm" method="GET" action="/search">
+                        <!-- Búsqueda por texto -->
+                        <div class="mb-3">
+                            <label for="searchQuery" class="form-label">Buscar</label>
+                            <input type="text" class="form-control" id="searchQuery" name="q" 
+                                   value="<%= searchQuery %>" placeholder="Nombre del restaurante...">
+                        </div>
+
+                        <!-- Filtro por categoría -->
+                        <div class="mb-3">
+                            <label for="categoryFilter" class="form-label">Categoría</label>
+                            <select class="form-select" id="categoryFilter" name="category">
+                                <option value="">Todas las categorías</option>
+                                <% categories.forEach(category => { %>
+                                    <option value="<%= category.nombre %>" 
+                                            <%= selectedCategory === category.nombre ? 'selected' : '' %>>
+                                        <%= category.nombre %>
+                                    </option>
+                                <% }) %>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resultados -->
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2>Resultados de búsqueda</h2>
+                <span class="text-muted"><%= restaurants.length %> restaurante(s) encontrado(s)</span>
+            </div>
+
+            <% if (restaurants.length > 0) { %>
+                <div class="row">
+                    <% restaurants.forEach(restaurant => { %>
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 restaurant-card">
+                                <div class="card-img-container">
+                                    <img src="/uploads/<%= restaurant.imagen_banner || 'no-image.png' %>" 
+                                         class="restaurant-banner card-img-top" 
+                                         alt="<%= restaurant.nombre %>">
+                                    
+                                    <!-- Badge de estado -->
+                                    <% if (restaurant.abierto) { %>
+                                        <span class="badge badge-success position-absolute top-0 end-0 m-2">
+                                            <i class="fas fa-check-circle"></i> Abierto
+                                        </span>
+                                    <% } else { %>
+                                        <span class="badge badge-danger position-absolute top-0 end-0 m-2">
+                                            <i class="fas fa-times-circle"></i> Cerrado
+                                        </span>
+                                    <% } %>
+                                </div>
+
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <a href="/restaurants/<%= restaurant.id %>" class="text-decoration-none">
+                                            <%= restaurant.nombre %>
+                                        </a>
+                                    </h5>
+                                    
+                                    <p class="card-text text-muted small">
+                                        <%= restaurant.descripcion.substring(0, 100) %>...
+                                    </p>
+
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-primary">
+                                            <i class="fas fa-utensils"></i>
+                                            <% if (restaurant.categorias) { %>
+                                                <%= restaurant.categorias.split(',').join(' • ') %>
+                                            <% } else { %>
+                                                General
+                                            <% } %>
+                                        </span>
+                                        
+                                        <div class="rating">
+                                            <% const rating = restaurant.calificacion_promedio || 0; %>
+                                            <% for (let i = 1; i <= 5; i++) { %>
+                                                <i class="fas fa-star <%= i <= rating ? 'text-warning' : 'text-muted' %>"></i>
+                                            <% } %>
+                                            <span class="small text-muted">(<%= typeof rating === 'number' ? rating.toFixed(1) : 'N/A' %>)</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted small">
+                                            <i class="fas fa-clock"></i>
+                                            <%= restaurant.tiempo_entrega_min || 30 %>-<%= restaurant.tiempo_entrega_max || 45 %> min
+                                        </span>
+                                        
+                                        <span class="text-success small">
+                                            <i class="fas fa-shipping-fast"></i>
+                                            Envío $<%= restaurant.costo_delivery || 0 %>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="card-footer bg-transparent">
+                                    <a href="/restaurants/<%= restaurant.id %>" class="btn btn-primary w-100">
+                                        <i class="fas fa-shopping-cart"></i>
+                                        Ver Menú (<%= restaurant.total_productos %> productos)
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+            <% } else { %>
+                <div class="text-center py-5">
+                    <div class="empty-state">
+                        <i class="fas fa-search fa-4x text-muted mb-3"></i>
+                        <h4>No se encontraron restaurantes</h4>
+                        <p class="text-muted">Intenta cambiar los filtros de búsqueda o buscar con otros términos.</p>
+                        <a href="/" class="btn btn-primary">
+                            <i class="fas fa-home"></i> Volver al inicio
+                        </a>
+                    </div>
+                </div>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<style>
+.restaurant-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.restaurant-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.card-img-container {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.card-img-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.badge-success {
+    background-color: #28a745;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+}
+
+.rating {
+    font-size: 0.9rem;
+}
+
+.empty-state {
+    max-width: 400px;
+    margin: 0 auto;
+}
+</style>
+
+<script>
+// Auto-submit form when filters change
+document.getElementById('categoryFilter').addEventListener('change', function() {
+    document.getElementById('filterForm').submit();
+});
+
+// Real-time search with debounce
+let searchTimeout;
+document.getElementById('searchQuery').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        document.getElementById('filterForm').submit();
+    }, 500);
+});
+</script>
+
+<%- include('partials/footer') %>

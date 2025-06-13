@@ -1,0 +1,330 @@
+<%- include('../partials/header') %>
+
+<div class="container mt-4">
+    <div class="row">
+        <!-- Order Summary -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        Confirmar Pedido
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <% if (cart && cart.length > 0) { %>
+                        <!-- Restaurant Info -->
+                        <div class="restaurant-info mb-4 p-3 bg-light rounded">
+                            <div class="d-flex align-items-center">
+                                <img src="<%= cart[0].restaurant_logo || '/images/no-image.png' %>" 
+                                     alt="<%= cart[0].restaurant_name %>" 
+                                     class="rounded me-3" width="60" height="60">
+                                <div>
+                                    <h6 class="mb-1"><%= cart[0].restaurant_name %></h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Tiempo estimado: <%= cart[0].restaurant_delivery_time || '30-45' %> min
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Order Items -->
+                        <div class="order-items">
+                            <h6 class="mb-3">Productos en tu pedido:</h6>
+                            <% cart.forEach(item => { %>
+                                <div class="order-item d-flex justify-content-between align-items-center mb-3 p-3 border rounded">
+                                    <div class="d-flex align-items-center">
+                                        <img src="<%= item.imagen || '/images/no-image.png' %>" 
+                                             alt="<%= item.name %>" 
+                                             class="rounded me-3" width="50" height="50">
+                                        <div>
+                                            <h6 class="mb-1"><%= item.name %></h6>
+                                            <small class="text-muted">Cantidad: <%= item.quantity %></small>
+                                            <% if (item.specialInstructions) { %>
+                                                <small class="text-muted d-block">
+                                                    <i class="fas fa-comment-alt me-1"></i>
+                                                    <%= item.specialInstructions %>
+                                                </small>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fw-bold">$<%= (item.price * item.quantity).toFixed(2) %></div>
+                                        <small class="text-muted">$<%= item.price.toFixed(2) %> c/u</small>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+
+                        <!-- Delivery Address -->
+                        <div class="delivery-address mt-4">
+                            <h6 class="mb-3">Dirección de entrega:</h6>
+                            <div class="form-group">
+                                <input type="text" class="form-control address-autocomplete" 
+                                       id="deliveryAddress" name="deliveryAddress"
+                                       placeholder="Ingresa tu dirección completa"
+                                       value="<%= user.direccion_principal || '' %>" required>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Asegúrate de incluir número, piso y departamento si corresponde
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Special Instructions -->
+                        <div class="special-instructions mt-4">
+                            <h6 class="mb-3">Instrucciones especiales (opcional):</h6>
+                            <textarea class="form-control" id="specialInstructions" name="specialInstructions" 
+                                      rows="3" placeholder="Ej: Sin cebolla, sin sal, etc."></textarea>
+                        </div>
+                    <% } else { %>
+                        <div class="text-center py-5">
+                            <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                            <h5>Tu carrito está vacío</h5>
+                            <p class="text-muted">Agrega algunos productos para continuar</p>
+                            <a href="/" class="btn btn-primary">Explorar Restaurantes</a>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Summary -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm sticky-top">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Resumen del Pedido</h6>
+                </div>
+                <div class="card-body">
+                    <% if (cart && cart.length > 0) { %>
+                        <!-- Price Breakdown -->
+                        <div class="price-breakdown">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Subtotal:</span>
+                                <span>$<%= subtotal.toFixed(2) %></span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Costo de envío:</span>
+                                <span>$<%= deliveryFee.toFixed(2) %></span>
+                            </div>
+                            <% if (restaurant.descuento_delivery > 0) { %>
+                            <div class="d-flex justify-content-between mb-2 text-success">
+                                <span>Descuento:</span>
+                                <span>-$<%= restaurant.descuento_delivery.toFixed(2) %></span>
+                            </div>
+                            <% } %>
+                            <hr>
+                            <div class="d-flex justify-content-between mb-3">
+                                <strong>Total:</strong>
+                                <strong>$<%= total.toFixed(2) %></strong>
+                            </div>
+                        </div>
+
+                        <!-- Payment Methods -->
+                        <div class="payment-methods mb-4">
+                            <h6 class="mb-3">Método de pago:</h6>
+                            
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="paymentMethod" 
+                                       id="mercadopago" value="mercadopago" checked>
+                                <label class="form-check-label d-flex align-items-center" for="mercadopago">
+                                    <img src="/images/mercadopago-logo.png" alt="MercadoPago" height="20" class="me-2">
+                                    MercadoPago
+                                </label>
+                            </div>
+                            
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="paymentMethod" 
+                                       id="efectivo" value="efectivo">
+                                <label class="form-check-label" for="efectivo">
+                                    <i class="fas fa-money-bill-wave text-success me-2"></i>
+                                    Efectivo
+                                </label>
+                            </div>
+                            
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="paymentMethod" 
+                                       id="transferencia" value="transferencia">
+                                <label class="form-check-label" for="transferencia">
+                                    <i class="fas fa-university text-primary me-2"></i>
+                                    Transferencia
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Order Button -->
+                        <button class="btn btn-primary w-100 btn-lg" id="confirmOrderBtn" onclick="confirmOrder()">
+                            <i class="fas fa-check me-2"></i>
+                            Confirmar Pedido
+                        </button>
+
+                        <!-- Security Info -->
+                        <div class="security-info mt-3">
+                            <small class="text-muted d-flex align-items-center">
+                                <i class="fas fa-shield-alt text-success me-2"></i>
+                                Pago 100% seguro y protegido
+                            </small>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MercadoPago SDK -->
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+
+<script>
+// Initialize MercadoPago
+const mp = new MercadoPago('<%= process.env.MERCADOPAGO_PUBLIC_KEY || "TEST-YOUR-PUBLIC-KEY" %>', {
+    locale: 'es-AR'
+});
+
+let currentOrder = null;
+
+async function confirmOrder() {
+    const deliveryAddress = document.getElementById('deliveryAddress').value.trim();
+    const specialInstructions = document.getElementById('specialInstructions').value.trim();
+    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+    const confirmBtn = document.getElementById('confirmOrderBtn');
+
+    // Validation
+    if (!deliveryAddress) {
+        showNotification('Por favor, ingresa una dirección de entrega', 'error');
+        document.getElementById('deliveryAddress').focus();
+        return;
+    }
+
+    // Disable button and show loading
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
+
+    try {
+        // Create order first
+        const orderResponse = await fetch('/orders/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                deliveryAddress: deliveryAddress,
+                specialInstructions: specialInstructions,
+                paymentMethod: paymentMethod
+            })
+        });
+
+        const orderData = await orderResponse.json();
+
+        if (!orderData.success) {
+            throw new Error(orderData.message || 'Error creando el pedido');
+        }
+
+        currentOrder = orderData.order;
+
+        // Handle payment based on method
+        if (paymentMethod === 'mercadopago') {
+            await processMercadoPagoPayment(orderData.order.id);
+        } else if (paymentMethod === 'efectivo') {
+            // For cash payment, just redirect to success
+            window.location.href = `/orders/${orderData.order.id}?payment=cash`;
+        } else if (paymentMethod === 'transferencia') {
+            // For transfer payment, show transfer details
+            window.location.href = `/orders/${orderData.order.id}?payment=transfer`;
+        }
+
+    } catch (error) {
+        console.error('Error confirming order:', error);
+        showNotification(error.message || 'Error confirmando el pedido', 'error');
+    } finally {
+        // Re-enable button
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fas fa-check me-2"></i>Confirmar Pedido';
+    }
+}
+
+async function processMercadoPagoPayment(orderId) {
+    try {
+        // Create payment preference
+        const preferenceResponse = await fetch('/payments/create-preference', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                orderId: orderId
+            })
+        });
+
+        const preferenceData = await preferenceResponse.json();
+
+        if (!preferenceData.success) {
+            throw new Error(preferenceData.message || 'Error creando preferencia de pago');
+        }
+
+        // Open MercadoPago checkout
+        const checkout = mp.checkout({
+            preference: {
+                id: preferenceData.preferenceId
+            },
+            autoOpen: true
+        });
+
+        // Handle checkout errors
+        checkout.on('error', (error) => {
+            console.error('MercadoPago checkout error:', error);
+            showNotification('Error abriendo el checkout de pago', 'error');
+        });
+
+    } catch (error) {
+        console.error('Error processing MercadoPago payment:', error);
+        showNotification(error.message || 'Error procesando el pago', 'error');
+    }
+}
+
+// Update delivery cost based on address
+document.getElementById('deliveryAddress').addEventListener('blur', function() {
+    const address = this.value.trim();
+    if (address) {
+        // This could be enhanced to calculate delivery cost based on distance
+        console.log('Address updated:', address);
+    }
+});
+
+// Payment method change handler
+document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const method = this.value;
+        console.log('Payment method changed to:', method);
+        
+        // You could update UI based on payment method
+        if (method === 'efectivo') {
+            // Show cash payment info
+        } else if (method === 'transferencia') {
+            // Show transfer info
+        }
+    });
+});
+
+// Initialize address autocomplete
+document.addEventListener('DOMContentLoaded', function() {
+    // Address autocomplete is already initialized in app.js
+    
+    // Load user's saved address
+    const saved = localStorage.getItem('alamesa_location');
+    if (saved) {
+        try {
+            const locationData = JSON.parse(saved);
+            const addressInput = document.getElementById('deliveryAddress');
+            if (addressInput && !addressInput.value.trim()) {
+                addressInput.value = locationData.address;
+            }
+        } catch (error) {
+            console.error('Error loading saved address:', error);
+        }
+    }
+});
+</script>
+
+<%- include('../partials/footer') %>

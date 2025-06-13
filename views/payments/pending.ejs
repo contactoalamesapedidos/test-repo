@@ -1,0 +1,367 @@
+<%- include('../partials/header') %>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="text-center">
+                <!-- Pending Icon -->
+                <div class="pending-icon mb-4">
+                    <i class="fas fa-clock text-warning" style="font-size: 5rem;"></i>
+                </div>
+
+                <h1 class="text-warning mb-3">Pago Pendiente</h1>
+                <p class="lead text-muted mb-4">
+                    Tu pago está siendo procesado. Te notificaremos cuando se complete la transacción.
+                </p>
+
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-3">
+                            <i class="fas fa-info-circle text-info me-2"></i>
+                            Información del Pago
+                        </h5>
+
+                        <% if (paymentId) { %>
+                        <div class="mb-3">
+                            <strong>ID de Pago:</strong> 
+                            <span class="text-muted">#<%= paymentId %></span>
+                        </div>
+                        <% } %>
+
+                        <% if (orderId) { %>
+                        <div class="mb-3">
+                            <strong>Número de Pedido:</strong> 
+                            <span class="text-muted">#<%= orderId %></span>
+                        </div>
+                        <% } %>
+
+                        <div class="mb-3">
+                            <strong>Estado:</strong> 
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-clock me-1"></i>
+                                Pendiente de Aprobación
+                            </span>
+                        </div>
+
+                        <div class="mb-3">
+                            <strong>Fecha:</strong> 
+                            <span class="text-muted"><%= new Date().toLocaleDateString('es-AR') %></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Check -->
+                <div class="card border-0 bg-light mt-4">
+                    <div class="card-body p-4">
+                        <h5 class="card-title">
+                            <i class="fas fa-search text-primary me-2"></i>
+                            Verificar Estado
+                        </h5>
+                        <p class="card-text text-muted mb-3">
+                            Haz clic en el botón de abajo para verificar el estado actual de tu pago.
+                        </p>
+                        
+                        <% if (orderId) { %>
+                        <button class="btn btn-primary w-100" id="checkStatusBtn" onclick="checkPaymentStatus('<%= orderId %>')">
+                            <i class="fas fa-sync-alt me-2"></i>
+                            Verificar Estado del Pago
+                        </button>
+                        <% } %>
+                        
+                        <div id="statusResult" class="mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- Information Alert -->
+                <div class="alert alert-info mt-4">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        ¿Qué significa "Pendiente"?
+                    </h6>
+                    <ul class="list-unstyled mb-0">
+                        <li><i class="fas fa-circle text-info me-2" style="font-size: 0.5rem;"></i> El pago está siendo verificado por el banco</li>
+                        <li><i class="fas fa-circle text-info me-2" style="font-size: 0.5rem;"></i> Puede tomar unos minutos en procesarse</li>
+                        <li><i class="fas fa-circle text-info me-2" style="font-size: 0.5rem;"></i> Recibirás una notificación cuando se complete</li>
+                        <li><i class="fas fa-circle text-info me-2" style="font-size: 0.5rem;"></i> Tu pedido está reservado durante este tiempo</li>
+                    </ul>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex gap-3 justify-content-center mt-4 flex-wrap">
+                    <% if (orderId) { %>
+                    <a href="/orders/<%= orderId %>" class="btn btn-primary">
+                        <i class="fas fa-eye me-2"></i>
+                        Ver Pedido
+                    </a>
+                    <% } %>
+                    
+                    <a href="/orders/history" class="btn btn-outline-primary">
+                        <i class="fas fa-history me-2"></i>
+                        Mis Pedidos
+                    </a>
+                    
+                    <a href="/" class="btn btn-outline-secondary">
+                        <i class="fas fa-home me-2"></i>
+                        Inicio
+                    </a>
+                </div>
+
+                <!-- Auto-refresh notification -->
+                <div class="mt-4">
+                    <small class="text-muted">
+                        <i class="fas fa-sync-alt me-1"></i>
+                        Esta página se actualizará automáticamente cada 30 segundos
+                    </small>
+                </div>
+
+                <!-- Timeline -->
+                <div class="mt-5">
+                    <h5 class="mb-3">Proceso de Pago</h5>
+                    <div class="timeline">
+                        <div class="timeline-item completed">
+                            <div class="timeline-icon">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <h6>Pago Iniciado</h6>
+                                <small class="text-muted">Datos enviados al procesador</small>
+                            </div>
+                        </div>
+                        <div class="timeline-item active">
+                            <div class="timeline-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <h6>Verificando Pago</h6>
+                                <small class="text-muted">El banco está procesando la transacción</small>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <h6>Pago Confirmado</h6>
+                                <small class="text-muted">Pedido confirmado y en preparación</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Support -->
+                <div class="card border-0 bg-warning bg-opacity-10 mt-5">
+                    <div class="card-body p-4">
+                        <h5 class="card-title">
+                            <i class="fas fa-headset text-warning me-2"></i>
+                            ¿El pago tarda mucho?
+                        </h5>
+                        <p class="card-text text-muted mb-3">
+                            Si tu pago lleva más de 15 minutos pendiente, puedes contactar a nuestro soporte.
+                        </p>
+                        
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <a href="/contact" class="btn btn-outline-warning w-100">
+                                    <i class="fas fa-envelope me-2"></i>
+                                    Contactar Soporte
+                                </a>
+                            </div>
+                            <div class="col-md-6">
+                                <a href="https://wa.me/5491123456789" class="btn btn-outline-success w-100" target="_blank">
+                                    <i class="fab fa-whatsapp me-2"></i>
+                                    WhatsApp
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.pending-icon {
+    animation: pendingAnimation 2s ease-in-out infinite;
+}
+
+@keyframes pendingAnimation {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+}
+
+.timeline {
+    position: relative;
+    padding: 1rem 0;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 25px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e0e0e0;
+}
+
+.timeline-item {
+    position: relative;
+    padding: 1rem 0 1rem 60px;
+    margin-bottom: 1rem;
+}
+
+.timeline-icon {
+    position: absolute;
+    left: 0;
+    top: 1rem;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    z-index: 2;
+}
+
+.timeline-item.completed .timeline-icon {
+    background: #28a745;
+    color: white;
+}
+
+.timeline-item.active .timeline-icon {
+    background: #ffc107;
+    color: #000;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+    }
+}
+
+.timeline-content h6 {
+    margin-bottom: 0.25rem;
+    color: #333;
+}
+
+.timeline-item.completed .timeline-content h6 {
+    color: #28a745;
+}
+
+.timeline-item.active .timeline-content h6 {
+    color: #ffc107;
+}
+
+@media (max-width: 768px) {
+    .timeline::before {
+        left: 15px;
+    }
+    
+    .timeline-item {
+        padding-left: 50px;
+    }
+    
+    .timeline-icon {
+        width: 30px;
+        height: 30px;
+        font-size: 0.8rem;
+    }
+}
+</style>
+
+<script>
+// Auto-refresh every 30 seconds
+setInterval(function() {
+    if (typeof checkPaymentStatus === 'function' && '<%= orderId %>') {
+        checkPaymentStatus('<%= orderId %>', true);
+    }
+}, 30000);
+
+// Check payment status function
+function checkPaymentStatus(orderId, isAutoRefresh = false) {
+    const btn = document.getElementById('checkStatusBtn');
+    const result = document.getElementById('statusResult');
+    
+    if (btn && !isAutoRefresh) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verificando...';
+    }
+    
+    fetch(`/payments/status/${orderId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const status = data.paymentStatus;
+                
+                if (result) {
+                    let statusClass = 'alert-warning';
+                    let statusIcon = 'fas fa-clock';
+                    let statusText = 'Pendiente';
+                    
+                    if (status === 'approved') {
+                        statusClass = 'alert-success';
+                        statusIcon = 'fas fa-check-circle';
+                        statusText = 'Aprobado';
+                        
+                        // Redirect to success page
+                        setTimeout(() => {
+                            window.location.href = `/payments/success?payment_id=${data.mpPaymentId}&external_reference=${orderId}&status=approved`;
+                        }, 2000);
+                    } else if (status === 'rejected' || status === 'failed') {
+                        statusClass = 'alert-danger';
+                        statusIcon = 'fas fa-times-circle';
+                        statusText = 'Rechazado';
+                        
+                        // Redirect to failure page
+                        setTimeout(() => {
+                            window.location.href = `/payments/failure?payment_id=${data.mpPaymentId}&external_reference=${orderId}&status=${status}`;
+                        }, 2000);
+                    }
+                    
+                    result.innerHTML = `
+                        <div class="alert ${statusClass}">
+                            <i class="${statusIcon} me-2"></i>
+                            Estado actual: <strong>${statusText}</strong>
+                        </div>
+                    `;
+                    result.style.display = 'block';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error checking payment status:', error);
+            if (result && !isAutoRefresh) {
+                result.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error verificando el estado del pago
+                    </div>
+                `;
+                result.style.display = 'block';
+            }
+        })
+        .finally(() => {
+            if (btn && !isAutoRefresh) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Verificar Estado del Pago';
+            }
+        });
+}
+</script>
+
+<%- include('../partials/footer') %>

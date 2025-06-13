@@ -1,0 +1,95 @@
+<nav class="admin-sidebar bg-dark text-white">
+    <div class="sidebar-header p-3">
+        <h4><i class="fas fa-shield-alt me-2"></i>Admin Panel</h4>
+        <small class="text-muted">A la Mesa</small>
+    </div>
+    
+    <ul class="nav flex-column p-3">
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= path === '/admin' ? 'active text-white' : 'text-light' %>" href="/admin">
+                <i class="fas fa-chart-bar me-2"></i>Dashboard
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= path === '/admin/restaurantes' ? 'active text-white' : 'text-light' %>" href="/admin/restaurantes">
+                <i class="fas fa-store me-2"></i>Restaurantes
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= path.startsWith('/admin/cobros') ? 'active text-white' : 'text-light' %>" href="/admin/cobros">
+                <i class="fas fa-money-bill-wave me-2"></i>Cobros y Comisiones
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= path === '/admin/productos' ? 'active text-white' : 'text-light' %>" href="/admin/productos">
+                <i class="fas fa-utensils me-2"></i>Productos
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= path === '/admin/comprobantes' ? 'active text-white' : 'text-light' %>" href="/admin/comprobantes">
+                <i class="fas fa-receipt me-2"></i>Comprobantes
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= path === '/admin/usuarios' ? 'active text-white' : 'text-light' %>" href="/admin/usuarios">
+                <i class="fas fa-users me-2"></i>Usuarios
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= path === '/admin/reportes' ? 'active text-white' : 'text-light' %>" href="/admin/reportes">
+                <i class="fas fa-chart-line me-2"></i>Reportes
+            </a>
+        </li>
+        <hr class="text-secondary">
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= path === '/admin/configuracion' ? 'active text-white' : 'text-light' %>" href="/admin/configuracion">
+                <i class="fas fa-cog me-2"></i>Configuración
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link text-light" href="/" target="_blank">
+                <i class="fas fa-external-link-alt me-2"></i>Ver Sitio
+            </a>
+        </li>
+    </ul>
+</nav>
+
+<style>
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.admin-sidebar {
+    width: 280px;
+    flex-shrink: 0;
+}
+
+.admin-content {
+    flex-grow: 1;
+    background-color: #f8f9fa;
+}
+
+.admin-topbar {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.nav-link.active {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 0.375rem;
+}
+
+.sidebar-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 768px) {
+    .admin-layout {
+        flex-direction: column;
+    }
+    
+    .admin-sidebar {
+        width: 100%;
+    }
+}
+</style>

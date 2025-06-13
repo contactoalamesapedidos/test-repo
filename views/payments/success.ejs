@@ -1,0 +1,217 @@
+<%- include('../partials/header') %>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="text-center">
+                <!-- Success Icon -->
+                <div class="success-icon mb-4">
+                    <i class="fas fa-check-circle text-success" style="font-size: 5rem;"></i>
+                </div>
+
+                <h1 class="text-success mb-3">¡Pago Exitoso!</h1>
+                <p class="lead text-muted mb-4">
+                    Tu pago ha sido procesado correctamente y tu pedido está confirmado.
+                </p>
+
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-3">
+                            <i class="fas fa-receipt text-primary me-2"></i>
+                            Detalles del Pago
+                        </h5>
+
+                        <% if (paymentId) { %>
+                        <div class="mb-3">
+                            <strong>ID de Pago:</strong> 
+                            <span class="text-muted">#<%= paymentId %></span>
+                        </div>
+                        <% } %>
+
+                        <% if (orderId) { %>
+                        <div class="mb-3">
+                            <strong>Número de Pedido:</strong> 
+                            <span class="text-muted">#<%= orderId %></span>
+                        </div>
+                        <% } %>
+
+                        <div class="mb-3">
+                            <strong>Estado:</strong> 
+                            <span class="badge bg-success">
+                                <i class="fas fa-check me-1"></i>
+                                Aprobado
+                            </span>
+                        </div>
+
+                        <div class="mb-3">
+                            <strong>Fecha:</strong> 
+                            <span class="text-muted"><%= new Date().toLocaleDateString('es-AR') %></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>¿Qué sigue?</strong><br>
+                    El restaurante ha sido notificado y comenzará a preparar tu pedido. 
+                    Te mantendremos actualizado sobre el estado de tu pedido.
+                </div>
+
+                <div class="d-flex gap-3 justify-content-center mt-4">
+                    <% if (orderId) { %>
+                    <a href="/orders/<%= orderId %>" class="btn btn-primary">
+                        <i class="fas fa-eye me-2"></i>
+                        Ver Pedido
+                    </a>
+                    <% } %>
+                    
+                    <a href="/orders/history" class="btn btn-outline-primary">
+                        <i class="fas fa-history me-2"></i>
+                        Mis Pedidos
+                    </a>
+                    
+                    <a href="/" class="btn btn-outline-secondary">
+                        <i class="fas fa-home me-2"></i>
+                        Inicio
+                    </a>
+                </div>
+
+                <!-- Order Tracking Section -->
+                <div class="mt-5">
+                    <h5 class="mb-3">Estado de tu Pedido</h5>
+                    <div class="progress-tracking">
+                        <div class="step completed">
+                            <div class="step-icon">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="step-text">Pedido Confirmado</div>
+                        </div>
+                        <div class="step">
+                            <div class="step-icon">
+                                <i class="fas fa-utensils"></i>
+                            </div>
+                            <div class="step-text">Preparando</div>
+                        </div>
+                        <div class="step">
+                            <div class="step-icon">
+                                <i class="fas fa-shipping-fast"></i>
+                            </div>
+                            <div class="step-text">En Camino</div>
+                        </div>
+                        <div class="step">
+                            <div class="step-icon">
+                                <i class="fas fa-home"></i>
+                            </div>
+                            <div class="step-text">Entregado</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.success-icon {
+    animation: checkAnimation 0.6s ease-in-out;
+}
+
+@keyframes checkAnimation {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.progress-tracking {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 2rem 0;
+    position: relative;
+}
+
+.progress-tracking::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: 25px;
+    right: 25px;
+    height: 2px;
+    background: #e0e0e0;
+    z-index: 1;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 2;
+    background: white;
+    padding: 0 10px;
+}
+
+.step-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    color: #666;
+    font-size: 1.2rem;
+}
+
+.step.completed .step-icon {
+    background: #28a745;
+    color: white;
+}
+
+.step-text {
+    font-size: 0.9rem;
+    color: #666;
+    text-align: center;
+}
+
+.step.completed .step-text {
+    color: #28a745;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .progress-tracking {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .progress-tracking::before {
+        display: none;
+    }
+    
+    .step {
+        width: 100%;
+        flex-direction: row;
+        justify-content: flex-start;
+        text-align: left;
+        padding: 10px;
+        border-radius: 8px;
+        background: #f8f9fa;
+    }
+    
+    .step-icon {
+        margin-right: 15px;
+        margin-bottom: 0;
+    }
+}
+</style>
+
+<%- include('../partials/footer') %>

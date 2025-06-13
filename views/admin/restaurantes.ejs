@@ -1,0 +1,406 @@
+<%- include('../partials/header') %>
+
+<!-- Admin Sidebar -->
+<div class="admin-layout">
+    <%- include('partials/sidebar') %>
+
+    <!-- Main Content -->
+    <div class="admin-content">
+        <!-- Top Bar -->
+        <div class="admin-topbar bg-white shadow-sm px-4 py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0">Gestión de Restaurantes</h5>
+                <small class="text-muted">Administra todos los restaurantes de la plataforma</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/admin/restaurantes/crear/nuevo" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>Nuevo Restaurante
+                </a>
+                <a href="/admin" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Volver
+                </a>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-4">
+            <!-- Filters -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <form method="GET" action="/admin/restaurantes" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">Buscar</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="<%= filtros.search %>" placeholder="Nombre, email o propietario...">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="estado" class="form-label">Estado</label>
+                            <select class="form-select" id="estado" name="estado">
+                                <option value="">Todos los estados</option>
+                                <option value="activos" <%= filtros.estado === 'activos' ? 'selected' : '' %>>Activos</option>
+                                <option value="inactivos" <%= filtros.estado === 'inactivos' ? 'selected' : '' %>>Inactivos</option>
+                                <option value="verificados" <%= filtros.estado === 'verificados' ? 'selected' : '' %>>Verificados</option>
+                                <option value="no_verificados" <%= filtros.estado === 'no_verificados' ? 'selected' : '' %>>No verificados</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="categoria" class="form-label">Categoría</label>
+                            <select class="form-select" id="categoria" name="categoria">
+                                <option value="">Todas las categorías</option>
+                                <% categorias.forEach(cat => { %>
+                                    <option value="<%= cat.nombre %>" <%= filtros.categoria === cat.nombre ? 'selected' : '' %>>
+                                        <%= cat.nombre %>
+                                    </option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-1"></i>Filtrar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Stats Summary -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card border-0 bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h3><%= restaurantes.length %></h3>
+                            <small>Total Mostrados</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 bg-success text-white">
+                        <div class="card-body text-center">
+                            <h3><%= restaurantes.filter(r => r.activo).length %></h3>
+                            <small>Activos</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h3><%= restaurantes.filter(r => r.verificado).length %></h3>
+                            <small>Verificados</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 bg-info text-white">
+                        <div class="card-body text-center">
+                            <h3><%= Math.round(restaurantes.reduce((sum, r) => sum + (parseFloat(r.ventas_totales) || 0), 0)).toLocaleString() %></h3>
+                            <small>Ventas Totales ($)</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Restaurants Table -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-store me-2"></i>
+                        Lista de Restaurantes
+                    </h6>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-success" onclick="exportarRestaurantes()">
+                            <i class="fas fa-download me-1"></i>Exportar
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                    data-bs-toggle="dropdown">
+                                <i class="fas fa-cog me-1"></i>Acciones
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="accionMasiva('activar')">
+                                    <i class="fas fa-check me-2"></i>Activar seleccionados
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="accionMasiva('desactivar')">
+                                    <i class="fas fa-times me-2"></i>Desactivar seleccionados
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="accionMasiva('eliminar')">
+                                    <i class="fas fa-trash me-2"></i>Eliminar seleccionados
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <% if (restaurantes.length > 0) { %>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th width="40">
+                                            <input type="checkbox" id="selectAll" class="form-check-input">
+                                        </th>
+                                        <th>Restaurante</th>
+                                        <th>Propietario</th>
+                                        <th>Categoría</th>
+                                        <th>Productos</th>
+                                        <th>Ventas</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% restaurantes.forEach(restaurante => { %>
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" class="form-check-input restaurant-checkbox" 
+                                                       value="<%= restaurante.id %>">
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <img src="/uploads/<%= restaurante.imagen_logo || 'no-image.png' %>" 
+                                                         alt="<%= restaurante.nombre %>" 
+                                                         class="rounded me-2" width="40" height="40"
+                                                         onerror="this.src='/images/no-image.png'">
+                                                    <div>
+                                                        <div class="fw-bold"><%= restaurante.nombre %></div>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-map-marker-alt me-1"></i>
+                                                            <%= restaurante.direccion.substring(0, 30) %>...
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <div class="fw-bold"><%= restaurante.nombre %> <%= restaurante.apellido %></div>
+                                                    <small class="text-muted"><%= restaurante.email %></small><br>
+                                                    <% if (restaurante.telefono) { %>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-phone me-1"></i><%= restaurante.telefono %>
+                                                        </small>
+                                                    <% } %>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark">
+                                                    <%= restaurante.categoria_nombre || 'Sin categoría' %>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">
+                                                    <%= restaurante.total_productos %> productos
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="text-end">
+                                                    <div class="fw-bold text-success">
+                                                        $<%= (restaurante.ventas_totales || 0).toLocaleString() %>
+                                                    </div>
+                                                    <small class="text-muted">
+                                                        <%= restaurante.total_pedidos %> pedidos
+                                                    </small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-column gap-1">
+                                                    <% if (restaurante.activo) { %>
+                                                        <span class="badge bg-success">Activo</span>
+                                                    <% } else { %>
+                                                        <span class="badge bg-danger">Inactivo</span>
+                                                    <% } %>
+                                                    
+                                                    <% if (restaurante.verificado) { %>
+                                                        <span class="badge bg-primary">Verificado</span>
+                                                    <% } else { %>
+                                                        <span class="badge bg-warning">Sin verificar</span>
+                                                    <% } %>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                            type="button" data-bs-toggle="dropdown">
+                                                        <i class="fas fa-ellipsis-v"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <a class="dropdown-item" href="/admin/restaurantes/<%= restaurante.id %>">
+                                                                <i class="fas fa-eye me-2"></i>Ver Detalle
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="/admin/restaurantes/<%= restaurante.id %>/editar">
+                                                                <i class="fas fa-edit me-2"></i>Editar
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="/admin/productos?restaurante=<%= restaurante.id %>">
+                                                                <i class="fas fa-utensils me-2"></i>Gestionar Productos
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="/admin/cobros?restaurante=<%= restaurante.id %>">
+                                                                <i class="fas fa-money-bill-wave me-2"></i>Ver Cobros
+                                                            </a>
+                                                        </li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <% if (restaurante.activo) { %>
+                                                            <li>
+                                                                <a class="dropdown-item text-warning" 
+                                                                   href="#" onclick="toggleEstado(<%= restaurante.id %>, 'desactivar')">
+                                                                    <i class="fas fa-pause me-2"></i>Desactivar
+                                                                </a>
+                                                            </li>
+                                                        <% } else { %>
+                                                            <li>
+                                                                <a class="dropdown-item text-success" 
+                                                                   href="#" onclick="toggleEstado(<%= restaurante.id %>, 'activar')">
+                                                                    <i class="fas fa-play me-2"></i>Activar
+                                                                </a>
+                                                            </li>
+                                                        <% } %>
+                                                        <li>
+                                                            <a class="dropdown-item text-danger" 
+                                                               href="#" onclick="eliminarRestaurante(<%= restaurante.id %>, '<%= restaurante.nombre %>')">
+                                                                <i class="fas fa-trash me-2"></i>Eliminar
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    <% } else { %>
+                        <div class="text-center py-5">
+                            <i class="fas fa-store fa-3x text-muted mb-3"></i>
+                            <h5>No se encontraron restaurantes</h5>
+                            <p class="text-muted">Intenta cambiar los filtros de búsqueda</p>
+                            <a href="/admin/restaurantes/crear/nuevo" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>Crear Primer Restaurante
+                            </a>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Select all functionality
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.restaurant-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+
+// Toggle restaurant status
+function toggleEstado(restaurantId, accion) {
+    const texto = accion === 'activar' ? 'activar' : 'desactivar';
+    
+    if (confirm(`¿Estás seguro de que quieres ${texto} este restaurante?`)) {
+        fetch(`/admin/restaurantes/${restaurantId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ accion: accion })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(`Restaurante ${texto} exitosamente`, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.message || 'Error procesando la acción', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error procesando la acción', 'error');
+        });
+    }
+}
+
+// Delete restaurant
+function eliminarRestaurante(restaurantId, nombre) {
+    if (confirm(`¿Estás seguro de que quieres ELIMINAR PERMANENTEMENTE el restaurante "${nombre}"?\n\nEsta acción no se puede deshacer y eliminará:\n- El restaurante\n- Todos sus productos\n- Su historial de pedidos\n- Las cuentas de usuario asociadas`)) {
+        const confirmText = prompt(`Para confirmar la eliminación, escribe: ${nombre}`);
+        
+        if (confirmText === nombre) {
+            fetch(`/admin/restaurantes/${restaurantId}/eliminar`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Restaurante eliminado exitosamente', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showNotification(data.message || 'Error eliminando restaurante', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error eliminando restaurante', 'error');
+            });
+        } else {
+            showNotification('Nombre incorrecto. Eliminación cancelada.', 'warning');
+        }
+    }
+}
+
+// Bulk actions
+function accionMasiva(accion) {
+    const checkboxes = document.querySelectorAll('.restaurant-checkbox:checked');
+    if (checkboxes.length === 0) {
+        showNotification('Selecciona al menos un restaurante', 'warning');
+        return;
+    }
+    
+    const restaurantIds = Array.from(checkboxes).map(cb => cb.value);
+    const confirmText = `¿Estás seguro de que quieres ${accion} ${restaurantIds.length} restaurante(s)?`;
+    
+    if (confirm(confirmText)) {
+        fetch('/admin/restaurantes/accion-masiva', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                accion: accion,
+                restaurantIds: restaurantIds
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(`Acción ${accion} aplicada exitosamente`, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.message || 'Error procesando la acción masiva', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error procesando la acción masiva', 'error');
+        });
+    }
+}
+
+// Export restaurants
+function exportarRestaurantes() {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', 'csv');
+    window.open(`/admin/restaurantes/export?${params.toString()}`, '_blank');
+}
+</script>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container min-vh-100 d-flex align-items-center justify-content-center">
+        <div class="row w-100">
+            <div class="col-md-6 col-lg-4 mx-auto">
+                
+                <!-- Back button -->
+                <div class="mb-4">
+                    <a href="/" class="btn btn-link text-decoration-none p-0">
+                        <i class="fas fa-arrow-left me-2"></i>Volver al inicio
+                    </a>
+                </div>
+
+                <!-- Logo -->
+                <div class="text-center mb-4">
+                    <a href="/" class="text-decoration-none">
+                        <div class="d-flex align-items-center justify-content-center mb-3">
+                            <div class="bg-primary rounded-circle p-3">
+                                <i class="fas fa-utensils text-white fs-3"></i>
+                            </div>
+                        </div>
+                        <h2 class="fw-bold text-primary">A la Mesa</h2>
+                    </a>
+                    <h4 class="fw-normal text-muted">Crear Cuenta</h4>
+                </div>
+
+                <!-- Register Form -->
+                <div class="card shadow border-0">
+                    <div class="card-body p-4">
+                        
+                        <!-- Error/Success messages -->
+                        <% if (error) { %>
+                            <div class="alert alert-danger" role="alert">
+                                <i class="fas fa-exclamation-circle me-2"></i><%= error %>
+                            </div>
+                        <% } %>
+                        
+                        <% if (success) { %>
+                            <div class="alert alert-success" role="alert">
+                                <i class="fas fa-check-circle me-2"></i><%= success %>
+                            </div>
+                        <% } %>
+
+                        <form action="/auth/register" method="POST">
+                            <!-- Nombre -->
+                            <div class="mb-3">
+                                <label for="nombre" class="form-label">Nombre</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fas fa-user text-muted"></i>
+                                    </span>
+                                    <input type="text" class="form-control border-start-0" 
+                                           id="nombre" name="nombre" placeholder="Tu nombre" required>
+                                </div>
+                            </div>
+
+                            <!-- Apellido -->
+                            <div class="mb-3">
+                                <label for="apellido" class="form-label">Apellido</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fas fa-user text-muted"></i>
+                                    </span>
+                                    <input type="text" class="form-control border-start-0" 
+                                           id="apellido" name="apellido" placeholder="Tu apellido" required>
+                                </div>
+                            </div>
+
+                            <!-- Email -->
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fas fa-envelope text-muted"></i>
+                                    </span>
+                                    <input type="email" class="form-control border-start-0" 
+                                           id="email" name="email" placeholder="tu@email.com" required
+                                           pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$">
+                                </div>
+                                <div class="invalid-feedback">
+                                    Por favor ingresa un email válido
+                                </div>
+                            </div>
+
+                            <!-- Teléfono -->
+                            <div class="mb-3">
+                                <label for="telefono" class="form-label">Teléfono <small class="text-muted">(opcional)</small></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fas fa-phone text-muted"></i>
+                                    </span>
+                                    <input type="tel" class="form-control border-start-0" 
+                                           id="telefono" name="telefono" placeholder="+54 11 1234-5678"
+                                           pattern="[+]?[0-9\s-()]+" 
+                                           title="Ingresa un número de teléfono válido">
+                                </div>
+                                <div class="invalid-feedback">
+                                    Por favor ingresa un número de teléfono válido
+                                </div>
+                            </div>
+
+                            <!-- Ciudad -->
+                            <div class="mb-3">
+                                <label for="ciudad" class="form-label">Ciudad</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fas fa-city text-muted"></i>
+                                    </span>
+                                    <input type="text" class="form-control border-start-0" 
+                                           id="ciudad" name="ciudad" placeholder="Tu ciudad" required
+                                           minlength="2" maxlength="50">
+                                </div>
+                                <div class="invalid-feedback">
+                                    Por favor ingresa tu ciudad
+                                </div>
+                            </div>
+
+                            <!-- Password -->
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Contraseña</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fas fa-lock text-muted"></i>
+                                    </span>
+                                    <input type="password" class="form-control border-start-0 border-end-0" 
+                                           id="password" name="password" placeholder="Tu contraseña" required>
+                                    <button class="btn btn-outline-secondary border-start-0" type="button" 
+                                            onclick="togglePassword('password')">
+                                        <i class="fas fa-eye" id="password-toggle"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Mínimo 6 caracteres</small>
+                            </div>
+
+                            <!-- Confirm Password -->
+                            <div class="mb-4">
+                                <label for="confirm_password" class="form-label">Confirmar Contraseña</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fas fa-lock text-muted"></i>
+                                    </span>
+                                    <input type="password" class="form-control border-start-0 border-end-0" 
+                                           id="confirm_password" name="confirm_password" placeholder="Confirma tu contraseña" required>
+                                    <button class="btn btn-outline-secondary border-start-0" type="button" 
+                                            onclick="togglePassword('confirm_password')">
+                                        <i class="fas fa-eye" id="confirm_password-toggle"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Terms -->
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
+                                    <label class="form-check-label small" for="terms">
+                                        Acepto los <a href="/terms" target="_blank">términos y condiciones</a> 
+                                        y la <a href="/privacy" target="_blank">política de privacidad</a>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Submit button -->
+                            <button type="submit" class="btn btn-primary w-100 py-2 mb-3">
+                                <i class="fas fa-user-plus me-2"></i>Crear Cuenta
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Login links -->
+                <div class="text-center mt-4">
+                    <p class="text-muted">
+                        ¿Ya tienes cuenta? 
+                        <a href="/auth/login" class="text-decoration-none fw-semibold">Inicia sesión aquí</a>
+                    </p>
+                    <p class="text-muted">
+                        ¿Tienes un restaurante? 
+                        <a href="/auth/register-restaurant" class="text-decoration-none fw-semibold">Regístralo aquí</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function togglePassword(inputId) {
+            const passwordInput = document.getElementById(inputId);
+            const toggleIcon = document.getElementById(inputId + '-toggle');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
+
+        // Validación del formulario
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            const inputs = form.querySelectorAll('input[required]');
+            
+            // Validación en tiempo real
+            inputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    validateInput(this);
+                });
+                
+                input.addEventListener('blur', function() {
+                    validateInput(this);
+                });
+            });
+
+            // Validación al enviar el formulario
+            form.addEventListener('submit', function(event) {
+                let isValid = true;
+                
+                inputs.forEach(input => {
+                    if (!validateInput(input)) {
+                        isValid = false;
+                    }
+                });
+
+                // Validación de contraseñas
+                const password = document.getElementById('password');
+                const confirmPassword = document.getElementById('confirm_password');
+                
+                if (password.value.length < 6) {
+                    password.setCustomValidity('La contraseña debe tener al menos 6 caracteres');
+                    isValid = false;
+                } else {
+                    password.setCustomValidity('');
+                }
+                
+                if (password.value !== confirmPassword.value) {
+                    confirmPassword.setCustomValidity('Las contraseñas no coinciden');
+                    isValid = false;
+                } else {
+                    confirmPassword.setCustomValidity('');
+                }
+
+                if (!isValid) {
+                    event.preventDefault();
+                }
+            });
+
+            function validateInput(input) {
+                if (input.validity.valid) {
+                    input.classList.remove('is-invalid');
+                    input.classList.add('is-valid');
+                    return true;
+                } else {
+                    input.classList.remove('is-valid');
+                    input.classList.add('is-invalid');
+                    
+                    // Mensajes de error personalizados
+                    if (input.validity.valueMissing) {
+                        input.setCustomValidity('Este campo es obligatorio');
+                    } else if (input.validity.typeMismatch && input.type === 'email') {
+                        input.setCustomValidity('Por favor ingresa un email válido');
+                    } else if (input.validity.patternMismatch) {
+                        if (input.id === 'telefono') {
+                            input.setCustomValidity('Ingresa un número de teléfono válido');
+                        } else if (input.id === 'email') {
+                            input.setCustomValidity('Ingresa un email válido');
+                        }
+                    } else {
+                        input.setCustomValidity('');
+                    }
+                    
+                    return false;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

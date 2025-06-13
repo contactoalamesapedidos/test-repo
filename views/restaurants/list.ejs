@@ -1,0 +1,36 @@
+<div class="restaurant-card">
+  <div class="restaurant-image">
+    <img src="/uploads/<%= restaurant.imagen_banner || 'no-image.png' %>" 
+         alt="<%= restaurant.nombre %>"
+         onerror="this.src='/images/no-image.png'">
+  </div>
+  <div class="restaurant-info">
+    <h3><%= restaurant.nombre %></h3>
+    <% if (restaurant.categorias) { %>
+      <div class="restaurant-categories">
+        <% restaurant.categorias.split(',').forEach((categoria, index) => { %>
+          <span class="badge bg-primary"><%= categoria.trim() %></span>
+          <% if (index < restaurant.categorias.split(',').length - 1) { %> • <% } %>
+        <% }); %>
+      </div>
+    <% } %>
+    <p class="restaurant-description"><%= restaurant.descripcion %></p>
+    <div class="restaurant-details">
+      <div class="detail">
+        <i class="fas fa-star"></i>
+        <span><%= restaurant.calificacion_promedio ? restaurant.calificacion_promedio.toFixed(1) : 'N/A' %></span>
+      </div>
+      <div class="detail">
+        <i class="fas fa-clock"></i>
+        <span><%= restaurant.tiempo_entrega_min %>-<%= restaurant.tiempo_entrega_max %> min</span>
+      </div>
+      <div class="detail">
+        <i class="fas fa-truck"></i>
+        <span>$<%= restaurant.costo_delivery.toFixed(2) %></span>
+      </div>
+    </div>
+    <div class="restaurant-actions">
+      <a href="/restaurants/<%= restaurant.id %>" class="btn btn-primary">Ver Menú</a>
+    </div>
+  </div>
+</div> 

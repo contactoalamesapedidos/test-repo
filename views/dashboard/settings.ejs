@@ -1,0 +1,312 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid py-4">
+    <!-- Flash Messages Container -->
+    <% if (typeof flashMessage !== 'undefined' && flashMessage) { %>
+        <div class="alert alert-<%= flashMessage.type === 'success' ? 'success' : 'danger' %> alert-dismissible fade show" role="alert">
+            <%= flashMessage.message %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <% } %>
+
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <a href="/dashboard" class="list-group-item list-group-item-action">
+                            <i class="fas fa-home me-2"></i> Dashboard
+                        </a>
+                        <a href="/dashboard/products" class="list-group-item list-group-item-action">
+                            <i class="fas fa-utensils me-2"></i> Productos
+                        </a>
+                        <a href="/dashboard/orders" class="list-group-item list-group-item-action">
+                            <i class="fas fa-shopping-cart me-2"></i> Pedidos
+                        </a>
+                        <a href="/dashboard/cobros" class="list-group-item list-group-item-action">
+                            <i class="fas fa-money-bill-wave me-2"></i> Cobros
+                        </a>
+                        <a href="/dashboard/settings" class="list-group-item list-group-item-action active">
+                            <i class="fas fa-cog me-2"></i> Configuración
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 col-lg-10">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-cog me-2"></i>
+                    Configuración del Restaurante
+                </h2>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form id="settingsForm" method="POST" action="/dashboard/settings" enctype="multipart/form-data">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <!-- Información Básica -->
+                                <h5 class="mb-3">Información Básica</h5>
+                                <div class="mb-3">
+                                    <label for="nombre" class="form-label">Nombre del Restaurante *</label>
+                                    <input type="text" class="form-control" id="nombre" name="nombre" 
+                                           value="<%= restaurant.nombre %>" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="descripcion" class="form-label">Descripción *</label>
+                                    <textarea class="form-control" id="descripcion" name="descripcion" 
+                                              rows="3" required><%= restaurant.descripcion %></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="direccion" class="form-label">Dirección *</label>
+                                    <input type="text" class="form-control" id="direccion" name="direccion" 
+                                           value="<%= restaurant.direccion %>" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="telefono" class="form-label">Teléfono *</label>
+                                    <input type="tel" class="form-control" id="telefono" name="telefono" 
+                                           value="<%= restaurant.telefono %>" required>
+                                </div>
+
+                                <!-- Horario -->
+                                <h5 class="mb-3 mt-4">Horario de Atención</h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="horario_apertura" class="form-label">Horario de Apertura</label>
+                                            <input type="time" class="form-control" id="horario_apertura" name="horario_apertura" 
+                                                value="<%= restaurant.horario_apertura || '10:00' %>" required>
+                                            <div class="form-text">Ingresa la hora de apertura del restaurante</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="horario_cierre" class="form-label">Horario de Cierre</label>
+                                            <input type="time" class="form-control" id="horario_cierre" name="horario_cierre" 
+                                                value="<%= restaurant.horario_cierre || '23:59' %>" required>
+                                            <div class="form-text">Ingresa la hora de cierre del restaurante</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Horarios de Operación -->
+                                <div class="mb-4">
+                                    <h5 class="mb-3">Horarios de Operación</h5>
+                                    
+                                    <!-- Días de Operación -->
+                                    <div class="mb-3">
+                                        <label class="form-label">Días de Operación</label>
+                                        <div class="dias-operacion">
+                                            <% 
+                                            let diasOperacion = [];
+                                            try {
+                                                if (restaurant.dias_operacion) {
+                                                    if (Array.isArray(restaurant.dias_operacion)) {
+                                                        diasOperacion = restaurant.dias_operacion;
+                                                    } else {
+                                                        const diasOperacionClean = restaurant.dias_operacion.trim();
+                                                        if (diasOperacionClean) {
+                                                            diasOperacion = JSON.parse(diasOperacionClean);
+                                                        }
+                                                    }
+                                                }
+                                            } catch (e) {
+                                                console.error('Error al parsear dias_operacion en la vista:', e);
+                                            }
+
+                                            if (!Array.isArray(diasOperacion)) {
+                                                diasOperacion = [];
+                                            }
+
+                                            // Función auxiliar para verificar si un día está seleccionado
+                                            function isDiaSeleccionado(dia) {
+                                                return diasOperacion.includes(parseInt(dia));
+                                            }
+                                            %>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" name="dias_operacion[]" value="1" id="dia1" 
+                                                    <%= isDiaSeleccionado(1) ? 'checked' : '' %>>
+                                                <label class="form-check-label" for="dia1">Lunes</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" name="dias_operacion[]" value="2" id="dia2"
+                                                    <%= isDiaSeleccionado(2) ? 'checked' : '' %>>
+                                                <label class="form-check-label" for="dia2">Martes</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" name="dias_operacion[]" value="3" id="dia3"
+                                                    <%= isDiaSeleccionado(3) ? 'checked' : '' %>>
+                                                <label class="form-check-label" for="dia3">Miércoles</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" name="dias_operacion[]" value="4" id="dia4"
+                                                    <%= isDiaSeleccionado(4) ? 'checked' : '' %>>
+                                                <label class="form-check-label" for="dia4">Jueves</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" name="dias_operacion[]" value="5" id="dia5"
+                                                    <%= isDiaSeleccionado(5) ? 'checked' : '' %>>
+                                                <label class="form-check-label" for="dia5">Viernes</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" name="dias_operacion[]" value="6" id="dia6"
+                                                    <%= isDiaSeleccionado(6) ? 'checked' : '' %>>
+                                                <label class="form-check-label" for="dia6">Sábado</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" name="dias_operacion[]" value="7" id="dia7"
+                                                    <%= isDiaSeleccionado(7) ? 'checked' : '' %>>
+                                                <label class="form-check-label" for="dia7">Domingo</label>
+                                            </div>
+                                        </div>
+                                        <div class="form-text">Selecciona los días en que tu restaurante está abierto</div>
+                                    </div>
+
+                                    <div class="row">
+                                        <!-- Categorías -->
+                                        <h5 class="mb-3 mt-4">Categorías del Restaurante</h5>
+                                        <div class="mb-3">
+                                            <div class="row">
+                                                <% categories.forEach(function(categoria) { %>
+                                                    <div class="col-md-4 mb-2">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" 
+                                                                   name="categorias[]" 
+                                                                   value="<%= categoria.id %>" 
+                                                                   id="categoria_<%= categoria.id %>"
+                                                                   <%= selectedCategories.includes(categoria.id) ? 'checked' : '' %>>
+                                                            <label class="form-check-label" for="categoria_<%= categoria.id %>">
+                                                                <%= categoria.nombre %>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                <% }); %>
+                                            </div>
+                                        </div>
+
+                                        <!-- Servicios -->
+                                        <h5 class="mb-3 mt-4">Servicios Disponibles</h5>
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch mb-2">
+                                                <input class="form-check-input" type="checkbox" id="delivery" 
+                                                       name="delivery" <%= restaurant.delivery ? 'checked' : '' %>>
+                                                <label class="form-check-label" for="delivery">
+                                                    Delivery
+                                                </label>
+                                            </div>
+                                            <div class="form-check form-switch mb-3">
+                                                <input class="form-check-input" type="checkbox" id="pedidos_online" 
+                                                       name="pedidos_online" <%= restaurant.pedidos_online ? 'checked' : '' %>>
+                                                <label class="form-check-label" for="pedidos_online">
+                                                    Pedidos Online
+                                                </label>
+                                            </div>
+                                            <div class="mb-3" id="costoDeliveryContainer" style="display: <%= restaurant.delivery ? 'block' : 'none' %>;">
+                                                <label for="costo_delivery" class="form-label">Costo de Envío ($)</label>
+                                                <input type="number" class="form-control" id="costo_delivery" 
+                                                       name="costo_delivery" step="0.01" min="0" 
+                                                       value="<%= restaurant.costo_delivery || '0.00' %>">
+                                                <div class="form-text">Ingresa el costo de envío para pedidos de delivery</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <!-- Logo -->
+                                <h5 class="mb-3">Logo del Restaurante</h5>
+                                <div class="mb-3">
+                                    <input type="file" class="form-control" id="logo" name="logo" accept="image/*">
+                                    <div class="form-text">Formatos: JPG, PNG. Máx: 5MB</div>
+                                    <div class="mt-3">
+                                        <% if (restaurant.imagen_logo) { %>
+                                            <img src="/uploads/<%= restaurant.imagen_logo %>" alt="Logo actual" 
+                                                 id="currentLogo" class="img-thumbnail" style="max-height: 200px;">
+                                            <div class="form-text mt-1">Logo actual</div>
+                                        <% } %>
+                                        <img id="logoPreview" src="" alt="Vista previa" 
+                                             class="img-thumbnail d-none" style="max-height: 200px;">
+                                    </div>
+                                </div>
+
+                                <!-- Banner -->
+                                <h5 class="mb-3">Banner del Restaurante</h5>
+                                <div class="mb-3">
+                                    <input type="file" class="form-control" id="banner" name="banner" accept="image/*">
+                                    <div class="form-text">Formatos: JPG, PNG. Máx: 5MB. Recomendado: 800x400px</div>
+                                    <div class="mt-3">
+                                        <% if (restaurant.imagen_banner) { %>
+                                            <img src="/uploads/<%= restaurant.imagen_banner %>" alt="Banner actual" 
+                                                 id="currentBanner" class="img-thumbnail" style="max-height: 200px;">
+                                            <div class="form-text mt-1">Banner actual</div>
+                                        <% } %>
+                                        <img id="bannerPreview" src="" alt="Vista previa" 
+                                             class="img-thumbnail d-none" style="max-height: 200px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/dashboard-settings.js"></script>
+
+<script>
+// Función para mostrar notificaciones
+function showNotification(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    // Remover el toast después de que se oculte
+    toast.addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toast);
+    });
+}
+
+// Auto-hide flash messages after 5 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    const flashAlert = document.querySelector('.alert');
+    if (flashAlert) {
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(flashAlert);
+            bsAlert.close();
+        }, 5000);
+    }
+});
+</script>
+
+<%- include('../partials/footer') %> 

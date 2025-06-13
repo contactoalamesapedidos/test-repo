@@ -1,0 +1,476 @@
+<%- include('../partials/header') %>
+
+<!-- Admin Sidebar -->
+<div class="admin-layout">
+    <%- include('partials/sidebar') %>
+
+    <!-- Main Content -->
+    <div class="admin-content">
+        <!-- Top Bar -->
+        <div class="admin-topbar bg-white shadow-sm px-4 py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0">Gestión de Productos</h5>
+                <small class="text-muted">Administra productos de todos los restaurantes</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-primary" onclick="mostrarModalCrearProducto()">
+                    <i class="fas fa-plus me-1"></i>Nuevo Producto
+                </button>
+                <a href="/admin" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Volver
+                </a>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-4">
+            <!-- Filters -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <form method="GET" action="/admin/productos" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="restaurante" class="form-label">Restaurante</label>
+                            <select class="form-select" id="restaurante" name="restaurante">
+                                <option value="">Todos los restaurantes</option>
+                                <% restaurantes.forEach(rest => { %>
+                                    <option value="<%= rest.id %>" <%= filtros.restaurante == rest.id ? 'selected' : '' %>>
+                                        <%= rest.nombre %>
+                                    </option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="search" class="form-label">Buscar</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="<%= filtros.search %>" placeholder="Nombre o descripción...">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="categoria" class="form-label">Categoría</label>
+                            <select class="form-select" id="categoria" name="categoria">
+                                <option value="">Todas</option>
+                                <% categorias.forEach(cat => { %>
+                                    <option value="<%= cat.nombre %>" <%= filtros.categoria === cat.nombre ? 'selected' : '' %>>
+                                        <%= cat.nombre %>
+                                    </option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="disponible" class="form-label">Disponibilidad</label>
+                            <select class="form-select" id="disponible" name="disponible">
+                                <option value="">Todos</option>
+                                <option value="true" <%= filtros.disponible === 'true' ? 'selected' : '' %>>Disponibles</option>
+                                <option value="false" <%= filtros.disponible === 'false' ? 'selected' : '' %>>No disponibles</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-1"></i>Filtrar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card border-0 bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h3><%= productos.length %></h3>
+                            <small>Total Productos</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 bg-success text-white">
+                        <div class="card-body text-center">
+                            <h3><%= productos.filter(p => p.disponible).length %></h3>
+                            <small>Disponibles</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h3><%= productos.filter(p => p.destacado).length %></h3>
+                            <small>Destacados</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 bg-info text-white">
+                        <div class="card-body text-center">
+                            <h3>$<%= Math.round(productos.reduce((sum, p) => sum + parseFloat(p.precio || 0), 0) / productos.length || 0) %></h3>
+                            <small>Precio Promedio</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Table -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-utensils me-2"></i>
+                        Lista de Productos
+                    </h6>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-success" onclick="exportarProductos()">
+                            <i class="fas fa-download me-1"></i>Exportar
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                    data-bs-toggle="dropdown">
+                                <i class="fas fa-cog me-1"></i>Acciones
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="accionMasiva('disponible')">
+                                    <i class="fas fa-check me-2"></i>Marcar disponibles
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="accionMasiva('no_disponible')">
+                                    <i class="fas fa-times me-2"></i>Marcar no disponibles
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="accionMasiva('eliminar')">
+                                    <i class="fas fa-trash me-2"></i>Eliminar seleccionados
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <% if (productos.length > 0) { %>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th width="40">
+                                            <input type="checkbox" id="selectAll" class="form-check-input">
+                                        </th>
+                                        <th>Producto</th>
+                                        <th>Restaurante</th>
+                                        <th>Categoría</th>
+                                        <th>Precio</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% productos.forEach(producto => { %>
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" class="form-check-input producto-checkbox" 
+                                                       value="<%= producto.id %>">
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <img src="<%= producto.imagen || '/images/no-image.png' %>" 
+                                                         alt="<%= producto.nombre %>" 
+                                                         class="rounded me-2" width="50" height="50">
+                                                    <div>
+                                                        <div class="fw-bold">
+                                                            <%= producto.nombre %>
+                                                            <% if (producto.destacado) { %>
+                                                                <span class="badge bg-warning text-dark ms-1">
+                                                                    <i class="fas fa-star"></i>
+                                                                </span>
+                                                            <% } %>
+                                                        </div>
+                                                        <small class="text-muted">
+                                                            <%= (producto.descripcion || '').substring(0, 50) %>...
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold text-primary"><%= producto.restaurante_nombre %></div>
+                                                <small class="text-muted">ID: <%= producto.restaurante_id %></small>
+                                            </td>
+                                            <td>
+                                                <% if (producto.categoria_nombre) { %>
+                                                    <span class="badge bg-light text-dark">
+                                                        <%= producto.categoria_nombre %>
+                                                    </span>
+                                                <% } else { %>
+                                                    <span class="badge bg-secondary">Sin categoría</span>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <div class="text-end">
+                                                    <strong class="text-success">$<%= producto.precio.toLocaleString() %></strong>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-column gap-1">
+                                                    <% if (producto.disponible) { %>
+                                                        <span class="badge bg-success">Disponible</span>
+                                                    <% } else { %>
+                                                        <span class="badge bg-danger">No disponible</span>
+                                                    <% } %>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                            type="button" data-bs-toggle="dropdown">
+                                                        <i class="fas fa-ellipsis-v"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" onclick="editarProducto(<%= producto.id %>)">
+                                                                <i class="fas fa-edit me-2"></i>Editar
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="/admin/restaurantes/<%= producto.restaurante_id %>">
+                                                                <i class="fas fa-store me-2"></i>Ver Restaurante
+                                                            </a>
+                                                        </li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <% if (producto.disponible) { %>
+                                                            <li>
+                                                                <a class="dropdown-item text-warning" 
+                                                                   href="#" onclick="toggleDisponibilidad(<%= producto.id %>, false)">
+                                                                    <i class="fas fa-pause me-2"></i>Marcar no disponible
+                                                                </a>
+                                                            </li>
+                                                        <% } else { %>
+                                                            <li>
+                                                                <a class="dropdown-item text-success" 
+                                                                   href="#" onclick="toggleDisponibilidad(<%= producto.id %>, true)">
+                                                                    <i class="fas fa-play me-2"></i>Marcar disponible
+                                                                </a>
+                                                            </li>
+                                                        <% } %>
+                                                        <li>
+                                                            <a class="dropdown-item text-danger" 
+                                                               href="#" onclick="eliminarProducto(<%= producto.id %>, '<%= producto.nombre %>')">
+                                                                <i class="fas fa-trash me-2"></i>Eliminar
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    <% } else { %>
+                        <div class="text-center py-5">
+                            <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
+                            <h5>No se encontraron productos</h5>
+                            <p class="text-muted">Intenta cambiar los filtros de búsqueda</p>
+                            <button class="btn btn-primary" onclick="mostrarModalCrearProducto()">
+                                <i class="fas fa-plus me-1"></i>Crear Primer Producto
+                            </button>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear/Editar Producto -->
+<div class="modal fade" id="modalProducto" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalProductoTitulo">
+                    <i class="fas fa-plus me-2"></i>Nuevo Producto
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formProducto">
+                    <input type="hidden" id="producto_id" name="producto_id">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="restaurante_id" class="form-label">Restaurante *</label>
+                            <select class="form-select" id="restaurante_id" name="restaurante_id" required>
+                                <option value="">Selecciona un restaurante</option>
+                                <% restaurantes.forEach(rest => { %>
+                                    <option value="<%= rest.id %>"><%= rest.nombre %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="categoria_id" class="form-label">Categoría</label>
+                            <select class="form-select" id="categoria_id" name="categoria_id">
+                                <option value="">Sin categoría</option>
+                                <!-- Categories will be loaded dynamically based on restaurant -->
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="nombre" class="form-label">Nombre del Producto *</label>
+                            <input type="text" class="form-control" id="nombre" name="nombre" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="precio" class="form-label">Precio *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="precio" name="precio" 
+                                       step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label for="descripcion" class="form-label">Descripción *</label>
+                            <textarea class="form-control" id="descripcion" name="descripcion" 
+                                      rows="3" required></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="destacado" name="destacado">
+                                <label class="form-check-label" for="destacado">
+                                    <i class="fas fa-star text-warning me-1"></i>Producto destacado
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="disponible" name="disponible" checked>
+                                <label class="form-check-label" for="disponible">
+                                    <i class="fas fa-check text-success me-1"></i>Disponible
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnGuardarProducto" onclick="guardarProducto()">
+                    <i class="fas fa-save me-1"></i>Guardar Producto
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show create product modal
+function mostrarModalCrearProducto() {
+    document.getElementById('modalProductoTitulo').innerHTML = '<i class="fas fa-plus me-2"></i>Nuevo Producto';
+    document.getElementById('btnGuardarProducto').innerHTML = '<i class="fas fa-save me-1"></i>Guardar Producto';
+    document.getElementById('formProducto').reset();
+    document.getElementById('producto_id').value = '';
+    new bootstrap.Modal(document.getElementById('modalProducto')).show();
+}
+
+// Save product
+function guardarProducto() {
+    const form = document.getElementById('formProducto');
+    const formData = new FormData(form);
+    
+    const data = {
+        restaurante_id: formData.get('restaurante_id'),
+        categoria_id: formData.get('categoria_id') || null,
+        nombre: formData.get('nombre'),
+        descripcion: formData.get('descripcion'),
+        precio: formData.get('precio'),
+        destacado: formData.has('destacado'),
+        disponible: formData.has('disponible')
+    };
+    
+    if (!data.restaurante_id || !data.nombre || !data.descripcion || !data.precio) {
+        showNotification('Por favor, completa todos los campos requeridos', 'warning');
+        return;
+    }
+    
+    const url = '/admin/productos/crear';
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalProducto')).hide();
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showNotification(data.message || 'Error guardando producto', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error guardando producto', 'error');
+    });
+}
+
+// Toggle product availability
+function toggleDisponibilidad(productId, disponible) {
+    const texto = disponible ? 'disponible' : 'no disponible';
+    
+    if (confirm(`¿Marcar este producto como ${texto}?`)) {
+        fetch(`/admin/productos/${productId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ disponible: disponible })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(`Producto marcado como ${texto}`, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.message || 'Error cambiando disponibilidad', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error procesando la acción', 'error');
+        });
+    }
+}
+
+// Delete product
+function eliminarProducto(productId, nombre) {
+    if (confirm(`¿Estás seguro de que quieres eliminar el producto "${nombre}"?`)) {
+        fetch(`/admin/productos/${productId}/eliminar`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Producto eliminado exitosamente', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.message || 'Error eliminando producto', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error eliminando producto', 'error');
+        });
+    }
+}
+
+// Select all functionality
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.producto-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+
+// Export products
+function exportarProductos() {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', 'csv');
+    window.open(`/admin/productos/export?${params.toString()}`, '_blank');
+}
+</script>
+
+<%- include('../partials/footer') %>

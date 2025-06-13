@@ -1,0 +1,282 @@
+
+<%- include('../partials/header') %>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white text-center">
+                    <h3 class="mb-0">
+                        <i class="fas fa-store me-2"></i>
+                        Registrar Restaurante
+                    </h3>
+                    <p class="mb-0 mt-2">Únete a A la Mesa y llega a más clientes</p>
+                </div>
+                
+                <div class="card-body p-4">
+                    <% if (error) { %>
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <%= error %>
+                        </div>
+                    <% } %>
+                    
+                    <% if (success) { %>
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <%= success %>
+                        </div>
+                    <% } %>
+
+                    <form method="POST" action="/auth/register-restaurant">
+                        <!-- Información del Usuario -->
+                        <div class="section-title mb-3">
+                            <h5 class="text-primary">
+                                <i class="fas fa-user me-2"></i>
+                                Información Personal
+                            </h5>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="nombre" class="form-label">Nombre *</label>
+                                <input type="text" class="form-control" id="nombre" name="nombre" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="apellido" class="form-label">Apellido *</label>
+                                <input type="text" class="form-control" id="apellido" name="apellido" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="email" class="form-label">Email *</label>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                                <div class="form-text">Este será tu email de acceso</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="telefono" class="form-label">Teléfono</label>
+                                <input type="tel" class="form-control" id="telefono" name="telefono" 
+                                       placeholder="Ej: +5491123456789">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="ciudad" class="form-label">Ciudad *</label>
+                                <input type="text" class="form-control" id="ciudad" name="ciudad" 
+                                       value="Ciudad Autónoma de Buenos Aires"
+                                       required minlength="2" maxlength="50"
+                                       pattern="[A-Za-záéíóúÁÉÍÓÚñÑ\s]+"
+                                       title="Por favor ingresa el nombre de la ciudad (solo letras y espacios)"
+                                       onchange="this.value = this.value.trim() || 'Ciudad Autónoma de Buenos Aires'"
+                                       onblur="this.value = this.value.trim() || 'Ciudad Autónoma de Buenos Aires'">
+                                <div class="form-text">Ingresa el nombre completo de tu ciudad</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="password" class="form-label">Contraseña *</label>
+                                <input type="password" class="form-control" id="password" name="password" 
+                                       minlength="6" required>
+                                <div class="form-text">Mínimo 6 caracteres</div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Información del Restaurante -->
+                        <div class="section-title mb-3">
+                            <h5 class="text-primary">
+                                <i class="fas fa-store me-2"></i>
+                                Información del Restaurante
+                            </h5>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="restaurante_nombre" class="form-label">Nombre del Restaurante *</label>
+                            <input type="text" class="form-control" id="restaurante_nombre" 
+                                   name="restaurante_nombre" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="restaurante_descripcion" class="form-label">Descripción *</label>
+                            <textarea class="form-control" id="restaurante_descripcion" 
+                                      name="restaurante_descripcion" rows="3" 
+                                      placeholder="Describe tu restaurante, especialidades, historia..." 
+                                      required></textarea>
+                            <div class="form-text">Mínimo 20 caracteres</div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label for="restaurante_direccion" class="form-label">Dirección *</label>
+                                <input type="text" class="form-control address-autocomplete" 
+                                       id="restaurante_direccion" name="restaurante_direccion" 
+                                       placeholder="Dirección completa del restaurante" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="restaurante_telefono" class="form-label">Teléfono del Restaurante</label>
+                                <input type="tel" class="form-control" id="restaurante_telefono" 
+                                       name="restaurante_telefono" placeholder="Teléfono del local">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="categoria_id" class="form-label">Categoría Principal *</label>
+                                <select class="form-select" id="categoria_id" name="categoria_id" required>
+                                    <option value="">Selecciona una categoría</option>
+                                    <option value="1">Comida Rápida</option>
+                                    <option value="2">Pizza</option>
+                                    <option value="3">Parrilla</option>
+                                    <option value="4">Asiática</option>
+                                    <option value="5">Italiana</option>
+                                    <option value="6">Mexicana</option>
+                                    <option value="7">Saludable</option>
+                                    <option value="8">Postres</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="horario_apertura" class="form-label">Horario de Apertura</label>
+                                <input type="time" class="form-control" id="horario_apertura" 
+                                       name="horario_apertura" value="09:00">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="horario_cierre" class="form-label">Horario de Cierre</label>
+                                <input type="time" class="form-control" id="horario_cierre" 
+                                       name="horario_cierre" value="22:00">
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Términos y Condiciones -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="acepto_terminos" required>
+                                <label class="form-check-label" for="acepto_terminos">
+                                    Acepto los <a href="/terms" target="_blank">términos y condiciones</a> 
+                                    y la <a href="/privacy" target="_blank">política de privacidad</a> *
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-store me-2"></i>
+                                Registrar Restaurante
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Already have account -->
+                    <div class="text-center mt-4">
+                        <p class="text-muted">
+                            ¿Ya tienes una cuenta? 
+                            <a href="/auth/login" class="text-decoration-none">Inicia sesión aquí</a>
+                        </p>
+                        <p class="text-muted">
+                            ¿Eres cliente? 
+                            <a href="/auth/register" class="text-decoration-none">Regístrate como cliente</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Benefits Section -->
+            <div class="row mt-5">
+                <div class="col-12">
+                    <h4 class="text-center mb-4">¿Por qué elegir A la Mesa?</h4>
+                </div>
+                <div class="col-md-4 text-center mb-3">
+                    <div class="benefit-item">
+                        <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                        <h6>Más Clientes</h6>
+                        <p class="text-muted">Accede a miles de usuarios que buscan comida en tu zona</p>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center mb-3">
+                    <div class="benefit-item">
+                        <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
+                        <h6>Aumenta Ventas</h6>
+                        <p class="text-muted">Incrementa tus ingresos con pedidos online 24/7</p>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center mb-3">
+                    <div class="benefit-item">
+                        <i class="fas fa-tools fa-3x text-info mb-3"></i>
+                        <h6>Panel Completo</h6>
+                        <p class="text-muted">Gestiona pedidos, productos y estadísticas fácilmente</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.section-title {
+    border-left: 4px solid var(--bs-primary);
+    padding-left: 15px;
+}
+
+.benefit-item {
+    padding: 1rem;
+}
+
+.benefit-item i {
+    transition: transform 0.3s ease;
+}
+
+.benefit-item:hover i {
+    transform: scale(1.1);
+}
+
+.form-check-input:checked {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+.address-autocomplete {
+    position: relative;
+}
+</style>
+
+<script>
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    // Asegurar que ciudad tenga un valor
+    const ciudadInput = document.getElementById('ciudad');
+    if (!ciudadInput.value.trim()) {
+        ciudadInput.value = 'Ciudad Autónoma de Buenos Aires';
+    }
+    
+    const descripcion = document.getElementById('restaurante_descripcion').value;
+    
+    if (descripcion.length < 20) {
+        e.preventDefault();
+        document.getElementById('restaurante_descripcion').focus();
+        showNotification('La descripción debe tener al menos 20 caracteres', 'error');
+        return false;
+    }
+    
+    // Show loading state
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Registrando...';
+});
+
+// Character counter for description
+document.getElementById('restaurante_descripcion').addEventListener('input', function() {
+    const length = this.value.length;
+    const minLength = 20;
+    
+    if (length < minLength) {
+        this.classList.add('is-invalid');
+    } else {
+        this.classList.remove('is-invalid');
+    }
+});
+</script>
+
+<%- include('../partials/footer') %>

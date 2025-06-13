@@ -1,0 +1,246 @@
+<%- include('../partials/header') %>
+
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Mis Pedidos
+                </h2>
+            </div>
+
+            <!-- Filtros -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <form id="filterForm" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">Estado</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">Todos los estados</option>
+                                <option value="pendiente">Pendiente</option>
+                                <option value="confirmado">Confirmado</option>
+                                <option value="preparando">Preparando</option>
+                                <option value="listo">Listo</option>
+                                <option value="en_camino">En camino</option>
+                                <option value="entregado">Entregado</option>
+                                <option value="cancelado">Cancelado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="date" class="form-label">Fecha</label>
+                            <input type="date" class="form-control" id="date" name="date">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">Buscar</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   placeholder="Número de pedido o restaurante">
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Lista de Pedidos -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-0">
+                    <% if (orders && orders.length > 0) { %>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Pedido</th>
+                                        <th>Restaurante</th>
+                                        <th>Total</th>
+                                        <th>Items</th>
+                                        <th>Estado</th>
+                                        <th>Fecha</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% orders.forEach(order => { %>
+                                        <tr>
+                                            <td>
+                                                <strong>#<%= order.numero_pedido %></strong>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <% if (order.imagen_logo) { %>
+                                                        <img src="/uploads/<%= order.imagen_logo %>" 
+                                                             alt="<%= order.restaurante_nombre %>"
+                                                             class="rounded me-2" width="32" height="32">
+                                                    <% } %>
+                                                    <%= order.restaurante_nombre %>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <strong>$<%= parseFloat(order.total).toFixed(2) %></strong>
+                                            </td>
+                                            <td>
+                                                <%= order.total_items %> items
+                                            </td>
+                                            <td>
+                                                <span class="badge status-<%= order.estado %>">
+                                                    <%= order.estado.charAt(0).toUpperCase() + order.estado.slice(1) %>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <%= new Date(order.fecha_pedido).toLocaleString('es-AR') %>
+                                            </td>
+                                            <td>
+                                                <a href="/orders/<%= order.id %>" 
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   title="Ver detalles">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <% if (['pendiente', 'confirmado'].includes(order.estado)) { %>
+                                                    <button class="btn btn-sm btn-outline-danger ms-1"
+                                                            onclick="cancelOrder('<%= order.id %>')"
+                                                            title="Cancelar pedido">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                <% } %>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    <% } else { %>
+                        <div class="text-center py-5">
+                            <i class="fas fa-shopping-cart text-muted fs-1 mb-3"></i>
+                            <p class="text-muted">No tienes pedidos para mostrar</p>
+                            <a href="/restaurants" class="btn btn-primary">
+                                <i class="fas fa-utensils me-2"></i>
+                                Ver Restaurantes
+                            </a>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Cancelación -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cancelar Pedido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="cancelForm">
+                    <input type="hidden" id="cancelOrderId" name="orderId">
+                    <div class="mb-3">
+                        <label for="cancelReason" class="form-label">Motivo de cancelación</label>
+                        <textarea class="form-control" id="cancelReason" name="motivo" 
+                                  rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmCancel()">
+                    Confirmar Cancelación
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Función para aplicar filtros
+function applyFilters() {
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData);
+    window.location.href = `/orders?${params.toString()}`;
+}
+
+// Event listeners para filtros
+document.getElementById('status').addEventListener('change', applyFilters);
+document.getElementById('date').addEventListener('change', applyFilters);
+document.getElementById('search').addEventListener('input', debounce(applyFilters, 500));
+
+// Función para cancelar pedido
+function cancelOrder(orderId) {
+    document.getElementById('cancelOrderId').value = orderId;
+    const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+    modal.show();
+}
+
+// Función para confirmar cancelación
+async function confirmCancel() {
+    const orderId = document.getElementById('cancelOrderId').value;
+    const motivo = document.getElementById('cancelReason').value;
+    
+    if (!motivo.trim()) {
+        showNotification('Por favor, ingresa un motivo de cancelación', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/orders/${orderId}/cancel`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ motivo })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Pedido cancelado exitosamente', 'success');
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showNotification(data.message || 'Error al cancelar el pedido', 'error');
+        }
+    } catch (error) {
+        showNotification('Error al cancelar el pedido', 'error');
+    }
+}
+
+// Función debounce para el buscador
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Función para mostrar notificaciones
+function showNotification(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toast);
+    });
+}
+</script>
+
+<%- include('../partials/footer') %> 

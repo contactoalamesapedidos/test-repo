@@ -1,0 +1,406 @@
+<%- include('../partials/header') %>
+
+<!-- Admin Sidebar -->
+<div class="admin-layout">
+    <nav class="admin-sidebar bg-dark text-white">
+        <div class="sidebar-header p-3">
+            <h4><i class="fas fa-shield-alt me-2"></i>Admin Panel</h4>
+            <small class="text-muted">A la Mesa</small>
+        </div>
+        
+        <ul class="nav flex-column p-3">
+            <li class="nav-item mb-2">
+                <a class="nav-link active text-white" href="/admin">
+                    <i class="fas fa-chart-bar me-2"></i>Dashboard
+                </a>
+            </li>
+            <li class="nav-item mb-2">
+                <a class="nav-link text-light" href="/admin/restaurantes">
+                    <i class="fas fa-store me-2"></i>Restaurantes
+                </a>
+            </li>
+            <li class="nav-item mb-2">
+                <a class="nav-link text-light" href="/admin/cobros">
+                    <i class="fas fa-money-bill-wave me-2"></i>Cobros y Comisiones
+                </a>
+            </li>
+            <li class="nav-item mb-2">
+                <a class="nav-link text-light" href="/admin/productos">
+                    <i class="fas fa-utensils me-2"></i>Productos
+                </a>
+            </li>
+            <li class="nav-item mb-2">
+                <a class="nav-link text-light" href="/admin/comprobantes">
+                    <i class="fas fa-receipt me-2"></i>Comprobantes
+                </a>
+            </li>
+            <li class="nav-item mb-2">
+                <a class="nav-link text-light" href="/admin/usuarios">
+                    <i class="fas fa-users me-2"></i>Usuarios
+                </a>
+            </li>
+            <li class="nav-item mb-2">
+                <a class="nav-link text-light" href="/admin/reportes">
+                    <i class="fas fa-chart-line me-2"></i>Reportes
+                </a>
+            </li>
+            <hr class="text-secondary">
+            <li class="nav-item mb-2">
+                <a class="nav-link text-light" href="/admin/configuracion">
+                    <i class="fas fa-cog me-2"></i>Configuración
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-light" href="/" target="_blank">
+                    <i class="fas fa-external-link-alt me-2"></i>Ver Sitio
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="admin-content">
+        <!-- Top Bar -->
+        <div class="admin-topbar bg-white shadow-sm px-4 py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0">Dashboard Administrativo</h5>
+                <small class="text-muted">Panel de control general</small>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="me-3">
+                    <i class="fas fa-user-shield me-1"></i>
+                    <%= user.nombre %> <%= user.apellido %>
+                </span>
+                <a href="/auth/logout" class="btn btn-outline-danger btn-sm">
+                    <i class="fas fa-sign-out-alt me-1"></i>Salir
+                </a>
+            </div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div class="p-4">
+            <!-- Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6>Total Restaurantes</h6>
+                                    <h3><%= stats.restaurantes.total %></h3>
+                                    <small><%= stats.restaurantes.activos %> activos</small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-store fa-2x opacity-75"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6>Ventas Totales</h6>
+                                    <h3>$<%= Math.round(stats.ventas.ventas_totales) %></h3>
+                                    <small>Últimos 30 días</small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-chart-line fa-2x opacity-75"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6>Comisiones</h6>
+                                    <h3>$<%= Math.round(stats.ventas.comisiones_totales) %></h3>
+                                    <small>Últimos 30 días</small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-money-bill-wave fa-2x opacity-75"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6>Ticket Promedio</h6>
+                                    <h3>$<%= Math.round(stats.ventas.ticket_promedio) %></h3>
+                                    <small>Últimos 30 días</small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-shopping-cart fa-2x opacity-75"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-chart-area me-2"></i>
+                                Ventas Últimos 7 Días
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="ventasChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-tasks me-2"></i>
+                                Acciones Rápidas
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="/admin/restaurantes/crear/nuevo" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i>Nuevo Restaurante
+                                </a>
+                                <a href="/admin/cobros/generar" class="btn btn-success">
+                                    <i class="fas fa-calculator me-2"></i>Generar Cobros
+                                </a>
+                                <a href="/admin/comprobantes?estado=pendiente" class="btn btn-warning">
+                                    <i class="fas fa-clock me-2"></i>Revisar Pagos
+                                </a>
+                                <a href="/admin/reportes" class="btn btn-info">
+                                    <i class="fas fa-file-alt me-2"></i>Ver Reportes
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="fas fa-receipt me-2"></i>
+                                Cobros Recientes
+                            </h6>
+                            <a href="/admin/cobros" class="btn btn-sm btn-outline-primary">Ver todos</a>
+                        </div>
+                        <div class="card-body p-0">
+                            <% if (cobrosRecientes.length > 0) { %>
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Restaurante</th>
+                                                <th>Período</th>
+                                                <th>Monto</th>
+                                                <th>Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <% cobrosRecientes.forEach(cobro => { %>
+                                                <tr>
+                                                    <td>
+                                                        <small class="fw-bold"><%= cobro.restaurante_nombre %></small>
+                                                    </td>
+                                                    <td>
+                                                        <small>
+                                                            <%= new Date(cobro.semana_inicio).toLocaleDateString('es-AR') %><br>
+                                                            al <%= new Date(cobro.semana_fin).toLocaleDateString('es-AR') %>
+                                                        </small>
+                                                    </td>
+                                                    <td>
+                                                        <strong>$<%= cobro.monto_comision.toLocaleString() %></strong><br>
+                                                        <small class="text-muted">de $<%= cobro.ventas_brutas.toLocaleString() %></small>
+                                                    </td>
+                                                    <td>
+                                                        <% if (cobro.estado === 'pagado') { %>
+                                                            <span class="badge bg-success">Pagado</span>
+                                                        <% } else if (cobro.estado === 'pendiente') { %>
+                                                            <span class="badge bg-warning">Pendiente</span>
+                                                        <% } else if (cobro.estado === 'vencido') { %>
+                                                            <span class="badge bg-danger">Vencido</span>
+                                                        <% } %>
+                                                        <% if (cobro.comprobantes_subidos > 0) { %>
+                                                            <br><small class="text-info">
+                                                                <i class="fas fa-paperclip"></i> <%= cobro.comprobantes_subidos %>
+                                                            </small>
+                                                        <% } %>
+                                                    </td>
+                                                </tr>
+                                            <% }) %>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <% } else { %>
+                                <div class="text-center py-4">
+                                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted">No hay cobros recientes</p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-bell me-2"></i>
+                                Notificaciones
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Sistema funcionando correctamente</strong><br>
+                                <small>Última actualización: <%= new Date().toLocaleString('es-AR') %></small>
+                            </div>
+                            
+                            <div class="notification-item d-flex align-items-start mb-3">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-clock text-warning"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-2">
+                                    <small class="fw-bold">Recordatorio semanal</small><br>
+                                    <small class="text-muted">Generar cobros de la semana anterior</small>
+                                </div>
+                            </div>
+                            
+                            <div class="notification-item d-flex align-items-start">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-2">
+                                    <small class="fw-bold">Sistema actualizado</small><br>
+                                    <small class="text-muted">Panel de administración v2.0</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.admin-sidebar {
+    width: 280px;
+    flex-shrink: 0;
+}
+
+.admin-content {
+    flex-grow: 1;
+    background-color: #f8f9fa;
+}
+
+.admin-topbar {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.nav-link.active {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 0.375rem;
+}
+
+.notification-item:last-child {
+    margin-bottom: 0 !important;
+}
+
+.sidebar-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 768px) {
+    .admin-layout {
+        flex-direction: column;
+    }
+    
+    .admin-sidebar {
+        width: 100%;
+    }
+}
+</style>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Ventas Chart
+const ctx = document.getElementById('ventasChart').getContext('2d');
+const ventasData = {
+    labels: [
+        <% ventasUltimos7Dias.forEach((dia, index) => { %>
+            '<%= new Date(dia.fecha).toLocaleDateString("es-AR", {weekday: "short", day: "numeric"}) %>'<%= index < ventasUltimos7Dias.length - 1 ? ',' : '' %>
+        <% }) %>
+    ],
+    datasets: [{
+        label: 'Ventas ($)',
+        data: [
+            <% ventasUltimos7Dias.forEach((dia, index) => { %>
+                <%= dia.ventas || 0 %><%= index < ventasUltimos7Dias.length - 1 ? ',' : '' %>
+            <% }) %>
+        ],
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        tension: 0.1,
+        fill: true
+    }]
+};
+
+new Chart(ctx, {
+    type: 'line',
+    data: ventasData,
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Auto refresh every 5 minutes
+setTimeout(() => {
+    location.reload();
+}, 300000);
+</script>
+
+<%- include('../partials/footer') %>
