@@ -4,6 +4,7 @@ const path = require('path');
 const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const db = require('../config/database');
+const ejs = require('ejs');
 
 // Middleware to check if user is restaurant owner
 function requireRestaurant(req, res, next) {
@@ -472,6 +473,72 @@ router.get('/orders', requireRestaurant, async (req, res) => {
       error: {}
     });
   }
+});
+
+// Get order details for restaurant
+router.get('/orders/:id/details', requireRestaurant, async (req, res) => {
+    try {
+        const orderId = req.params.id;
+        const userId = req.session.user.id;
+        
+        // Get restaurant
+        const [restaurants] = await db.execute(`
+            SELECT id FROM restaurantes WHERE usuario_id = ?
+        `, [userId]);
+        
+        if (restaurants.length === 0) {
+            return res.json({
+                success: false,
+                message: 'Restaurante no encontrado'
+            });
+        }
+        
+        const restaurantId = restaurants[0].id;
+        
+        // Get order info
+        const [orders] = await db.execute(`
+            SELECT p.*, u.nombre as cliente_nombre, u.apellido as cliente_apellido,
+                   u.telefono as cliente_telefono, u.email as cliente_email
+            FROM pedidos p
+            JOIN usuarios u ON p.cliente_id = u.id
+            WHERE p.id = ? AND p.restaurante_id = ?
+        `, [orderId, restaurantId]);
+        
+        if (orders.length === 0) {
+            return res.json({
+                success: false,
+                message: 'Pedido no encontrado'
+            });
+        }
+        
+        const order = orders[0];
+        
+        // Get order items
+        const [items] = await db.execute(`
+            SELECT ip.*, pr.nombre, pr.imagen
+            FROM items_pedido ip
+            JOIN productos pr ON ip.producto_id = pr.id
+            WHERE ip.pedido_id = ?
+        `, [orderId]);
+        
+        // Render the order details partial
+        const html = await ejs.renderFile('views/partials/order-details-restaurant.ejs', {
+            order,
+            items
+        });
+        
+        res.json({
+            success: true,
+            html
+        });
+        
+    } catch (error) {
+        console.error('Error cargando detalles del pedido:', error);
+        res.json({
+            success: false,
+            message: 'Error cargando los detalles del pedido'
+        });
+    }
 });
 
 // Update order status
@@ -1078,7 +1145,7 @@ router.post('/settings', upload.fields([
                 JSON.stringify(diasOperacion),
                 req.body.delivery === 'on' ? 1 : 0,
                 req.body.pedidos_online === 'on' ? 1 : 0,
-                req.body.costo_delivery || '0.00',
+                parseFloat(req.body.costo_delivery) || 0,
                 restauranteId,
                 req.session.user.id
             ];
@@ -1166,6 +1233,47 @@ router.post('/settings', upload.fields([
         return res.status(500).json({ 
             success: false, 
             error: 'Error al actualizar la configuración' 
+        });
+    }
+});
+
+// Toggle restaurant status
+router.post('/toggle-status', requireRestaurant, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const { accion } = req.body;
+        
+        // Get restaurant
+        const [restaurants] = await db.execute(`
+            SELECT id FROM restaurantes WHERE usuario_id = ?
+        `, [userId]);
+        
+        if (restaurants.length === 0) {
+            return res.json({
+                success: false,
+                message: 'Restaurante no encontrado'
+            });
+        }
+        
+        const restaurantId = restaurants[0].id;
+        const nuevoEstado = accion === 'activar' ? 1 : 0;
+        
+        // Update restaurant status
+        await db.execute(
+            'UPDATE restaurantes SET activo = ? WHERE id = ? AND usuario_id = ?',
+            [nuevoEstado, restaurantId, userId]
+        );
+        
+        res.json({
+            success: true,
+            message: `Restaurante ${accion === 'activar' ? 'activado' : 'desactivado'} exitosamente`
+        });
+        
+    } catch (error) {
+        console.error('Error cambiando estado del restaurante:', error);
+        res.json({
+            success: false,
+            message: 'Error al cambiar el estado del restaurante'
         });
     }
 });

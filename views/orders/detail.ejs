@@ -1,0 +1,265 @@
+<%- include('../partials/header') %>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Order Status Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-receipt me-2"></i>
+                            Pedido #<%= order.numero_pedido %>
+                        </h5>
+                        <span class="badge bg-<%= order.estado === 'pendiente' ? 'warning' : 
+                                               order.estado === 'confirmado' ? 'info' : 
+                                               order.estado === 'en_preparacion' ? 'primary' : 
+                                               order.estado === 'en_camino' ? 'info' : 
+                                               order.estado === 'entregado' ? 'success' : 
+                                               order.estado === 'cancelado' ? 'danger' : 'secondary' %>">
+                            <%= order.estado.charAt(0).toUpperCase() + order.estado.slice(1).replace('_', ' ') %>
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Restaurant Info -->
+                    <div class="restaurant-info mb-4 p-3 bg-light rounded">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-store text-primary fs-4 me-3"></i>
+                            <div>
+                                <h6 class="mb-1"><%= restaurant && restaurant.nombre ? restaurant.nombre : 'Restaurante no disponible' %></h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    <%= restaurant && restaurant.direccion ? restaurant.direccion : 'Dirección no disponible' %>
+                                </small>
+                                <% if (restaurant && restaurant.telefono) { %>
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-phone me-1"></i>
+                                        <%= restaurant.telefono %>
+                                    </small>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Items -->
+                    <div class="order-items mb-4">
+                        <h6 class="mb-3">Productos</h6>
+                        <% if (items && items.length > 0) { %>
+                            <% items.forEach(item => { %>
+                                <div class="order-item d-flex align-items-center mb-3 p-3 border rounded">
+                                    <img src="<%= item.imagen || '/images/no-image.png' %>" 
+                                         alt="<%= item.nombre || 'Producto' %>" 
+                                         class="rounded me-3" width="80" height="80"
+                                         style="object-fit: cover;">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1"><%= item.nombre || 'Producto sin nombre' %></h6>
+                                        <% if (item.notas_especiales) { %>
+                                            <small class="text-muted d-block mb-1">
+                                                <i class="fas fa-comment-alt me-1"></i>
+                                                <%= item.notas_especiales %>
+                                            </small>
+                                        <% } %>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-muted">Cantidad: <%= item.cantidad || 0 %></span>
+                                            <strong>$<%= (Number(item.precio_unitario || 0) * Number(item.cantidad || 0)).toFixed(2) %></strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        <% } else { %>
+                            <div class="alert alert-info">
+                                No hay productos en este pedido
+                            </div>
+                        <% } %>
+                    </div>
+
+                    <!-- Order Summary -->
+                    <div class="order-summary p-3 bg-light rounded">
+                        <h6 class="mb-3">Resumen del Pedido</h6>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Subtotal:</span>
+                            <strong>$<%= Number(order && order.subtotal ? order.subtotal : 0).toFixed(2) %></strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Envío:</span>
+                            <strong>$<%= Number(order && order.costo_delivery ? order.costo_delivery : 0).toFixed(2) %></strong>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="fs-5">Total:</span>
+                            <strong class="fs-5 text-primary">$<%= Number(order && order.total ? order.total : 0).toFixed(2) %></strong>
+                        </div>
+                    </div>
+
+                    <!-- Delivery Info -->
+                    <div class="delivery-info mt-4">
+                        <h6 class="mb-3">Información de Entrega</h6>
+                        <div class="p-3 bg-light rounded">
+                            <p class="mb-2">
+                                <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                                <strong>Dirección:</strong> <%= order && order.direccion_entrega ? order.direccion_entrega : 'No disponible' %>
+                            </p>
+                            <% if (order && order.notas_especiales) { %>
+                                <p class="mb-0">
+                                    <i class="fas fa-comment-alt text-primary me-2"></i>
+                                    <strong>Notas:</strong> <%= order.notas_especiales %>
+                                </p>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Payment Info -->
+                    <div class="payment-info mt-4">
+                        <h6 class="mb-3">Información de Pago</h6>
+                        <div class="p-3 bg-light rounded">
+                            <p class="mb-0">
+                                <i class="fas fa-credit-card text-primary me-2"></i>
+                                <strong>Método de Pago:</strong> 
+                                <%= order && order.metodo_pago ? 
+                                    (order.metodo_pago === 'mercadopago' ? 'MercadoPago' :
+                                     order.metodo_pago === 'efectivo' ? 'Efectivo' :
+                                     order.metodo_pago === 'transferencia' ? 'Transferencia Bancaria' :
+                                     order.metodo_pago) : 'No disponible' %>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Order Timeline -->
+                    <div class="order-timeline mt-4">
+                        <h6 class="mb-3">Estado del Pedido</h6>
+                        <div class="timeline">
+                            <% const estados = ['pendiente', 'confirmado', 'en_preparacion', 'en_camino', 'entregado'] %>
+                            <% estados.forEach((estado, index) => { %>
+                                <div class="timeline-item d-flex mb-3">
+                                    <div class="timeline-icon me-3">
+                                        <div class="timeline-dot <%= order && order.estado === estado ? 'active' : 
+                                                                   order && estados.indexOf(order.estado) > index ? 'completed' : '' %>">
+                                            <i class="fas fa-<%= estado === 'pendiente' ? 'clock' :
+                                                               estado === 'confirmado' ? 'check' :
+                                                               estado === 'en_preparacion' ? 'utensils' :
+                                                               estado === 'en_camino' ? 'truck' :
+                                                               'check-circle' %>"></i>
+                                        </div>
+                                        <% if (index < estados.length - 1) { %>
+                                            <div class="timeline-line"></div>
+                                        <% } %>
+                                    </div>
+                                    <div class="timeline-content">
+                                        <h6 class="mb-1"><%= estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ') %></h6>
+                                        <small class="text-muted">
+                                            <%= order && order.estado === estado ? 'Estado actual' :
+                                               order && estados.indexOf(order.estado) > index ? 'Completado' :
+                                               'Pendiente' %>
+                                        </small>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-between">
+                <a href="/orders" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Volver a Mis Pedidos
+                </a>
+                <% if (order && order.estado === 'pendiente') { %>
+                    <button onclick="cancelOrder('<%= order.id %>')" class="btn btn-outline-danger">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar Pedido
+                    </button>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+}
+
+.timeline-item {
+    position: relative;
+}
+
+.timeline-icon {
+    position: relative;
+    width: 40px;
+    text-align: center;
+}
+
+.timeline-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+}
+
+.timeline-dot.active {
+    background: #0d6efd;
+    color: white;
+}
+
+.timeline-dot.completed {
+    background: #198754;
+    color: white;
+}
+
+.timeline-line {
+    position: absolute;
+    left: 50%;
+    top: 40px;
+    bottom: -20px;
+    width: 2px;
+    background: #e9ecef;
+    transform: translateX(-50%);
+}
+
+.timeline-item:last-child .timeline-line {
+    display: none;
+}
+
+.timeline-content {
+    flex: 1;
+}
+</style>
+
+<script>
+function cancelOrder(orderId) {
+    if (!confirm('¿Estás seguro de que quieres cancelar este pedido?')) {
+        return;
+    }
+
+    fetch(`/orders/${orderId}/cancel`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Pedido cancelado exitosamente', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            showNotification(data.message || 'Error cancelando el pedido', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error cancelando el pedido', 'error');
+    });
+}
+</script>
+
+<%- include('../partials/footer') %> 

@@ -1,0 +1,166 @@
+/* Estilos para el panel de administración */
+
+/* Layout principal */
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.admin-sidebar {
+    width: 250px;
+    background-color: #343a40;
+    color: #fff;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1040;
+    transition: all 0.3s ease;
+}
+
+/* Contenido principal */
+.admin-content {
+    flex: 1;
+    margin-left: 250px;
+    padding-top: 56px; /* Altura del navbar */
+    min-height: 100vh;
+    background-color: #f8f9fa;
+}
+
+/* Topbar */
+.admin-topbar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 250px;
+    z-index: 1030;
+    height: 56px;
+    background-color: #fff;
+    border-bottom: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+/* Responsive */
+@media (max-width: 991.98px) {
+    .admin-sidebar {
+        transform: translateX(-100%);
+    }
+    
+    .admin-sidebar.show {
+        transform: translateX(0);
+    }
+    
+    .admin-content {
+        margin-left: 0;
+    }
+    
+    .admin-topbar {
+        left: 0;
+    }
+}
+
+/* Contenido de las páginas */
+.admin-page-content {
+    padding: 1.5rem;
+}
+
+/* Cards y contenedores */
+.admin-card {
+    background-color: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 1.5rem;
+}
+
+.admin-card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #dee2e6;
+    background-color: #fff;
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+}
+
+.admin-card-body {
+    padding: 1.25rem;
+}
+
+/* Formularios */
+.admin-form-group {
+    margin-bottom: 1rem;
+}
+
+.admin-form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+/* Tablas */
+.admin-table {
+    width: 100%;
+    margin-bottom: 1rem;
+    background-color: #fff;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.admin-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    padding: 0.75rem;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.admin-table td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Botones de acción */
+.admin-action-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.25rem;
+    margin-right: 0.25rem;
+}
+
+/* Estados y badges */
+.admin-badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+    border-radius: 0.25rem;
+}
+
+/* Alertas y mensajes */
+.admin-alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+}
+
+.admin-alert-success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.admin-alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.admin-alert-warning {
+    background-color: #fff3cd;
+    border-color: #ffeeba;
+    color: #856404;
+}
+
+.admin-alert-info {
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+    color: #0c5460;
+} 

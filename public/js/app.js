@@ -51,8 +51,10 @@ function initializeApp() {
   anchorLinks.forEach(link => {
     link.addEventListener('click', function(e) {
       e.preventDefault();
-      const target = document.querySelector(this.getAttribute('href'));
-      if (target) {
+      const href = this.getAttribute('href');
+      if (href && href !== '#') {
+        const target = document.querySelector(href);
+        if (target) {
         target.scrollIntoView({
           behavior: 'smooth',
           block: 'start'
@@ -72,6 +74,15 @@ function initializeApp() {
           navbarToggler.click();
         }
       }
+    });
+  }
+
+  // Handle cart button click
+  const cartButton = document.querySelector('.cart-button');
+  if (cartButton) {
+    cartButton.addEventListener('click', function(event) {
+      console.log('Cart button clicked in app.js');
+      toggleCartSidebar(event);
     });
   }
 }

@@ -1,0 +1,328 @@
+<%- include('../partials/header') %>
+
+<!-- Admin Sidebar -->
+<div class="admin-layout">
+    <%- include('partials/sidebar') %>
+
+    <!-- Main Content -->
+    <div class="admin-content">
+        <!-- Top Bar -->
+        <div class="admin-topbar bg-white shadow-sm px-4 py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0"><%= restaurante.nombre %></h5>
+                <small class="text-muted">Detalles del restaurante</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/admin/restaurantes/<%= restaurante.id %>/editar" class="btn btn-primary">
+                    <i class="fas fa-edit me-1"></i>Editar
+                </a>
+                <button class="btn btn-outline-<%= restaurante.activo ? 'danger' : 'success' %>" 
+                        onclick="toggleEstado(<%= restaurante.id %>, '<%= restaurante.activo ? 'desactivar' : 'activar' %>')">
+                    <i class="fas fa-<%= restaurante.activo ? 'times' : 'check' %> me-1"></i>
+                    <%= restaurante.activo ? 'Desactivar' : 'Activar' %>
+                </button>
+                <a href="/admin/restaurantes" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Volver
+                </a>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-4">
+            <!-- Restaurant Info -->
+            <div class="row">
+                <!-- Main Info -->
+                <div class="col-md-8">
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-4">
+                                <img src="/uploads/<%= restaurante.imagen_logo || 'no-image.png' %>" 
+                                     alt="<%= restaurante.nombre %>" 
+                                     class="rounded me-3" width="100" height="100"
+                                     onerror="this.src='/images/no-image.png'">
+                                <div>
+                                    <h4 class="mb-1"><%= restaurante.nombre %></h4>
+                                    <div class="d-flex gap-2 mb-2">
+                                        <span class="badge <%= restaurante.activo ? 'bg-success' : 'bg-danger' %>">
+                                            <%= restaurante.activo ? 'Activo' : 'Inactivo' %>
+                                        </span>
+                                        <span class="badge <%= restaurante.verificado ? 'bg-info' : 'bg-warning' %>">
+                                            <%= restaurante.verificado ? 'Verificado' : 'Pendiente' %>
+                                        </span>
+                                    </div>
+                                    <p class="text-muted mb-0">
+                                        <i class="fas fa-map-marker-alt me-1"></i>
+                                        <%= restaurante.direccion %>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <h6 class="text-primary mb-3">Información de Contacto</h6>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2">
+                                            <i class="fas fa-phone me-2 text-muted"></i>
+                                            <%= restaurante.telefono || 'No especificado' %>
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-envelope me-2 text-muted"></i>
+                                            <%= restaurante.email_contacto %>
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-clock me-2 text-muted"></i>
+                                            <%= restaurante.horario_apertura %> - <%= restaurante.horario_cierre %>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-primary mb-3">Detalles del Negocio</h6>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2">
+                                            <i class="fas fa-truck me-2 text-muted"></i>
+                                            Delivery: <%= restaurante.costo_delivery ? `$${restaurante.costo_delivery}` : 'No disponible' %>
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-star me-2 text-muted"></i>
+                                            Calificación: <%= restaurante.calificacion_promedio ? 
+                                                (parseFloat(restaurante.calificacion_promedio) || 0).toFixed(1) : 
+                                                'Sin calificaciones' %>
+                                            <% if (restaurante.total_calificaciones) { %>
+                                                (<%= restaurante.total_calificaciones %> reseñas)
+                                            <% } %>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <h6 class="text-primary mb-3">Descripción</h6>
+                                <p><%= restaurante.descripcion %></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Products -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-utensils me-2"></i>
+                                Productos (<%= productos.length %>)
+                            </h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <% if (productos.length > 0) { %>
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Producto</th>
+                                                <th>Categoría</th>
+                                                <th>Precio</th>
+                                                <th>Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <% productos.forEach(producto => { %>
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <% if (producto.imagen) { %>
+                                                                <img src="/uploads/<%= producto.imagen %>" 
+                                                                     alt="<%= producto.nombre %>" 
+                                                                     class="rounded me-2" width="40" height="40"
+                                                                     onerror="this.src='/images/no-image.png'">
+                                                            <% } %>
+                                                            <div>
+                                                                <div class="fw-bold"><%= producto.nombre %></div>
+                                                                <small class="text-muted"><%= producto.descripcion.substring(0, 50) %>...</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td><%= producto.categoria_nombre || 'Sin categoría' %></td>
+                                                    <td>$<%= producto.precio %></td>
+                                                    <td>
+                                                        <span class="badge <%= producto.disponible ? 'bg-success' : 'bg-danger' %>">
+                                                            <%= producto.disponible ? 'Disponible' : 'No disponible' %>
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            <% }) %>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <% } else { %>
+                                <div class="text-center py-4">
+                                    <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
+                                    <h5>No hay productos</h5>
+                                    <p class="text-muted">Este restaurante aún no ha agregado productos</p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="col-md-4">
+                    <!-- Owner Info -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-user me-2"></i>
+                                Propietario
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="flex-shrink-0">
+                                    <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                         style="width: 50px; height: 50px;">
+                                        <%= restaurante.nombre.charAt(0) %><%= restaurante.apellido.charAt(0) %>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-1"><%= restaurante.nombre %> <%= restaurante.apellido %></h6>
+                                    <p class="text-muted mb-0"><%= restaurante.email %></p>
+                                </div>
+                            </div>
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2">
+                                    <i class="fas fa-phone me-2 text-muted"></i>
+                                    <%= restaurante.telefono || 'No especificado' %>
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-calendar me-2 text-muted"></i>
+                                    Registrado el <%= new Date(restaurante.fecha_registro).toLocaleDateString() %>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Recent Orders -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-shopping-bag me-2"></i>
+                                Pedidos Recientes
+                            </h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <% if (pedidos.length > 0) { %>
+                                <div class="list-group list-group-flush">
+                                    <% pedidos.forEach(pedido => { %>
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <div class="fw-bold">#<%= pedido.id %></div>
+                                                <span class="badge bg-<%= 
+                                                    pedido.estado === 'entregado' ? 'success' : 
+                                                    pedido.estado === 'cancelado' ? 'danger' : 
+                                                    pedido.estado === 'pendiente' ? 'warning' : 'info' 
+                                                %>">
+                                                    <%= pedido.estado.charAt(0).toUpperCase() + pedido.estado.slice(1) %>
+                                                </span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">
+                                                    <%= pedido.cliente_nombre %>
+                                                </small>
+                                                <strong>$<%= pedido.total %></strong>
+                                            </div>
+                                            <small class="text-muted d-block">
+                                                <%= new Date(pedido.fecha_pedido).toLocaleString() %>
+                                            </small>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                            <% } else { %>
+                                <div class="text-center py-4">
+                                    <i class="fas fa-shopping-bag fa-3x text-muted mb-3"></i>
+                                    <h5>No hay pedidos</h5>
+                                    <p class="text-muted">Este restaurante aún no tiene pedidos</p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Weekly Charges -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-money-bill me-2"></i>
+                                Cobros Semanales
+                            </h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <% if (cobros.length > 0) { %>
+                                <div class="list-group list-group-flush">
+                                    <% cobros.forEach(cobro => { %>
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <div>
+                                                    <div class="fw-bold">
+                                                        <%= new Date(cobro.semana_inicio).toLocaleDateString() %> - 
+                                                        <%= new Date(cobro.semana_fin).toLocaleDateString() %>
+                                                    </div>
+                                                    <small class="text-muted">
+                                                        <%= cobro.total_pedidos %> pedidos
+                                                    </small>
+                                                </div>
+                                                <span class="badge bg-<%= 
+                                                    cobro.estado === 'pagado' ? 'success' : 
+                                                    cobro.estado === 'pendiente' ? 'warning' : 'info' 
+                                                %>">
+                                                    <%= cobro.estado.charAt(0).toUpperCase() + cobro.estado.slice(1) %>
+                                                </span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small>Comisión:</small>
+                                                <strong>$<%= cobro.monto_comision %></strong>
+                                            </div>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                            <% } else { %>
+                                <div class="text-center py-4">
+                                    <i class="fas fa-money-bill fa-3x text-muted mb-3"></i>
+                                    <h5>No hay cobros</h5>
+                                    <p class="text-muted">Este restaurante aún no tiene cobros generados</p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Toggle restaurant status
+function toggleEstado(restaurantId, accion) {
+    const texto = accion === 'activar' ? 'activar' : 'desactivar';
+    
+    if (confirm(`¿Estás seguro de que quieres ${texto} este restaurante?`)) {
+        fetch(`/admin/restaurantes/${restaurantId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ accion: accion })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(`Restaurante ${texto}do exitosamente`, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.message || 'Error procesando la acción', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error procesando la acción', 'error');
+        });
+    }
+}
+</script>
+
+<%- include('../partials/footer') %> 

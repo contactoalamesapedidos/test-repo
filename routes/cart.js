@@ -31,6 +31,7 @@ function updateCartTotals(req) {
 router.post('/add', async (req, res) => {
   try {
     const { productId, quantity = 1, specialInstructions = '' } = req.body;
+    console.log('Intentando agregar al carrito:', { productId, quantity, specialInstructions });
     
     // Get product info
     const [products] = await db.execute(`
@@ -41,6 +42,8 @@ router.post('/add', async (req, res) => {
       JOIN restaurantes r ON p.restaurante_id = r.id
       WHERE p.id = ? AND p.disponible = 1 AND r.activo = 1 AND r.verificado = 1
     `, [productId]);
+    
+    console.log('Producto encontrado:', products[0] || 'No encontrado');
     
     if (products.length === 0) {
       return res.json({ 
@@ -53,6 +56,7 @@ router.post('/add', async (req, res) => {
 
     // Verificar que el restaurante esté activo y verificado
     if (!product.activo || !product.verificado) {
+      console.log('Restaurante no disponible:', { activo: product.activo, verificado: product.verificado });
       return res.json({
         success: false,
         message: 'El restaurante no está disponible en este momento'
@@ -73,17 +77,12 @@ router.post('/add', async (req, res) => {
     }
     
     const estaAbiertoHoy = diasOperacion.includes(currentDay);
-    
-    console.log('Validación de horarios:', {
-        horaActual: now.toLocaleTimeString(),
-        diaActual: currentDay,
-        diasOperacion,
-        estaAbiertoHoy,
-        horarioApertura: product.horario_apertura,
-        horarioCierre: product.horario_cierre,
-        activo: product.activo,
-        verificado: product.verificado,
-        diasOperacionOriginal: product.dias_operacion
+    console.log('Estado del restaurante:', { 
+      currentDay, 
+      diasOperacion, 
+      estaAbiertoHoy,
+      horario_apertura: product.horario_apertura,
+      horario_cierre: product.horario_cierre
     });
     
     // Crear objetos Date para las horas de apertura y cierre usando la hora actual
@@ -101,14 +100,11 @@ router.post('/add', async (req, res) => {
     }
     
     const abierto = estaAbiertoHoy && now >= apertura && now <= cierre;
-
-    console.log('Resultado de validación:', {
-        horaApertura: apertura.toLocaleTimeString(),
-        horaCierre: cierre.toLocaleTimeString(),
-        esDespuesDeApertura: now >= apertura,
-        esAntesDeCierre: now <= cierre,
-        abierto,
-        horaActual: now.toLocaleTimeString()
+    console.log('Horarios:', { 
+      ahora: now.toLocaleTimeString(),
+      apertura: apertura.toLocaleTimeString(),
+      cierre: cierre.toLocaleTimeString(),
+      abierto
     });
 
     // Verificar si el restaurante está abierto
@@ -120,9 +116,14 @@ router.post('/add', async (req, res) => {
     }
     
     const cart = initCart(req);
+    console.log('Carrito actual:', cart);
     
     // Check if cart has products from different restaurant
     if (cart.length > 0 && cart[0].restaurante_id !== product.restaurante_id) {
+      console.log('Intento de agregar producto de otro restaurante:', {
+        carrito_actual: cart[0].restaurante_id,
+        nuevo_producto: product.restaurante_id
+      });
       return res.json({
         success: false,
         message: 'Solo puedes agregar productos del mismo restaurante',
@@ -140,9 +141,10 @@ router.post('/add', async (req, res) => {
     if (existingItemIndex >= 0) {
       // Update quantity
       cart[existingItemIndex].quantity += parseInt(quantity);
+      console.log('Actualizando cantidad de producto existente:', cart[existingItemIndex]);
     } else {
       // Add new item
-      cart.push({
+      const newItem = {
         productId: parseInt(productId),
         name: product.nombre,
         price: parseFloat(product.precio),
@@ -151,10 +153,13 @@ router.post('/add', async (req, res) => {
         restaurante_id: product.restaurante_id,
         restaurante_nombre: product.restaurante_nombre,
         imagen: product.imagen
-      });
+      };
+      cart.push(newItem);
+      console.log('Agregando nuevo producto al carrito:', newItem);
     }
     
     const totals = updateCartTotals(req);
+    console.log('Totales actualizados:', totals);
     
     res.json({
       success: true,
@@ -186,24 +191,27 @@ router.post('/clear', (req, res) => {
 // Update item quantity
 router.post('/update', (req, res) => {
   try {
-    const { productId, quantity } = req.body;
+    const { productId, change } = req.body;
     const cart = req.session.cart || [];
     
     const itemIndex = cart.findIndex(item => item.productId === parseInt(productId));
     
     if (itemIndex >= 0) {
-      if (parseInt(quantity) <= 0) {
-        // Remove item
+      const newQuantity = cart[itemIndex].quantity + parseInt(change);
+      
+      if (newQuantity <= 0) {
+        // Remove item if quantity would be 0 or negative
         cart.splice(itemIndex, 1);
       } else {
         // Update quantity
-        cart[itemIndex].quantity = parseInt(quantity);
+        cart[itemIndex].quantity = newQuantity;
       }
       
       const totals = updateCartTotals(req);
       
       res.json({
         success: true,
+        cart: cart,
         cartCount: totals.count,
         cartTotal: totals.subtotal
       });
@@ -258,32 +266,65 @@ router.post('/remove', (req, res) => {
 });
 
 // View cart
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const cart = req.session.cart || [];
   const totals = updateCartTotals(req);
+  
+  let deliveryFee = 0;
+  if (cart.length > 0) {
+    // Obtener el costo de envío del restaurante
+    const [restaurants] = await db.execute(`
+      SELECT costo_delivery FROM restaurantes WHERE id = ?
+    `, [cart[0].restaurante_id]);
+    
+    if (restaurants.length > 0) {
+      deliveryFee = parseFloat(restaurants[0].costo_delivery) || 0;
+    }
+  }
   
   res.render('cart/index', {
     title: 'Carrito de Compras - A la Mesa',
     cart,
     subtotal: totals.subtotal,
-    deliveryFee: cart.length > 0 ? 350 : 0, // Fixed delivery fee
-    total: totals.subtotal + (cart.length > 0 ? 350 : 0),
+    deliveryFee,
+    total: totals.subtotal + deliveryFee,
     scripts: ['/js/cart.js']
   });
 });
 
-// Get cart data (AJAX)
-router.get('/data', (req, res) => {
-  const cart = req.session.cart || [];
-  const totals = updateCartTotals(req);
-  
-  res.json({
-    cart,
-    count: totals.count,
-    subtotal: totals.subtotal,
-    deliveryFee: cart.length > 0 ? 350 : 0,
-    total: totals.subtotal + (cart.length > 0 ? 350 : 0)
-  });
+// Get cart data
+router.get('/data', async (req, res) => {
+  try {
+    const cart = req.session.cart || [];
+    const totals = updateCartTotals(req);
+    
+    let deliveryFee = 0;
+    if (cart.length > 0) {
+      // Obtener el costo de envío del restaurante
+      const [restaurants] = await db.execute(`
+        SELECT costo_delivery FROM restaurantes WHERE id = ?
+      `, [cart[0].restaurante_id]);
+      
+      if (restaurants.length > 0) {
+        deliveryFee = parseFloat(restaurants[0].costo_delivery) || 0;
+      }
+    }
+    
+    res.json({
+      success: true,
+      cart: cart,
+      cartCount: totals.count,
+      subtotal: totals.subtotal,
+      deliveryFee: deliveryFee,
+      total: totals.subtotal + deliveryFee
+    });
+  } catch (error) {
+    console.error('Error obteniendo datos del carrito:', error);
+    res.json({
+      success: false,
+      message: 'Error obteniendo datos del carrito'
+    });
+  }
 });
 
 module.exports = router;

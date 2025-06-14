@@ -441,4 +441,15 @@ router.post('/profile', requireAuth, async (req, res) => {
     }
 });
 
+// Logout route
+router.get('/logout', (req, res) => {
+    req.session.destroy(err => {
+        if (err) {
+            console.error('Error al cerrar sesión:', err);
+            return res.redirect('/');
+        }
+        res.redirect('/auth/login');
+    });
+});
+
 module.exports = router;

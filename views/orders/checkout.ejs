@@ -174,15 +174,69 @@
 </div>
 
 <!-- MercadoPago SDK -->
-<script src="https://sdk.mercadopago.com/js/v2"></script>
-
 <script>
-// Initialize MercadoPago
-const mp = new MercadoPago('<%= process.env.MERCADOPAGO_PUBLIC_KEY || "TEST-YOUR-PUBLIC-KEY" %>', {
-    locale: 'es-AR'
-});
+// Función para cargar el SDK de MercadoPago
+function loadMercadoPagoSDK() {
+    return new Promise((resolve, reject) => {
+        if (typeof MercadoPago !== 'undefined') {
+            resolve();
+            return;
+        }
 
+        const script = document.createElement('script');
+        script.src = 'https://sdk.mercadopago.com/js/v2';
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Error cargando el SDK de MercadoPago'));
+        document.body.appendChild(script);
+    });
+}
+
+let mp = null;
 let currentOrder = null;
+
+// Función para mostrar notificaciones
+function showNotification(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toast);
+    });
+}
+
+// Inicializar MercadoPago
+async function initializeMercadoPago() {
+    try {
+        await loadMercadoPagoSDK();
+        mp = new MercadoPago('<%= process.env.MERCADOPAGO_PUBLIC_KEY || "TEST-YOUR-PUBLIC-KEY" %>', {
+            locale: 'es-AR'
+        });
+        console.log('MercadoPago SDK inicializado correctamente');
+    } catch (error) {
+        console.error('Error inicializando MercadoPago:', error);
+        showNotification('Error cargando el sistema de pagos', 'error');
+    }
+}
+
+// Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', initializeMercadoPago);
 
 async function confirmOrder() {
     const deliveryAddress = document.getElementById('deliveryAddress').value.trim();
@@ -209,31 +263,39 @@ async function confirmOrder() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                deliveryAddress: deliveryAddress,
-                specialInstructions: specialInstructions,
-                paymentMethod: paymentMethod
+                direccion: deliveryAddress,
+                ciudad: 'La Plata', // Por ahora hardcodeado
+                codigo_postal: '1900', // Por ahora hardcodeado
+                instrucciones: specialInstructions,
+                metodo_pago: paymentMethod,
+                telefono_entrega: '' // Por ahora vacío
             })
         });
 
         const orderData = await orderResponse.json();
+        console.log('Respuesta del backend:', orderData); // Debug
 
         if (!orderData.success) {
             throw new Error(orderData.message || 'Error creando el pedido');
         }
 
-        currentOrder = orderData.order;
+        if (!orderData.orderId) {
+            throw new Error('No se recibió el ID del pedido');
+        }
 
         // Handle payment based on method
         if (paymentMethod === 'mercadopago') {
-            await processMercadoPagoPayment(orderData.order.id);
+            if (!mp) {
+                throw new Error('El sistema de pagos no está disponible');
+            }
+            await processMercadoPagoPayment(orderData.orderId);
         } else if (paymentMethod === 'efectivo') {
             // For cash payment, just redirect to success
-            window.location.href = `/orders/${orderData.order.id}?payment=cash`;
+            window.location.href = `/orders/${orderData.orderId}?payment=cash`;
         } else if (paymentMethod === 'transferencia') {
             // For transfer payment, show transfer details
-            window.location.href = `/orders/${orderData.order.id}?payment=transfer`;
+            window.location.href = `/orders/${orderData.orderId}?payment=transfer`;
         }
-
     } catch (error) {
         console.error('Error confirming order:', error);
         showNotification(error.message || 'Error confirmando el pedido', 'error');
@@ -258,6 +320,7 @@ async function processMercadoPagoPayment(orderId) {
         });
 
         const preferenceData = await preferenceResponse.json();
+        console.log('Respuesta de preferencia:', preferenceData); // Debug
 
         if (!preferenceData.success) {
             throw new Error(preferenceData.message || 'Error creando preferencia de pago');

@@ -192,16 +192,20 @@ router.get('/', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const orderId = req.params.id;
+    console.log('Buscando pedido:', orderId);
     
     // Get order info
     const [orders] = await db.execute(`
       SELECT p.*, r.nombre as restaurante_nombre, r.telefono as restaurante_telefono,
-             r.direccion as restaurante_direccion, u.nombre as repartidor_nombre
+             r.direccion as restaurante_direccion, r.imagen_logo as restaurante_logo,
+             u.nombre as repartidor_nombre, u.telefono as repartidor_telefono
       FROM pedidos p
       JOIN restaurantes r ON p.restaurante_id = r.id
       LEFT JOIN usuarios u ON p.repartidor_id = u.id
       WHERE p.id = ? AND p.cliente_id = ?
     `, [orderId, req.session.user.id]);
+    
+    console.log('Pedido encontrado:', orders[0] || 'No encontrado');
     
     if (orders.length === 0) {
       return res.status(404).render('error', {
@@ -215,19 +219,47 @@ router.get('/:id', requireAuth, async (req, res) => {
     
     // Get order items
     const [items] = await db.execute(`
-      SELECT ip.*, pr.nombre as producto_nombre, pr.imagen
+      SELECT ip.*, pr.nombre, pr.imagen
       FROM items_pedido ip
       JOIN productos pr ON ip.producto_id = pr.id
       WHERE ip.pedido_id = ?
     `, [orderId]);
     
-    order.items = items;
+    console.log('Items del pedido:', items);
     
-    res.render('orders/detail', {
+    // Get restaurant info
+    const [restaurants] = await db.execute(`
+      SELECT * FROM restaurantes WHERE id = ?
+    `, [order.restaurante_id]);
+    
+    console.log('Restaurante encontrado:', restaurants[0] || 'No encontrado');
+    
+    if (restaurants.length === 0) {
+      return res.status(404).render('error', {
+        title: 'Error',
+        message: 'No se encontró la información del restaurante',
+        error: {}
+      });
+    }
+    
+    const restaurant = restaurants[0];
+    
+    // Preparar los datos para la vista
+    const viewData = {
       title: `Pedido #${order.numero_pedido} - A la Mesa`,
       order,
+      items,
+      restaurant,
       scripts: ['/js/order-detail.js']
+    };
+    
+    console.log('Datos enviados a la vista:', {
+      orderId: order.id,
+      restaurantId: restaurant.id,
+      itemsCount: items.length
     });
+    
+    res.render('orders/detail', viewData);
     
   } catch (error) {
     console.error('Error cargando pedido:', error);

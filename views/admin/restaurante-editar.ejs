@@ -1,0 +1,218 @@
+<%- include('../partials/header') %>
+
+<div class="admin-layout">
+    <%- include('partials/sidebar') %>
+
+    <div class="admin-content">
+        <div class="admin-topbar bg-white shadow-sm px-4 py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0">Editar Restaurante</h5>
+                <small class="text-muted"><%= restaurante.nombre %></small>
+            </div>
+            <div>
+                <a href="/admin/restaurantes/<%= restaurante.id %>" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Volver
+                </a>
+            </div>
+        </div>
+
+        <div class="p-4">
+            <form id="editRestaurantForm" action="/admin/restaurantes/<%= restaurante.id %>/editar" method="POST" enctype="multipart/form-data">
+                <div class="row">
+                    <div class="col-md-8">
+                        <!-- Información Principal -->
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-header bg-white">
+                                <h6 class="mb-0">Información Principal</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="nombre" class="form-label">Nombre del Restaurante</label>
+                                    <input type="text" class="form-control" id="nombre" name="nombre" 
+                                           value="<%= restaurante.nombre %>" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="descripcion" class="form-label">Descripción</label>
+                                    <textarea class="form-control" id="descripcion" name="descripcion" 
+                                              rows="3" required><%= restaurante.descripcion %></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="direccion" class="form-label">Dirección</label>
+                                    <input type="text" class="form-control" id="direccion" name="direccion" 
+                                           value="<%= restaurante.direccion %>" required>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="telefono" class="form-label">Teléfono</label>
+                                            <input type="tel" class="form-control" id="telefono" name="telefono" 
+                                                   value="<%= restaurante.telefono %>">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="email_contacto" class="form-label">Email de Contacto</label>
+                                            <input type="email" class="form-control" id="email_contacto" name="email_contacto" 
+                                                   value="<%= restaurante.email_contacto %>" required>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Horarios -->
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-header bg-white">
+                                <h6 class="mb-0">Horarios</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="horario_apertura" class="form-label">Horario de Apertura</label>
+                                            <input type="time" class="form-control" id="horario_apertura" name="horario_apertura" 
+                                                   value="<%= restaurante.horario_apertura %>" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="horario_cierre" class="form-label">Horario de Cierre</label>
+                                            <input type="time" class="form-control" id="horario_cierre" name="horario_cierre" 
+                                                   value="<%= restaurante.horario_cierre %>" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Días de Operación</label>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <% const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] %>
+                                        <% 
+                                            let diasOperacion = [];
+                                            try {
+                                                if (restaurante.dias_operacion) {
+                                                    if (typeof restaurante.dias_operacion === 'string') {
+                                                        diasOperacion = JSON.parse(restaurante.dias_operacion);
+                                                    } else if (Array.isArray(restaurante.dias_operacion)) {
+                                                        diasOperacion = restaurante.dias_operacion;
+                                                    }
+                                                }
+                                            } catch (e) {
+                                                console.error('Error parsing dias_operacion:', e);
+                                                diasOperacion = [];
+                                            }
+                                        %>
+                                        <% dias.forEach((dia, index) => { %>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       name="dias_operacion[]" value="<%= index + 1 %>" 
+                                                       id="dia<%= index + 1 %>"
+                                                       <%= diasOperacion.includes(index + 1) ? 'checked' : '' %>>
+                                                <label class="form-check-label" for="dia<%= index + 1 %>">
+                                                    <%= dia %>
+                                                </label>
+                                            </div>
+                                        <% }) %>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <!-- Estado -->
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-header bg-white">
+                                <h6 class="mb-0">Estado</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="activo" name="activo" 
+                                               <%= restaurante.activo ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="activo">Restaurante Activo</label>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="verificado" name="verificado" 
+                                               <%= restaurante.verificado ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="verificado">Restaurante Verificado</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Imágenes -->
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-header bg-white">
+                                <h6 class="mb-0">Imágenes</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="imagen_logo" class="form-label">Logo</label>
+                                    <% if (restaurante.imagen_logo) { %>
+                                        <div class="mb-2">
+                                            <img src="/uploads/<%= restaurante.imagen_logo %>" 
+                                                 alt="Logo actual" class="img-thumbnail" style="max-height: 100px">
+                                        </div>
+                                    <% } %>
+                                    <input type="file" class="form-control" id="imagen_logo" name="imagen_logo" 
+                                           accept="image/*">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="imagen_banner" class="form-label">Banner</label>
+                                    <% if (restaurante.imagen_banner) { %>
+                                        <div class="mb-2">
+                                            <img src="/uploads/<%= restaurante.imagen_banner %>" 
+                                                 alt="Banner actual" class="img-thumbnail" style="max-height: 100px">
+                                        </div>
+                                    <% } %>
+                                    <input type="file" class="form-control" id="imagen_banner" name="imagen_banner" 
+                                           accept="image/*">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <button type="submit" class="btn btn-primary w-100 mb-2">
+                                    <i class="fas fa-save me-1"></i>Guardar Cambios
+                                </button>
+                                <a href="/admin/restaurantes/<%= restaurante.id %>" class="btn btn-outline-secondary w-100">
+                                    <i class="fas fa-times me-1"></i>Cancelar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('editRestaurantForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Validar días de operación
+    const diasOperacion = document.querySelectorAll('input[name="dias_operacion[]"]:checked');
+    if (diasOperacion.length === 0) {
+        alert('Debes seleccionar al menos un día de operación');
+        return;
+    }
+    
+    // Validar horarios
+    const apertura = document.getElementById('horario_apertura').value;
+    const cierre = document.getElementById('horario_cierre').value;
+    if (apertura >= cierre) {
+        alert('El horario de cierre debe ser posterior al de apertura');
+        return;
+    }
+    
+    // Si todo está bien, enviar el formulario
+    this.submit();
+});
+</script>
+
+<%- include('../partials/footer') %> 

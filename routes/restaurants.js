@@ -135,25 +135,13 @@ router.get('/:id', async (req, res) => {
     // Si dias_operacion es null, asumimos que opera todos los días
     let diasOperacion;
     try {
-        diasOperacion = restaurant.dias_operacion ? JSON.parse(restaurant.dias_operacion) : [1,2,3,4,5,6,7];
+        diasOperacion = restaurant.dias_operacion ? JSON.parse(restaurant.dias_operacion.trim()) : [1,2,3,4,5,6,7];
     } catch (e) {
         console.error('Error parseando dias_operacion:', e);
         diasOperacion = [1,2,3,4,5,6,7]; // Por defecto, todos los días
     }
     
     const estaAbiertoHoy = diasOperacion.includes(currentDay);
-    
-    console.log('Validación de horarios (restaurante):', {
-        horaActual: now.toLocaleTimeString(),
-        diaActual: currentDay,
-        diasOperacion,
-        estaAbiertoHoy,
-        horarioApertura: restaurant.horario_apertura,
-        horarioCierre: restaurant.horario_cierre,
-        activo: restaurant.activo,
-        verificado: restaurant.verificado,
-        diasOperacionOriginal: restaurant.dias_operacion
-    });
     
     // Crear objetos Date para las horas de apertura y cierre usando la hora actual
     const [aperturaHora, aperturaMinuto] = restaurant.horario_apertura.split(':');
@@ -170,15 +158,9 @@ router.get('/:id', async (req, res) => {
     }
     
     const abierto = estaAbiertoHoy && now >= apertura && now <= cierre;
-
-    console.log('Resultado de validación (restaurante):', {
-        horaApertura: apertura.toLocaleTimeString(),
-        horaCierre: cierre.toLocaleTimeString(),
-        esDespuesDeApertura: now >= apertura,
-        esAntesDeCierre: now <= cierre,
-        abierto,
-        horaActual: now.toLocaleTimeString()
-    });
+    
+    // Añadir el estado de apertura al objeto del restaurante
+    restaurant.abierto = abierto;
     
     // Get restaurant categories
     const [categories] = await db.execute(`

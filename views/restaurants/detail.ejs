@@ -1,61 +1,4 @@
-<%- include('../partials/header') %>
-
-<div class="restaurant-detail">
-    <!-- Restaurant Header -->
-    <div class="restaurant-header bg-light">
-        <div class="container">
-            <div class="row align-items-center py-4">
-                <div class="col-md-3">
-                    <img src="<%= restaurant.imagen_logo %>" 
-                         alt="<%= restaurant.nombre %>" 
-                         class="restaurant-logo img-fluid rounded shadow">
-                </div>
-                <div class="col-md-6">
-                    <h1 class="restaurant-name mb-2"><%= restaurant.nombre %></h1>
-                    <p class="restaurant-description text-muted mb-3"><%= restaurant.descripcion %></p>
-                    
-                    <div class="restaurant-info d-flex flex-wrap gap-3">
-                        <div class="info-item">
-                            <i class="fas fa-star text-warning"></i>
-                            <span><%= restaurant.calificacion_promedio || 0 %>/5</span>
-                        </div>
-                        <div class="info-item">
-                            <i class="fas fa-clock text-primary"></i>
-                            <span><%= restaurant.tiempo_entrega_min || 30 %>-<%= restaurant.tiempo_entrega_max || 45 %> min</span>
-                        </div>
-                        <div class="info-item">
-                            <i class="fas fa-shipping-fast text-success"></i>
-                            <span>Envío $<%= restaurant.costo_delivery || 0 %></span>
-                        </div>
-                        <div class="info-item">
-                            <i class="fas fa-map-marker-alt text-danger"></i>
-                            <span><%= restaurant.direccion %></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 text-end">
-                    <div class="restaurant-status mb-3">
-                        <% if (restaurant.abierto) { %>
-                            <span class="badge bg-success fs-6">
-                                <i class="fas fa-check-circle"></i> Abierto
-                            </span>
-                        <% } else { %>
-                            <span class="badge bg-danger fs-6">
-                                <i class="fas fa-times-circle"></i> Cerrado
-                            </span>
-                        <% } %>
-                    </div>
-                    <div class="restaurant-hours">
-                        <small class="text-muted">
-                            Horarios: <%= restaurant.horario_apertura %> - <%= restaurant.horario_cierre %>
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="container mt-4">
+<div class="container mt-4">
         <div class="row">
             <!-- Menu Categories Sidebar -->
             <div class="col-lg-3">
@@ -71,29 +14,6 @@
                                 </span>
                             </a>
                         <% }) %>
-                    </div>
-
-                    <!-- Cart Summary -->
-                    <div class="cart-summary mt-4 d-none" id="cartSummary">
-                        <div class="card">
-                            <div class="card-header bg-primary text-white">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-shopping-cart"></i>
-                                    Tu Pedido
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="cartItems"></div>
-                                <hr>
-                                <div class="d-flex justify-content-between">
-                                    <strong>Total: $<span id="cartTotal">0</span></strong>
-                                </div>
-                                <a href="/cart" class="btn btn-primary w-100 mt-2">
-                                    <i class="fas fa-shopping-cart"></i>
-                                    Ver Carrito
-                                </a>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -195,10 +115,11 @@
                                     <div class="card">
                                         <div class="card-body">
                                             <div class="d-flex align-items-center mb-2">
-                                                <img src="<%= review.imagen_perfil %>" 
+                                                <img src="/uploads/<%= review.imagen_perfil || 'no-image.png' %>" 
                                                      alt="<%= review.nombre %>" 
                                                      class="user-image rounded-circle me-2" 
-                                                     width="40" height="40">
+                                                     width="40" height="40"
+                                                     onerror="this.src='/images/no-image.png'">
                                                 <div>
                                                     <h6 class="mb-0"><%= review.nombre %> <%= review.apellido %></h6>
                                                     <div class="rating">
@@ -285,6 +206,7 @@
 
 .menu-categories {
     top: 20px;
+    z-index: 900;
 }
 
 .product-card {
@@ -327,15 +249,21 @@
 }
 </style>
 
+<%- include('../partials/footer') %>
+
 <!-- Scripts -->
 <script>
-console.log('Verificando carga de scripts...');
-window.addEventListener('load', function() {
-    console.log('Todos los recursos cargados');
-    console.log('Scripts cargados:', document.scripts);
+console.log('=== TEST SCRIPT ===');
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM cargado');
+    const testButton = document.createElement('button');
+    testButton.textContent = 'Test Button';
+    testButton.onclick = function() {
+        alert('JavaScript funciona!');
+    };
+    document.body.appendChild(testButton);
 });
 </script>
-<script src="/js/restaurant-detail.js"></script>
 
-<%- include('../partials/footer') %>
+<script src="/js/restaurant-detail.js"></script>
 

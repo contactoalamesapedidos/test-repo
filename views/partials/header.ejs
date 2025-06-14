@@ -1,1 +1,207 @@
 <!-- This file is intentionally empty as the header is included in layout.ejs -->
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <img src="/images/logo.png" alt="A la Mesa" height="40">
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/search">
+                        <i class="fas fa-utensils me-1"></i>Restaurantes
+                    </a>
+                </li>
+            </ul>
+            <ul class="navbar-nav ms-auto d-flex align-items-center">
+                <li class="nav-item">
+                    <button class="nav-link btn btn-link position-relative cart-button">
+                        <i class="fas fa-shopping-cart"></i>
+                        <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger cart-badge">
+                                <%= cartCount %>
+                            </span>
+                        <% } %>
+                    </button>
+                </li>
+                <% if (user) { %>
+                     <li class="nav-item dropdown">
+                         <button class="nav-link dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                             <i class="fas fa-user me-1"></i><%= user.nombre %>
+                         </button>
+                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                             <% if (user.role === 'admin') { %>
+                                 <li>
+                                     <a class="dropdown-item" href="/admin">
+                                         <i class="fas fa-cog me-2"></i>Panel de Admin
+                                     </a>
+                                 </li>
+                                 <li><hr class="dropdown-divider"></li>
+                             <% } %>
+                             <li>
+                                 <a class="dropdown-item" href="/profile">
+                                     <i class="fas fa-user-cog me-2"></i>Mi Perfil
+                                 </a>
+                             </li>
+                             <li>
+                                 <a class="dropdown-item" href="/orders">
+                                     <i class="fas fa-receipt me-2"></i>Mis Pedidos
+                                 </a>
+                             </li>
+                             <li><hr class="dropdown-divider"></li>
+                             <li>
+                                 <a class="dropdown-item text-danger" href="/auth/logout">
+                                     <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                                 </a>
+                             </li>
+                         </ul>
+                      </li>
+                <% } else { %>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/auth/login">
+                            <i class="fas fa-sign-in-alt me-1"></i>Iniciar Sesión
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link" href="/auth/register">
+                            <i class="fas fa-user-plus me-1"></i>Registrarse
+                        </a>
+                    </li>
+                <% } %>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Cart Overlay -->
+<div id="cartOverlay" class="cart-overlay"></div>
+
+<!-- Cart Sidebar -->
+<div class="cart-sidebar" id="cartSidebar">
+    <div class="cart-sidebar-header">
+        <h5 class="mb-0">
+            <i class="fas fa-shopping-cart me-2"></i>
+            Tu Carrito
+            <button type="button" class="btn-close float-end" onclick="closeCartSidebar()"></button>
+        </h5>
+    </div>
+    <div class="cart-sidebar-body">
+        <% if (typeof cart !== 'undefined' && cart && cart.length > 0) { %>
+            <!-- Restaurant Info -->
+            <div class="restaurant-info mb-3 p-2 bg-light rounded">
+                <div class="d-flex align-items-center">
+                    <img src="<%= cart[0].restaurant_logo || '/images/no-image.png' %>" 
+                         alt="<%= cart[0].restaurante_nombre %>" 
+                         class="rounded me-2" width="40" height="40"
+                         onerror="this.src='/images/no-image.png'">
+                    <div>
+                        <h6 class="mb-0 small"><%= cart[0].restaurante_nombre %></h6>
+                        <small class="text-muted">Solo productos del mismo restaurante</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart Items -->
+            <div class="cart-items" id="cartItems">
+                <% cart.forEach(item => { %>
+                    <div class="cart-item d-flex align-items-center mb-2 p-2 border rounded">
+                        <img src="<%= item.imagen.startsWith('/') ? item.imagen : '/uploads/' + item.imagen %>" 
+                             alt="<%= item.name %>" 
+                             class="rounded me-2" width="50" height="50"
+                             style="object-fit: cover;"
+                             onerror="this.src='/images/no-image.png'">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0 small"><%= item.name %></h6>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">$<%= item.price.toFixed(2) %> x <%= item.quantity %></small>
+                                <div class="quantity-controls">
+                                    <button class="btn btn-sm btn-outline-secondary" 
+                                            onclick="updateCartItemQuantity(<%= item.productId %>, -1)">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <span class="mx-2"><%= item.quantity %></span>
+                                    <button class="btn btn-sm btn-outline-secondary" 
+                                            onclick="updateCartItemQuantity(<%= item.productId %>, 1)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <% if (item.specialInstructions) { %>
+                                <small class="text-muted d-block">
+                                    <i class="fas fa-comment-alt me-1"></i>
+                                    <%= item.specialInstructions %>
+                                </small>
+                            <% } %>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger ms-2" 
+                                onclick="removeFromCart(<%= item.productId %>)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                <% }) %>
+            </div>
+
+            <!-- Cart Summary -->
+            <div class="cart-summary mt-3 pt-3 border-top" id="cartSummary">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal:</span>
+                    <strong>$<%= (typeof subtotal !== 'undefined' ? subtotal : 0).toFixed(2) %></strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Envío:</span>
+                    <strong>$<%= (typeof deliveryFee !== 'undefined' ? deliveryFee : 0).toFixed(2) %></strong>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="fs-5">Total:</span>
+                    <strong class="fs-5 text-primary">$<%= (typeof total !== 'undefined' ? total : 0).toFixed(2) %></strong>
+                </div>
+                
+                <a href="/orders/checkout" class="btn btn-primary w-100 mb-2">
+                    <i class="fas fa-credit-card me-2"></i>
+                    Proceder al Pago
+                </a>
+                
+                <button class="btn btn-outline-danger w-100" onclick="clearCart()">
+                    <i class="fas fa-trash me-2"></i>
+                    Vaciar Carrito
+                </button>
+            </div>
+        <% } else { %>
+            <div class="text-center py-5">
+                <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                <h6>Tu carrito está vacío</h6>
+                <p class="text-muted small">Agrega productos de tus restaurantes favoritos</p>
+                <a href="/search" class="btn btn-primary btn-sm mt-2">
+                    <i class="fas fa-utensils me-2"></i>
+                    Ver Restaurantes
+                </a>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+
+
+<!-- Scripts -->
+<script src="/js/cart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Botón del carrito en el navbar
+    const cartButton = document.querySelector('.cart-button');
+    if (cartButton) {
+        cartButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleCartSidebar();
+        });
+    }
+});
+</script>

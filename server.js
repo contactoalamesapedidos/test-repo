@@ -9,12 +9,14 @@ const http = require('http');
 const socketIo = require('socket.io');
 require('dotenv').config();
 
+// Database connection
+const db = require('./config/database');
+
+const cartMiddleware = require('./middleware/cart')(db);
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
-
-// Database connection
-const db = require('./config/database');
 
 // Middleware
 app.use(helmet({
@@ -66,11 +68,11 @@ app.use(session({
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.isAuthenticated = !!req.session.user;
-  res.locals.cart = req.session.cart || [];
-  res.locals.cartTotal = req.session.cartTotal || 0;
-  res.locals.cartCount = req.session.cartCount || 0;
   next();
 });
+
+// Cart middleware
+app.use(cartMiddleware);
 
 // Routes
 const indexRoutes = require('./routes/index');

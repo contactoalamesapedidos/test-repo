@@ -43,6 +43,34 @@ router.get('/', async (req, res) => {
     `);
     console.log('Restaurantes encontrados:', restaurants.length);
 
+    // Calcular si cada restaurante está abierto
+    const now = new Date();
+    restaurants.forEach(restaurant => {
+      const currentDay = now.getDay() || 7; // Convertir 0 (Domingo) a 7
+      let diasOperacion;
+      try {
+          diasOperacion = restaurant.dias_operacion ? JSON.parse(restaurant.dias_operacion.trim()) : [1,2,3,4,5,6,7];
+      } catch (e) {
+          console.error('Error parseando dias_operacion para restaurante', restaurant.id, ':', e);
+          diasOperacion = [1,2,3,4,5,6,7]; // Por defecto, todos los días
+      }
+      const estaAbiertoHoy = diasOperacion.includes(currentDay);
+
+      const [aperturaHora, aperturaMinuto] = restaurant.horario_apertura.split(':');
+      const [cierreHora, cierreMinuto] = restaurant.horario_cierre.split(':');
+      
+      const apertura = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 
+                               parseInt(aperturaHora), parseInt(aperturaMinuto));
+      const cierre = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 
+                             parseInt(cierreHora), parseInt(cierreMinuto));
+      
+      if (cierre < apertura) {
+          cierre.setDate(cierre.getDate() + 1);
+      }
+      
+      restaurant.abierto = estaAbiertoHoy && now >= apertura && now <= cierre;
+    });
+
     console.log('Iniciando consulta de categorías...');
     // Get restaurant categories
     const [categories] = await db.execute(`
@@ -134,9 +162,34 @@ router.get('/search', async (req, res) => {
     const [restaurants] = await db.execute(sql, params);
     console.log('Restaurantes encontrados:', restaurants.length);
     
-    // Asegurar que calificacion_promedio sea un número
+    // Asegurar que calificacion_promedio sea un número y calcular si el restaurante está abierto
+    const now = new Date();
     restaurants.forEach(restaurant => {
       restaurant.calificacion_promedio = parseFloat(restaurant.calificacion_promedio) || 0;
+
+      const currentDay = now.getDay() || 7; // Convertir 0 (Domingo) a 7
+      let diasOperacion;
+      try {
+          diasOperacion = restaurant.dias_operacion ? JSON.parse(restaurant.dias_operacion.trim()) : [1,2,3,4,5,6,7];
+      } catch (e) {
+          console.error('Error parseando dias_operacion para restaurante', restaurant.id, ':', e);
+          diasOperacion = [1,2,3,4,5,6,7]; // Por defecto, todos los días
+      }
+      const estaAbiertoHoy = diasOperacion.includes(currentDay);
+
+      const [aperturaHora, aperturaMinuto] = restaurant.horario_apertura.split(':');
+      const [cierreHora, cierreMinuto] = restaurant.horario_cierre.split(':');
+      
+      const apertura = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 
+                               parseInt(aperturaHora), parseInt(aperturaMinuto));
+      const cierre = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 
+                             parseInt(cierreHora), parseInt(cierreMinuto));
+      
+      if (cierre < apertura) {
+          cierre.setDate(cierre.getDate() + 1);
+      }
+      
+      restaurant.abierto = estaAbiertoHoy && now >= apertura && now <= cierre;
     });
     
     // Get categories for filter

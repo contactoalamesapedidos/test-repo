@@ -156,12 +156,70 @@ router.get('/', requireAdmin, async (req, res) => {
   }
 });
 
+// ========== GESTIÓN DE CONFIGURACIÓN ==========
+router.get('/configuracion', requireAdmin, async (req, res) => {
+  try {
+    res.render('admin/configuracion', {
+      title: 'Configuración del Sistema - A la Mesa',
+      user: req.session.user,
+      path: req.path
+    });
+  } catch (error) {
+    console.error('Error in admin configuracion:', error);
+    res.render('error', {
+      title: 'Error',
+      message: 'Error cargando la configuración del sistema',
+      error: {}
+    });
+  }
+});
+
+// ========== GESTIÓN DE USUARIOS ==========
+router.get('/usuarios', requireAdmin, async (req, res) => {
+  try {
+    // Aquí podrías cargar datos de usuarios desde la base de datos
+    res.render('admin/usuarios', {
+      title: 'Gestión de Usuarios - A la Mesa',
+      user: req.session.user,
+      path: req.path
+    });
+  } catch (error) {
+    console.error('Error in admin usuarios:', error);
+    res.render('error', {
+      title: 'Error',
+      message: 'Error cargando la gestión de usuarios',
+      error: {}
+    });
+  }
+});
+
+// ========== GESTIÓN DE REPORTES ==========
+router.get('/reportes', requireAdmin, async (req, res) => {
+  try {
+    // Aquí podrías cargar datos para los reportes desde la base de datos
+    res.render('admin/reportes', {
+      title: 'Reportes - A la Mesa',
+      user: req.session.user,
+      path: req.path
+    });
+  } catch (error) {
+    console.error('Error in admin reportes:', error);
+    res.render('error', {
+      title: 'Error',
+      message: 'Error cargando los reportes',
+      error: {}
+    });
+  }
+});
+
 // ========== GESTIÓN DE RESTAURANTES ==========
 
 // Listar todos los restaurantes
-router.get('/restaurants', async (req, res) => {
+router.get('/restaurantes', requireAdmin, async (req, res) => {
   try {
-    const [restaurants] = await db.execute(`
+    const { search, estado, categoria } = req.query;
+    
+    let sql = `
       SELECT 
         r.id,
         r.nombre,
@@ -189,34 +247,71 @@ router.get('/restaurants', async (req, res) => {
       LEFT JOIN categorias_restaurantes cr ON rc.categoria_id = cr.id
       LEFT JOIN productos p ON r.id = p.restaurante_id
       LEFT JOIN pedidos o ON r.id = o.restaurante_id
-      GROUP BY 
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    
+    if (search) {
+      sql += ` AND (r.nombre LIKE ? OR r.email_contacto LIKE ?)`;
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    
+    if (estado) {
+      switch(estado) {
+        case 'activos':
+          sql += ` AND r.activo = 1`;
+          break;
+        case 'inactivos':
+          sql += ` AND r.activo = 0`;
+          break;
+        case 'verificados':
+          sql += ` AND r.verificado = 1`;
+          break;
+        case 'no_verificados':
+          sql += ` AND r.verificado = 0`;
+          break;
+      }
+    }
+    
+    if (categoria) {
+      sql += ` AND EXISTS (
+        SELECT 1 FROM restaurante_categorias rc2 
+        JOIN categorias_restaurantes cr2 ON rc2.categoria_id = cr2.id 
+        WHERE rc2.restaurante_id = r.id AND cr2.id = ?
+      )`;
+      params.push(categoria);
+    }
+    
+    sql += ` GROUP BY 
         r.id, r.nombre, r.descripcion, r.imagen_logo, r.imagen_banner,
         r.direccion, r.ciudad, r.telefono, r.email_contacto,
         r.horario_apertura, r.horario_cierre, r.tiempo_entrega_min,
         r.tiempo_entrega_max, r.costo_delivery, r.calificacion_promedio,
         r.total_calificaciones, r.activo, r.verificado
-      ORDER BY r.nombre ASC
-    `);
-    console.log('Restaurantes encontrados en admin:', restaurants.length);
+      ORDER BY r.nombre ASC`;
 
-    res.render('admin/restaurants', {
+    const [restaurants] = await db.execute(sql, params);
+    
+    // Get categories for filter
+    const [categorias] = await db.execute(`
+      SELECT * FROM categorias_restaurantes WHERE activa = 1 ORDER BY nombre
+    `);
+
+    res.render('admin/restaurantes', {
       title: 'Administrar Restaurantes',
+      user: req.session.user,
       restaurants,
+      categorias,
+      filtros: { search: search || '', estado: estado || '', categoria: categoria || '' },
       path: req.path
     });
   } catch (error) {
-    console.error('Error detallado en listado de restaurantes (admin):', {
-      message: error.message,
-      stack: error.stack,
-      code: error.code,
-      errno: error.errno,
-      sqlState: error.sqlState,
-      sqlMessage: error.sqlMessage
-    });
+    console.error('Error loading restaurants:', error);
     res.render('error', {
       title: 'Error',
       message: 'Error cargando restaurantes',
-      error: process.env.NODE_ENV === 'development' ? error : {}
+      error: {}
     });
   }
 });
@@ -315,13 +410,15 @@ router.get('/restaurantes/crear/nuevo', requireAdmin, async (req, res) => {
 
 // Procesar creación de restaurante
 router.post('/restaurantes/crear', requireAdmin, [
-  body('nombre').notEmpty().withMessage('El nombre es requerido'),
-  body('apellido').notEmpty().withMessage('El apellido es requerido'),
-  body('email').isEmail().withMessage('Email inválido'),
+  body('nombre').trim().notEmpty().withMessage('El nombre es requerido'),
+  body('apellido').trim().notEmpty().withMessage('El apellido es requerido'),
+  body('email').trim().isEmail().withMessage('Email inválido')
+    .normalizeEmail(),
   body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
-  body('restaurante_nombre').notEmpty().withMessage('El nombre del restaurante es requerido'),
-  body('restaurante_descripcion').isLength({ min: 20 }).withMessage('La descripción debe tener al menos 20 caracteres'),
-  body('restaurante_direccion').notEmpty().withMessage('La dirección es requerida'),
+  body('restaurante_nombre').trim().notEmpty().withMessage('El nombre del restaurante es requerido'),
+  body('restaurante_descripcion').trim().isLength({ min: 20 })
+    .withMessage('La descripción debe tener al menos 20 caracteres'),
+  body('restaurante_direccion').trim().notEmpty().withMessage('La dirección es requerida'),
   body('categoria_id').isInt().withMessage('Selecciona una categoría válida')
 ], async (req, res) => {
   const connection = await db.getConnection();
@@ -329,80 +426,69 @@ router.post('/restaurantes/crear', requireAdmin, [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      const [categorias] = await connection.execute(`
-        SELECT * FROM categorias_restaurantes WHERE activa = 1 ORDER BY nombre
-      `);
-      
-      return res.render('admin/restaurante-crear', {
-        title: 'Crear Nuevo Restaurante - Admin',
-        user: req.session.user,
-        categorias,
-        error: 'Por favor, verifica los datos ingresados',
-        formData: req.body,
-        path: req.path
-      });
-    }
-
-    const {
-      nombre, apellido, email, password, telefono,
-      restaurante_nombre, restaurante_descripcion, restaurante_direccion,
-      restaurante_telefono, categoria_id, horario_apertura, horario_cierre
-    } = req.body;
-
-    // Check if email already exists
-    const [existingUsers] = await connection.execute(
-      'SELECT id FROM usuarios WHERE email = ?',
-      [email]
-    );
-
-    if (existingUsers.length > 0) {
-      const [categorias] = await connection.execute(`
-        SELECT * FROM categorias_restaurantes WHERE activa = 1 ORDER BY nombre
-      `);
-      
-      return res.render('admin/restaurante-crear', {
-        title: 'Crear Nuevo Restaurante - Admin',
-        user: req.session.user,
-        categorias,
-        error: 'Este email ya está registrado',
-        formData: req.body,
-        path: req.path
+      return res.status(400).json({ 
+        success: false, 
+        errors: errors.array() 
       });
     }
 
     await connection.beginTransaction();
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // Check if email already exists
+    const [existingUser] = await connection.execute(
+      'SELECT id FROM usuarios WHERE email = ?',
+      [req.body.email]
+    );
 
-    // Insert user
+    if (existingUser.length > 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'El email ya está registrado'
+      });
+    }
+
+    // Create user
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
     const [userResult] = await connection.execute(
-      `INSERT INTO usuarios (nombre, apellido, email, password, telefono, tipo_usuario) 
-       VALUES (?, ?, ?, ?, ?, 'restaurante')`,
-      [nombre, apellido, email, hashedPassword, telefono || null]
+      `INSERT INTO usuarios (nombre, apellido, email, password, tipo_usuario, telefono)
+       VALUES (?, ?, ?, ?, 'restaurante', ?)`,
+      [
+        req.body.nombre,
+        req.body.apellido,
+        req.body.email,
+        hashedPassword,
+        req.body.telefono || null
+      ]
     );
 
     const userId = userResult.insertId;
 
-    // Insert restaurant
+    // Create restaurant
     const [restaurantResult] = await connection.execute(
       `INSERT INTO restaurantes (
-        usuario_id, nombre, descripcion, direccion, telefono, email_contacto,
+        usuario_id, nombre, descripcion, direccion, telefono,
         horario_apertura, horario_cierre, activo, verificado
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        userId, restaurante_nombre, restaurante_descripcion, restaurante_direccion,
-        restaurante_telefono || null, email, 
-        horario_apertura || '09:00:00', horario_cierre || '22:00:00'
+        userId,
+        req.body.restaurante_nombre,
+        req.body.restaurante_descripcion,
+        req.body.restaurante_direccion,
+        req.body.restaurante_telefono || null,
+        req.body.horario_apertura || '09:00:00',
+        req.body.horario_cierre || '22:00:00',
+        req.body.activo ? 1 : 0,
+        req.body.verificado ? 1 : 0
       ]
     );
 
     const restaurantId = restaurantResult.insertId;
 
-    // Link restaurant to category
+    // Add category
     await connection.execute(
       'INSERT INTO restaurante_categorias (restaurante_id, categoria_id) VALUES (?, ?)',
-      [restaurantId, categoria_id]
+      [restaurantId, req.body.categoria_id]
     );
 
     await connection.commit();
@@ -411,31 +497,30 @@ router.post('/restaurantes/crear', requireAdmin, [
     await logAdminActivity(
       req.session.user.id,
       'crear_restaurante',
-      `Restaurante creado: ${restaurante_nombre}`,
+      `Restaurante creado: ${req.body.restaurante_nombre}`,
       'restaurante',
       restaurantId,
       null,
-      { nombre: restaurante_nombre, email, usuario_id: userId },
+      { 
+        nombre: req.body.restaurante_nombre,
+        email: req.body.email,
+        activo: req.body.activo ? 1 : 0
+      },
       req
     );
 
-    res.redirect(`/admin/restaurantes/${restaurantId}?success=created`);
+    res.json({
+      success: true,
+      message: 'Restaurante creado exitosamente',
+      restaurant_id: restaurantId
+    });
 
   } catch (error) {
     await connection.rollback();
     console.error('Error creating restaurant:', error);
-    
-    const [categorias] = await connection.execute(`
-      SELECT * FROM categorias_restaurantes WHERE activa = 1 ORDER BY nombre
-    `);
-    
-    res.render('admin/restaurante-crear', {
-      title: 'Crear Nuevo Restaurante - Admin',
-      user: req.session.user,
-      categorias,
-      error: `Error creando restaurante: ${error.message}`,
-      formData: req.body,
-      path: req.path
+    res.status(500).json({
+      success: false,
+      message: 'Error creando restaurante'
     });
   } finally {
     connection.release();

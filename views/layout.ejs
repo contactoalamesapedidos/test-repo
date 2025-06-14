@@ -3,205 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
-    
-    <!-- CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <title><%= title %> - A la Mesa</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
     <link href="/css/style.css" rel="stylesheet">
-    
-    <!-- Meta tags -->
-    <meta name="description" content="A la Mesa - Delivery de comida rápida y segura">
-    <meta name="keywords" content="delivery, comida, restaurantes, pedidos online">
-    <meta name="author" content="A la Mesa">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link href="/css/cart.css" rel="stylesheet">
+    <link href="/css/admin.css" rel="stylesheet">
+    <%- style %>
 </head>
 <body>
-    <!-- Header -->
-    <header class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
-        <div class="container">
-            <!-- Logo -->
-            <a class="navbar-brand d-flex align-items-center" href="/">
-                <i class="fas fa-utensils text-primary me-2 fs-4"></i>
-                <span class="fw-bold text-primary">A la Mesa</span>
-            </a>
+    <%- include('partials/header') %>
 
-            <!-- Mobile toggle -->
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <!-- Navigation -->
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <!-- Search form -->
-                <form class="d-flex mx-auto my-2 my-lg-0" style="max-width: 400px;" action="/search" method="GET">
-                    <div class="input-group">
-                        <input class="form-control" type="search" name="q" placeholder="Buscar restaurantes..." 
-                               value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>">
-                        <button class="btn btn-outline-primary" type="submit">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                </form>
-
-                <!-- User menu -->
-                <ul class="navbar-nav ms-auto">
-                    <!-- Cart -->
-                    <li class="nav-item me-2">
-                        <a class="nav-link position-relative" href="/cart">
-                            <i class="fas fa-shopping-cart"></i>
-                            <% if (cartCount > 0) { %>
-                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary">
-                                    <%= cartCount %>
-                                </span>
-                            <% } %>
-                        </a>
-                    </li>
-
-                    <% if (isAuthenticated) { %>
-                        <!-- User dropdown -->
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" 
-                               id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                                <% if (user.imagen_perfil) { %>
-                                    <img src="/uploads/<%= user.imagen_perfil %>" alt="Avatar" 
-                                         class="rounded-circle me-2" width="24" height="24">
-                                <% } else { %>
-                                    <i class="fas fa-user-circle me-2"></i>
-                                <% } %>
-                                <%= user.nombre %>
-                            </a>
-                            <ul class="dropdown-menu">
-                                <% if (user.tipo_usuario === 'restaurante') { %>
-                                    <li><a class="dropdown-item" href="/dashboard">
-                                        <i class="fas fa-store me-2"></i>Mi Restaurante
-                                    </a></li>
-                                <% } else { %>
-                                    <li><a class="dropdown-item" href="/profile">
-                                        <i class="fas fa-user me-2"></i>Mi Perfil
-                                    </a></li>
-                                    <li><a class="dropdown-item" href="/orders">
-                                        <i class="fas fa-list me-2"></i>Mis Pedidos
-                                    </a></li>
-                                <% } %>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <form action="/auth/logout" method="POST" class="d-inline">
-                                        <button class="dropdown-item text-danger" type="submit">
-                                            <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
-                                        </button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </li>
-                    <% } else { %>
-                        <!-- Login/Register -->
-                        <li class="nav-item">
-                            <a class="nav-link" href="/auth/login">Iniciar Sesión</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="btn btn-primary btn-sm ms-2" href="/auth/register">Registrarse</a>
-                        </li>
-                    <% } %>
-                </ul>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main content -->
-    <main style="margin-top: 76px;">
+    <!-- Main Content -->
+    <main class="container py-4" style="padding-top: 76px !important;">
         <%- body %>
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-dark text-white py-5 mt-5">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-4 mb-4">
-                    <h5 class="mb-3">
-                        <i class="fas fa-utensils me-2"></i>A la Mesa
-                    </h5>
-                    <p class="text-muted">
-                        Tu plataforma de delivery favorita. Conectamos a los mejores restaurantes contigo.
-                    </p>
-                    <div class="d-flex gap-2">
-                        <a href="#" class="text-muted"><i class="fab fa-facebook fs-5"></i></a>
-                        <a href="#" class="text-muted"><i class="fab fa-instagram fs-5"></i></a>
-                        <a href="#" class="text-muted"><i class="fab fa-twitter fs-5"></i></a>
-                    </div>
-                </div>
-                
-                <div class="col-md-2 mb-4">
-                    <h6 class="mb-3">Enlaces</h6>
-                    <ul class="list-unstyled">
-                        <li><a href="/about" class="text-muted text-decoration-none">Acerca de</a></li>
-                        <li><a href="/contact" class="text-muted text-decoration-none">Contacto</a></li>
-                        <li><a href="/terms" class="text-muted text-decoration-none">Términos</a></li>
-                        <li><a href="/privacy" class="text-muted text-decoration-none">Privacidad</a></li>
-                    </ul>
-                </div>
-                
-                <div class="col-md-3 mb-4">
-                    <h6 class="mb-3">Para Restaurantes</h6>
-                    <ul class="list-unstyled">
-                        <li><a href="/auth/register-restaurant" class="text-muted text-decoration-none">Registrar Restaurante</a></li>
-                        <li><a href="/dashboard" class="text-muted text-decoration-none">Panel de Control</a></li>
-                    </ul>
-                </div>
-                
-                <div class="col-md-3 mb-4">
-                    <h6 class="mb-3">Contacto</h6>
-                    <div class="text-muted">
-                        <p><i class="fas fa-phone me-2"></i>+54 11 0800-MESA</p>
-                        <p><i class="fas fa-envelope me-2"></i>soporte@alamesa.com</p>
-                        <p><i class="fas fa-map-marker-alt me-2"></i>Buenos Aires, Argentina</p>
-                    </div>
-                </div>
-            </div>
-            
-            <hr class="my-4">
-            
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <p class="text-muted mb-0">
-                        &copy; 2024 A la Mesa. Todos los derechos reservados.
-                    </p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <small class="text-muted">
-                        Hecho con <i class="fas fa-heart text-danger"></i> en Argentina
-                    </small>
-                </div>
-            </div>
+    <!-- Cart Sidebar -->
+    <div class="cart-overlay" id="cartOverlay"></div>
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <h3 class="mb-0">Mi Carrito</h3>
+            <button class="close-cart" onclick="closeCartSidebar()">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-    </footer>
-
-    <!-- Toast notifications -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3">
-        <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header">
-                <i class="fas fa-info-circle text-primary me-2"></i>
-                <strong class="me-auto">A la Mesa</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-            </div>
-            <div class="toast-body">
-                <!-- Toast message will be set by JavaScript -->
-            </div>
+        <div class="cart-body">
+            <% if (cart && cart.length > 0) { %>
+                <div class="cart-restaurant-info p-3 bg-light">
+                    <h4 class="mb-0"><%= cart[0].restaurante_nombre %></h4>
+                </div>
+                <div class="cart-items" id="cartItems">
+                    <% cart.forEach(item => { %>
+                        <div class="cart-item" data-product-id="<%= item.productId %>">
+                            <img src="<%= item.imagen.startsWith('/') ? item.imagen : '/uploads/' + item.imagen %>" 
+                                 alt="<%= item.name %>" 
+                                 class="cart-item-image"
+                                 onerror="this.src='/images/no-image.png'">
+                            <div class="cart-item-details">
+                                <h4><%= item.name %></h4>
+                                <p class="cart-item-price">$<%= item.price.toFixed(2) %></p>
+                                <div class="cart-item-quantity">
+                                    <button onclick="updateCartItemQuantity(<%= item.productId %>, -1)">-</button>
+                                    <span><%= item.quantity %></span>
+                                    <button onclick="updateCartItemQuantity(<%= item.productId %>, 1)">+</button>
+                                </div>
+                            </div>
+                            <button class="remove-item" onclick="removeFromCart(<%= item.productId %>)">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    <% }); %>
+                </div>
+                <div class="cart-summary" id="cartSummary">
+                    <div class="cart-summary-item">
+                        <span>Subtotal:</span>
+                        <span>$<%= cart.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2) %></span>
+                    </div>
+                    <div class="cart-summary-item">
+                        <span>Envío:</span>
+                        <span>$<%= deliveryFee.toFixed(2) %></span>
+                    </div>
+                    <div class="cart-summary-item total">
+                        <span>Total:</span>
+                        <span>$<%= (cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + (cart.length > 0 ? 350 : 0)).toFixed(2) %></span>
+                    </div>
+                    <div class="cart-actions">
+                        <a href="/orders/checkout" class="btn btn-primary w-100 mb-2">
+                            <i class="fas fa-credit-card me-2"></i>
+                            Proceder al Pago
+                        </a>
+                        <button class="btn btn-outline-danger w-100" onclick="clearCart()">
+                            <i class="fas fa-trash me-2"></i>
+                            Vaciar Carrito
+                        </button>
+                    </div>
+                </div>
+            <% } else { %>
+                <div class="text-center py-4">
+                    <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">Tu carrito está vacío</p>
+                </div>
+            <% } %>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
-    <script src="/js/app.js"></script>
+    <!-- Footer -->
+    <footer class="bg-light py-4 mt-auto">
+        <div class="container text-center">
+            <p class="mb-0">&copy; 2024 A la Mesa. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JavaScript -->
+    <script src="/js/cart.js"></script>
+    <%- script %>
+
     
-    <!-- Page specific scripts -->
-    <% if (typeof scripts !== 'undefined') { %>
-        <% scripts.forEach(script => { %>
-            <script src="<%= script %>"></script>
-        <% }); %>
-    <% } %>
+
+
 </body>
 </html>
