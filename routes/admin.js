@@ -5,8 +5,11 @@ const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const db = require('../config/database');
 const bcrypt = require('bcryptjs');
+const { requireAdmin } = require('../middleware/auth');
+const { sendEmail } = require('../config/mailer');
 
 // Middleware to check if user is admin
+/*
 const requireAdmin = (req, res, next) => {
   console.log('=== MIDDLEWARE REQUIRE ADMIN ===');
   console.log('Session ID:', req.sessionID);
@@ -34,6 +37,10 @@ const requireAdmin = (req, res, next) => {
   console.log('=== FIN MIDDLEWARE REQUIRE ADMIN ===');
   next();
 };
+*/
+// La función requireAdmin ya se importa desde ../middleware/auth,
+// por lo que esta definición local es redundante y causa el error.
+
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -93,6 +100,7 @@ router.get('/', requireAdmin, async (req, res) => {
       FROM restaurantes
     `);
 
+    // Dashboard principal: solo pedidos entregados
     const [statsVentas] = await db.execute(`
       SELECT 
         COUNT(*) as total_pedidos,
@@ -100,7 +108,7 @@ router.get('/', requireAdmin, async (req, res) => {
         COALESCE(SUM(total * 0.10), 0) as comisiones_totales,
         COALESCE(AVG(total), 0) as ticket_promedio
       FROM pedidos 
-      WHERE estado != 'cancelled' AND fecha_pedido >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+      WHERE estado = 'entregado' AND fecha_pedido >= DATE_SUB(NOW(), INTERVAL 30 DAY)
     `);
 
     // Asegurarnos de que los valores sean números
@@ -123,6 +131,7 @@ router.get('/', requireAdmin, async (req, res) => {
       LIMIT 10
     `);
 
+    // Ventas últimos 7 días: solo entregados
     const [ventasUltimos7Dias] = await db.execute(`
       SELECT 
         DATE(fecha_pedido) as fecha,
@@ -130,9 +139,17 @@ router.get('/', requireAdmin, async (req, res) => {
         COALESCE(SUM(total), 0) as ventas
       FROM pedidos 
       WHERE fecha_pedido >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        AND estado != 'cancelled'
+        AND estado = 'entregado'
       GROUP BY DATE(fecha_pedido)
       ORDER BY fecha DESC
+    `);
+
+    // Calcular comisiones realizadas y pendientes
+    const [comisionesStats] = await db.execute(`
+      SELECT 
+        SUM(CASE WHEN estado = 'pagado' THEN monto_comision ELSE 0 END) as comisiones_realizadas,
+        SUM(CASE WHEN estado = 'pendiente' OR estado = 'vencido' THEN monto_comision ELSE 0 END) as comisiones_pendientes
+      FROM cobros_semanales
     `);
 
     res.render('admin/dashboard', {
@@ -144,6 +161,8 @@ router.get('/', requireAdmin, async (req, res) => {
       },
       cobrosRecientes,
       ventasUltimos7Dias,
+      comisiones_realizadas: Number(comisionesStats[0]?.comisiones_realizadas || 0),
+      comisiones_pendientes: Number(comisionesStats[0]?.comisiones_pendientes || 0),
       path: req.path
     });
   } catch (error) {
@@ -159,9 +178,13 @@ router.get('/', requireAdmin, async (req, res) => {
 // ========== GESTIÓN DE CONFIGURACIÓN ==========
 router.get('/configuracion', requireAdmin, async (req, res) => {
   try {
+    // Leer el link de Mercado Pago de la tabla configuraciones
+    const [rows] = await db.execute("SELECT valor FROM configuraciones WHERE clave = 'mercadopago_url' LIMIT 1");
+    const mercadopago_url = rows.length > 0 ? rows[0].valor : '';
     res.render('admin/configuracion', {
       title: 'Configuración del Sistema - A la Mesa',
       user: req.session.user,
+      mercadopago_url,
       path: req.path
     });
   } catch (error) {
@@ -174,13 +197,32 @@ router.get('/configuracion', requireAdmin, async (req, res) => {
   }
 });
 
+// Guardar configuración
+router.post('/configuracion/save', requireAdmin, async (req, res) => {
+  try {
+    const { sitioWeb, comision, tiempoPreparacion, mercadopago_url } = req.body;
+    // Guardar/actualizar el link de Mercado Pago
+    await db.execute(
+      `INSERT INTO configuraciones (clave, valor, tipo) VALUES ('mercadopago_url', ?, 'string')
+       ON DUPLICATE KEY UPDATE valor = VALUES(valor)`,
+      [mercadopago_url || '']
+    );
+    // Aquí puedes guardar las otras configuraciones si lo deseas
+    res.json({ success: true, message: 'Configuraciones guardadas exitosamente' });
+  } catch (error) {
+    console.error('Error guardando configuración:', error);
+    res.status(500).json({ success: false, message: 'Error guardando configuración' });
+  }
+});
+
 // ========== GESTIÓN DE USUARIOS ==========
 router.get('/usuarios', requireAdmin, async (req, res) => {
   try {
-    // Aquí podrías cargar datos de usuarios desde la base de datos
+    const [usuarios] = await db.execute('SELECT * FROM usuarios ORDER BY fecha_registro DESC');
     res.render('admin/usuarios', {
       title: 'Gestión de Usuarios - A la Mesa',
       user: req.session.user,
+      usuarios,
       path: req.path
     });
   } catch (error) {
@@ -217,7 +259,8 @@ router.get('/reportes', requireAdmin, async (req, res) => {
 // Listar todos los restaurantes
 router.get('/restaurantes', requireAdmin, async (req, res) => {
   try {
-    const { search, estado, categoria } = req.query;
+    const { search, estado, categoria, page = 1, limit = 10 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
     
     let sql = `
       SELECT 
@@ -250,26 +293,43 @@ router.get('/restaurantes', requireAdmin, async (req, res) => {
       WHERE 1=1
     `;
     
+    let countSql = `
+      SELECT COUNT(DISTINCT r.id) as total_count
+      FROM restaurantes r
+      LEFT JOIN restaurante_categorias rc ON r.id = rc.restaurante_id
+      LEFT JOIN categorias_restaurantes cr ON rc.categoria_id = cr.id
+      LEFT JOIN productos p ON r.id = p.restaurante_id
+      LEFT JOIN pedidos o ON r.id = o.restaurante_id
+      WHERE 1=1
+    `;
+
     const params = [];
+    const countParams = [];
     
     if (search) {
       sql += ` AND (r.nombre LIKE ? OR r.email_contacto LIKE ?)`;
+      countSql += ` AND (r.nombre LIKE ? OR r.email_contacto LIKE ?)`;
       params.push(`%${search}%`, `%${search}%`);
+      countParams.push(`%${search}%`, `%${search}%`);
     }
     
     if (estado) {
       switch(estado) {
         case 'activos':
           sql += ` AND r.activo = 1`;
+          countSql += ` AND r.activo = 1`;
           break;
         case 'inactivos':
           sql += ` AND r.activo = 0`;
+          countSql += ` AND r.activo = 0`;
           break;
         case 'verificados':
           sql += ` AND r.verificado = 1`;
+          countSql += ` AND r.verificado = 1`;
           break;
         case 'no_verificados':
           sql += ` AND r.verificado = 0`;
+          countSql += ` AND r.verificado = 0`;
           break;
       }
     }
@@ -280,7 +340,13 @@ router.get('/restaurantes', requireAdmin, async (req, res) => {
         JOIN categorias_restaurantes cr2 ON rc2.categoria_id = cr2.id 
         WHERE rc2.restaurante_id = r.id AND cr2.id = ?
       )`;
+      countSql += ` AND EXISTS (
+        SELECT 1 FROM restaurante_categorias rc2 
+        JOIN categorias_restaurantes cr2 ON rc2.categoria_id = cr2.id 
+        WHERE rc2.restaurante_id = r.id AND cr2.id = ?
+      )`;
       params.push(categoria);
+      countParams.push(categoria);
     }
     
     sql += ` GROUP BY 
@@ -289,9 +355,15 @@ router.get('/restaurantes', requireAdmin, async (req, res) => {
         r.horario_apertura, r.horario_cierre, r.tiempo_entrega_min,
         r.tiempo_entrega_max, r.costo_delivery, r.calificacion_promedio,
         r.total_calificaciones, r.activo, r.verificado
-      ORDER BY r.nombre ASC`;
+      ORDER BY r.nombre ASC
+      LIMIT ? OFFSET ?`;
+
+    params.push(parseInt(limit), offset);
 
     const [restaurants] = await db.execute(sql, params);
+    const [totalCountResult] = await db.execute(countSql, countParams);
+    const totalRestaurants = totalCountResult[0].total_count;
+    const totalPages = Math.ceil(totalRestaurants / parseInt(limit));
     
     // Get categories for filter
     const [categorias] = await db.execute(`
@@ -304,6 +376,8 @@ router.get('/restaurantes', requireAdmin, async (req, res) => {
       restaurants,
       categorias,
       filtros: { search: search || '', estado: estado || '', categoria: categoria || '' },
+      currentPage: parseInt(page),
+      totalPages,
       path: req.path
     });
   } catch (error) {
@@ -323,7 +397,7 @@ router.get('/restaurantes/:id', requireAdmin, async (req, res) => {
     
     // Get restaurant info
     const [restaurantes] = await db.execute(`
-      SELECT r.*, u.nombre, u.apellido, u.email, u.telefono, u.fecha_registro
+      SELECT r.*, u.nombre as usuario_nombre, u.apellido as usuario_apellido, u.email as usuario_email, u.telefono as usuario_telefono
       FROM restaurantes r
       JOIN usuarios u ON r.usuario_id = u.id
       WHERE r.id = ?
@@ -357,6 +431,23 @@ router.get('/restaurantes/:id', requireAdmin, async (req, res) => {
       ORDER BY p.fecha_pedido DESC
       LIMIT 20
     `, [restaurantId]);
+
+    // Estadísticas de pedidos
+    const [statsPedidos] = await db.execute(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN estado = 'cancelado' THEN 1 ELSE 0 END) as cancelados,
+        SUM(CASE WHEN estado = 'entregado' THEN 1 ELSE 0 END) as entregados,
+        SUM(CASE WHEN estado = 'pendiente' THEN 1 ELSE 0 END) as pendientes
+      FROM pedidos
+      WHERE restaurante_id = ?
+    `, [restaurantId]);
+    const totalPedidos = statsPedidos[0]?.total || 0;
+    const cancelados = statsPedidos[0]?.cancelados || 0;
+    const entregados = statsPedidos[0]?.entregados || 0;
+    // pendientes = total - cancelados - entregados
+    const pendientes = totalPedidos - cancelados - entregados;
+    const porcentajeEntregados = totalPedidos > 0 ? Math.round((entregados / totalPedidos) * 100) : 0;
     
     // Get weekly charges
     const [cobros] = await db.execute(`
@@ -373,7 +464,12 @@ router.get('/restaurantes/:id', requireAdmin, async (req, res) => {
       productos,
       pedidos,
       cobros,
-      path: req.path
+      path: req.path,
+      totalPedidos,
+      cancelados,
+      entregados,
+      pendientes,
+      porcentajeEntregados
     });
   } catch (error) {
     console.error('Error getting restaurant detail:', error);
@@ -533,7 +629,7 @@ router.get('/restaurantes/:id/editar', requireAdmin, async (req, res) => {
     const restaurantId = req.params.id;
     
     const [restaurantes] = await db.execute(`
-      SELECT r.*, u.nombre, u.apellido, u.email, u.telefono
+      SELECT r.*, u.nombre as usuario_nombre, u.apellido as usuario_apellido, u.email as usuario_email, u.telefono as usuario_telefono
       FROM restaurantes r
       JOIN usuarios u ON r.usuario_id = u.id
       WHERE r.id = ?
@@ -558,7 +654,37 @@ router.get('/restaurantes/:id/editar', requireAdmin, async (req, res) => {
     res.render('admin/restaurante-editar', {
       title: `Editar ${restaurantes[0].nombre} - Admin`,
       user: req.session.user,
-      restaurante: restaurantes[0],
+      restaurante: {
+        ...restaurantes[0],
+        dias_operacion: (() => {
+          // Aplicar la misma lógica que en el dashboard del restaurante
+          let diasOperacionParsed = null;
+          try {
+            if (restaurantes[0].dias_operacion) {
+              if (Array.isArray(restaurantes[0].dias_operacion)) {
+                diasOperacionParsed = restaurantes[0].dias_operacion;
+              } else if (typeof restaurantes[0].dias_operacion === 'string') {
+                const diasOperacionClean = restaurantes[0].dias_operacion.trim();
+                if (diasOperacionClean) {
+                  diasOperacionParsed = JSON.parse(diasOperacionClean);
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Error al procesar dias_operacion en admin:', e);
+          }
+
+          // Si no hay días de operación o hubo error, usar valor por defecto
+          if (!diasOperacionParsed || !Array.isArray(diasOperacionParsed)) {
+            diasOperacionParsed = [1,2,3,4,5,6,7];
+          }
+
+          // Asegurarnos de que todos los valores sean números
+          diasOperacionParsed = diasOperacionParsed.map(dia => parseInt(dia)).filter(dia => !isNaN(dia));
+          
+          return JSON.stringify(diasOperacionParsed);
+        })()
+      },
       categorias,
       categoriaActual: restauranteCategoria[0]?.categoria_id || null,
       path: req.path
@@ -574,7 +700,7 @@ router.get('/restaurantes/:id/editar', requireAdmin, async (req, res) => {
 });
 
 // Procesar edición de restaurante
-router.post('/restaurantes/:id/editar', requireAdmin, [
+router.post('/restaurantes/:id/editar', requireAdmin, upload.none(), [
   body('nombre').notEmpty().withMessage('El nombre es requerido'),
   body('apellido').notEmpty().withMessage('El apellido es requerido'),
   body('email').isEmail().withMessage('Email inválido'),
@@ -582,57 +708,91 @@ router.post('/restaurantes/:id/editar', requireAdmin, [
   body('restaurante_descripcion').isLength({ min: 20 }).withMessage('La descripción debe tener al menos 20 caracteres'),
   body('restaurante_direccion').notEmpty().withMessage('La dirección es requerida')
 ], async (req, res) => {
+  console.log('=== INICIO EDICIÓN RESTAURANTE ===');
+  console.log('URL:', req.url);
+  console.log('Método:', req.method);
+  console.log('Body completo:', req.body);
+  console.log('Parámetros:', req.params);
+  
   const connection = await db.getConnection();
   
   try {
     const restaurantId = req.params.id;
     const errors = validationResult(req);
     
+    console.log('Errores de validación:', errors.array());
+    
     if (!errors.isEmpty()) {
+      console.log('Validación falló, redirigiendo con error');
       return res.redirect(`/admin/restaurantes/${restaurantId}/editar?error=validation`);
     }
+
+    console.log('Validación pasó, continuando...');
 
     const {
       nombre, apellido, email, telefono,
       restaurante_nombre, restaurante_descripcion, restaurante_direccion,
       restaurante_telefono, categoria_id, horario_apertura, horario_cierre,
-      activo, verificado
+      activo, verificado, dias_operacion
     } = req.body;
 
+    // LOGS PARA DEPURAR
+    console.log('--- EDICIÓN DE RESTAURANTE ---');
+    console.log('Body recibido:', req.body);
+    console.log('Valor recibido de verificado:', verificado);
+    console.log('Valor recibido de activo:', activo);
+    console.log('Días de operación recibidos:', dias_operacion);
+    
+    // Procesar días de operación
+    let diasOperacionJSON = null;
+    if (dias_operacion && Array.isArray(dias_operacion) && dias_operacion.length > 0) {
+        diasOperacionJSON = JSON.stringify(dias_operacion.map(dia => parseInt(dia)));
+    }
+    console.log('Días de operación procesados:', diasOperacionJSON);
+    
     // Get current data for logging
     const [currentData] = await connection.execute(`
-      SELECT r.*, u.nombre, u.apellido, u.email, u.telefono
+      SELECT r.*, u.nombre as usuario_nombre, u.apellido as usuario_apellido, u.email as usuario_email, u.telefono as usuario_telefono
       FROM restaurantes r
       JOIN usuarios u ON r.usuario_id = u.id
       WHERE r.id = ?
     `, [restaurantId]);
 
+    console.log('Datos actuales del restaurante:', currentData[0]);
+
     if (currentData.length === 0) {
+      console.log('Restaurante no encontrado');
       return res.status(404).redirect('/admin/restaurantes?error=not_found');
     }
 
     await connection.beginTransaction();
+    console.log('Transacción iniciada');
 
     // Update user
+    console.log('Actualizando usuario con datos:', { nombre, apellido, email, telefono });
     await connection.execute(
       `UPDATE usuarios SET nombre = ?, apellido = ?, email = ?, telefono = ?
        WHERE id = ?`,
       [nombre, apellido, email, telefono || null, currentData[0].usuario_id]
     );
+    console.log('Usuario actualizado');
 
     // Update restaurant
+    console.log('Guardando verificado como:', verificado ? 1 : 0);
+    console.log('Guardando activo como:', activo ? 1 : 0);
     await connection.execute(
       `UPDATE restaurantes SET 
         nombre = ?, descripcion = ?, direccion = ?, telefono = ?,
-        horario_apertura = ?, horario_cierre = ?, activo = ?, verificado = ?
+        horario_apertura = ?, horario_cierre = ?, dias_operacion = ?, activo = ?, verificado = ?
        WHERE id = ?`,
       [
         restaurante_nombre, restaurante_descripcion, restaurante_direccion,
         restaurante_telefono || null, horario_apertura || '09:00:00', 
-        horario_cierre || '22:00:00', activo ? 1 : 0, verificado ? 1 : 0,
+        horario_cierre || '22:00:00', diasOperacionJSON, activo ? 1 : 0, verificado ? 1 : 0,
         restaurantId
       ]
     );
+    console.log('Restaurante actualizado');
 
     // Update category if provided
     if (categoria_id) {
@@ -644,9 +804,11 @@ router.post('/restaurantes/:id/editar', requireAdmin, [
         'INSERT INTO restaurante_categorias (restaurante_id, categoria_id) VALUES (?, ?)',
         [restaurantId, categoria_id]
       );
+      console.log('Categoría actualizada');
     }
 
     await connection.commit();
+    console.log('Transacción confirmada');
 
     // Log admin activity
     await logAdminActivity(
@@ -660,14 +822,17 @@ router.post('/restaurantes/:id/editar', requireAdmin, [
       req
     );
 
+    console.log('Redirigiendo a éxito');
     res.redirect(`/admin/restaurantes/${restaurantId}?success=updated`);
 
   } catch (error) {
     await connection.rollback();
     console.error('Error updating restaurant:', error);
+    console.log('Redirigiendo a error del servidor');
     res.redirect(`/admin/restaurantes/${req.params.id}/editar?error=server`);
   } finally {
     connection.release();
+    console.log('=== FIN EDICIÓN RESTAURANTE ===');
   }
 });
 
@@ -712,7 +877,7 @@ router.delete('/restaurantes/:id/eliminar', requireAdmin, async (req, res) => {
     
     // Get restaurant data for logging
     const [restaurantData] = await connection.execute(`
-      SELECT r.*, u.nombre, u.apellido, u.email
+      SELECT r.*, u.nombre as usuario_nombre, u.apellido as usuario_apellido, u.email as usuario_email, u.telefono as usuario_telefono
       FROM restaurantes r
       JOIN usuarios u ON r.usuario_id = u.id
       WHERE r.id = ?
@@ -725,7 +890,7 @@ router.delete('/restaurantes/:id/eliminar', requireAdmin, async (req, res) => {
     await connection.beginTransaction();
 
     // Delete in order due to foreign keys
-    await connection.execute('DELETE FROM pedido_items WHERE pedido_id IN (SELECT id FROM pedidos WHERE restaurante_id = ?)', [restaurantId]);
+    await connection.execute('DELETE FROM items_pedido WHERE pedido_id IN (SELECT id FROM pedidos WHERE restaurante_id = ?)', [restaurantId]);
     await connection.execute('DELETE FROM pedidos WHERE restaurante_id = ?', [restaurantId]);
     await connection.execute('DELETE FROM productos WHERE restaurante_id = ?', [restaurantId]);
     await connection.execute('DELETE FROM categorias_productos WHERE restaurante_id = ?', [restaurantId]);
@@ -760,7 +925,271 @@ router.delete('/restaurantes/:id/eliminar', requireAdmin, async (req, res) => {
   }
 });
 
-// ========== SISTEMA DE COBROS ==========
+// ========== GESTIÓN DE PRODUCTOS ==========
+
+// Listar productos
+router.get('/productos', requireAdmin, async (req, res) => {
+  try {
+    const { restaurante, search, categoria, disponible, page = 1, limit = 10 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    let sql = `
+      SELECT p.*, r.nombre as restaurante_nombre, cp.nombre as categoria_nombre
+      FROM productos p
+      JOIN restaurantes r ON p.restaurante_id = r.id
+      LEFT JOIN categorias_productos cp ON p.categoria_id = cp.id
+      WHERE 1=1
+    `;
+    
+    let countSql = `
+      SELECT COUNT(*) as total_count
+      FROM productos p
+      JOIN restaurantes r ON p.restaurante_id = r.id
+      LEFT JOIN categorias_productos cp ON p.categoria_id = cp.id
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    const countParams = [];
+    
+    if (restaurante) {
+      sql += ` AND p.restaurante_id = ?`;
+      countSql += ` AND p.restaurante_id = ?`;
+      params.push(restaurante);
+      countParams.push(restaurante);
+    }
+    
+    if (search) {
+      sql += ` AND (p.nombre LIKE ? OR p.descripcion LIKE ?)`;
+      countSql += ` AND (p.nombre LIKE ? OR p.descripcion LIKE ?)`;
+      params.push(`%${search}%`, `%${search}%`);
+      countParams.push(`%${search}%`, `%${search}%`);
+    }
+    
+    if (categoria) {
+      sql += ` AND cp.nombre = ?`;
+      countSql += ` AND cp.nombre = ?`;
+      params.push(categoria);
+      countParams.push(categoria);
+    }
+    
+    if (disponible !== undefined && disponible !== '') {
+      sql += ` AND p.disponible = ?`;
+      countSql += ` AND p.disponible = ?`;
+      params.push(disponible === 'true' ? 1 : 0);
+      countParams.push(disponible === 'true' ? 1 : 0);
+    }
+    
+    sql += ` ORDER BY r.nombre, p.destacado DESC, p.nombre
+      LIMIT ? OFFSET ?`;
+
+    params.push(parseInt(limit), offset);
+    
+    const [productos] = await db.execute(sql, params);
+    const [totalCountResult] = await db.execute(countSql, countParams);
+    const totalProductos = totalCountResult[0].total_count;
+    const totalPages = Math.ceil(totalProductos / parseInt(limit));
+    
+    // Get restaurants and categories for filters
+    const [restaurantes] = await db.execute(`
+      SELECT id, nombre FROM restaurantes ORDER BY nombre
+    `);
+    
+    // Obtener categorías globales para el filtro y el formulario
+    const [categorias] = await db.execute(`
+      SELECT id, nombre FROM categorias_productos WHERE restaurante_id IS NULL AND activa = 1 ORDER BY orden_display, nombre
+    `);
+
+    res.render('admin/productos', {
+      title: 'Gestión de Productos - Admin',
+      user: req.session.user,
+      productos,
+      restaurantes,
+      categorias, // <-- ahora sí se envía 'categorias'
+      filtros: { restaurante: restaurante || '', search: search || '', categoria: categoria || '', disponible: disponible || '' },
+      currentPage: parseInt(page),
+      totalPages,
+      path: req.path
+    });
+  } catch (error) {
+    console.error('Error loading products:', error);
+    res.render('error', {
+      title: 'Error',
+      message: 'Error cargando productos',
+      error: {}
+    });
+  }
+});
+
+// Crear producto
+router.post('/productos/crear', requireAdmin, [ 
+  body('restaurante_id').isInt().withMessage('ID de restaurante inválido'),
+  body('nombre').trim().notEmpty().withMessage('El nombre del producto es requerido'),
+  body('descripcion').trim().notEmpty().withMessage('La descripción es requerida'),
+  body('precio').isFloat({ gt: 0 }).withMessage('El precio debe ser un número positivo'),
+  body('categoria_id').isInt().withMessage('ID de categoría inválido'),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const { restaurante_id, nombre, descripcion, precio, categoria_id, imagen_url, destacado, activo } = req.body;
+
+    const [result] = await db.execute(
+      `INSERT INTO productos (
+        restaurante_id, nombre, descripcion, precio, categoria_id, imagen_url, destacado, activo
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        restaurante_id,
+        nombre,
+        descripcion,
+        precio,
+        categoria_id,
+        imagen_url || null,
+        destacado ? 1 : 0,
+        activo ? 1 : 0,
+      ]
+    );
+
+    await logAdminActivity(
+      req.session.user.id,
+      'crear_producto',
+      `Producto creado: ${nombre} (ID: ${result.insertId})`,
+      'producto',
+      result.insertId,
+      null,
+      req.body,
+      req
+    );
+
+    res.json({ success: true, message: 'Producto creado exitosamente', producto_id: result.insertId });
+  } catch (error) {
+    console.error('Error creating product:', error);
+    res.status(500).json({ success: false, message: 'Error creando producto' });
+  }
+});
+
+// Actualizar producto
+router.put('/productos/:id/editar', requireAdmin, [
+  body('restaurante_id').isInt().withMessage('ID de restaurante inválido'),
+  body('nombre').trim().notEmpty().withMessage('El nombre del producto es requerido'),
+  body('descripcion').trim().notEmpty().withMessage('La descripción es requerida'),
+  body('precio').isFloat({ gt: 0 }).withMessage('El precio debe ser un número positivo'),
+  body('categoria_id').isInt().withMessage('ID de categoría inválido'),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const productId = req.params.id;
+    const { restaurante_id, nombre, descripcion, precio, categoria_id, imagen_url, destacado, activo } = req.body;
+
+    const [currentData] = await db.execute('SELECT * FROM productos WHERE id = ?', [productId]);
+    if (currentData.length === 0) {
+      return res.status(404).json({ success: false, message: 'Producto no encontrado' });
+    }
+
+    await db.execute(
+      `UPDATE productos SET
+        restaurante_id = ?, nombre = ?, descripcion = ?, precio = ?, categoria_id = ?, imagen_url = ?, destacado = ?, activo = ?
+       WHERE id = ?`,
+      [
+        restaurante_id,
+        nombre,
+        descripcion,
+        precio,
+        categoria_id,
+        imagen_url || null,
+        destacado ? 1 : 0,
+        activo ? 1 : 0,
+        productId,
+      ]
+    );
+
+    await logAdminActivity(
+      req.session.user.id,
+      'editar_producto',
+      `Producto editado: ${nombre} (ID: ${productId})`,
+      'producto',
+      productId,
+      currentData[0],
+      req.body,
+      req
+    );
+
+    res.json({ success: true, message: 'Producto actualizado exitosamente' });
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({ success: false, message: 'Error actualizando producto' });
+  }
+});
+
+// Eliminar producto
+router.delete('/productos/:id/eliminar', requireAdmin, async (req, res) => {
+  try {
+    const productId = req.params.id;
+
+    const [currentData] = await db.execute('SELECT * FROM productos WHERE id = ?', [productId]);
+    if (currentData.length === 0) {
+      return res.status(404).json({ success: false, message: 'Producto no encontrado' });
+    }
+
+    await db.execute('DELETE FROM productos WHERE id = ?', [productId]);
+
+    await logAdminActivity(
+      req.session.user.id,
+      'eliminar_producto',
+      `Producto eliminado: ${currentData[0].nombre} (ID: ${productId})`,
+      'producto',
+      productId,
+      currentData[0],
+      null,
+      req
+    );
+
+    res.json({ success: true, message: 'Producto eliminado exitosamente' });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    res.status(500).json({ success: false, message: 'Error eliminando producto' });
+  }
+});
+
+// Toggle disponibilidad de producto
+router.post('/productos/:id/toggle-disponibilidad', requireAdmin, async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const { activo } = req.body;
+
+    const [currentData] = await db.execute('SELECT * FROM productos WHERE id = ?', [productId]);
+    if (currentData.length === 0) {
+      return res.status(404).json({ success: false, message: 'Producto no encontrado' });
+    }
+
+    const nuevoEstado = activo ? 1 : 0;
+
+    await db.execute('UPDATE productos SET activo = ? WHERE id = ?', [nuevoEstado, productId]);
+
+    await logAdminActivity(
+      req.session.user.id,
+      'toggle_disponibilidad_producto',
+      `Disponibilidad de producto ${currentData[0].nombre} (ID: ${productId}) cambiada a ${nuevoEstado ? 'activo' : 'inactivo'}`,
+      'producto',
+      productId,
+      { activo: currentData[0].activo },
+      { activo: nuevoEstado },
+      req
+    );
+
+    res.json({ success: true, message: 'Disponibilidad de producto actualizada exitosamente' });
+  } catch (error) {
+    console.error('Error toggling product availability:', error);
+    res.status(500).json({ success: false, message: 'Error actualizando disponibilidad del producto' });
+  }
+});
 
 // Listar cobros semanales
 router.get('/cobros', requireAdmin, async (req, res) => {
@@ -912,7 +1341,7 @@ router.post('/cobros/generar', requireAdmin, async (req, res) => {
         WHERE restaurante_id = ? 
           AND fecha_pedido >= ? 
           AND fecha_pedido <= ? 
-          AND estado NOT IN ('cancelled', 'rejected')
+          AND estado = 'entregado'
       `, [restaurant.id, fecha_inicio, fecha_fin]);
 
       const ventasBrutas = salesData[0].ventas_brutas || 0;
@@ -925,6 +1354,32 @@ router.post('/cobros/generar', requireAdmin, async (req, res) => {
         VALUES (?, ?, ?, ?, ?, DATE_ADD(?, INTERVAL 7 DAY))
       `, [restaurant.id, fecha_inicio, fecha_fin, ventasBrutas, montoComision, fecha_fin]);
 
+      // Obtener datos del restaurante para el email
+      const [restData] = await connection.execute(
+        'SELECT nombre, email_contacto FROM restaurantes WHERE id = ?',
+        [restaurant.id]
+      );
+      if (restData.length > 0 && restData[0].email_contacto) {
+        // Obtener el cobro recién creado
+        const [cobroRows] = await connection.execute(
+          'SELECT * FROM cobros_semanales WHERE restaurante_id = ? AND semana_inicio = ? LIMIT 1',
+          [restaurant.id, fecha_inicio]
+        );
+        const cobro = cobroRows[0];
+        await sendEmail(
+          restData[0].email_contacto,
+          'Nuevo cobro generado - A la Mesa',
+          'restaurant-charge',
+          {
+            nombreRestaurante: restData[0].nombre,
+            semana_inicio: cobro.semana_inicio,
+            semana_fin: cobro.semana_fin,
+            ventas_brutas: cobro.ventas_brutas,
+            monto_comision: cobro.monto_comision,
+            fecha_vencimiento: cobro.fecha_vencimiento
+          }
+        );
+      }
       cobrosGenerados++;
     }
 
@@ -962,7 +1417,8 @@ router.post('/cobros/generar', requireAdmin, async (req, res) => {
 // Listar productos
 router.get('/productos', requireAdmin, async (req, res) => {
   try {
-    const { restaurante, search, categoria, disponible } = req.query;
+    const { restaurante, search, categoria, disponible, page = 1, limit = 10 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
     
     let sql = `
       SELECT p.*, r.nombre as restaurante_nombre, cp.nombre as categoria_nombre
@@ -972,39 +1428,63 @@ router.get('/productos', requireAdmin, async (req, res) => {
       WHERE 1=1
     `;
     
+    let countSql = `
+      SELECT COUNT(*) as total_count
+      FROM productos p
+      JOIN restaurantes r ON p.restaurante_id = r.id
+      LEFT JOIN categorias_productos cp ON p.categoria_id = cp.id
+      WHERE 1=1
+    `;
+    
     const params = [];
+    const countParams = [];
     
     if (restaurante) {
       sql += ` AND p.restaurante_id = ?`;
+      countSql += ` AND p.restaurante_id = ?`;
       params.push(restaurante);
+      countParams.push(restaurante);
     }
     
     if (search) {
       sql += ` AND (p.nombre LIKE ? OR p.descripcion LIKE ?)`;
+      countSql += ` AND (p.nombre LIKE ? OR p.descripcion LIKE ?)`;
       params.push(`%${search}%`, `%${search}%`);
+      countParams.push(`%${search}%`, `%${search}%`);
     }
     
     if (categoria) {
       sql += ` AND cp.nombre = ?`;
+      countSql += ` AND cp.nombre = ?`;
       params.push(categoria);
+      countParams.push(categoria);
     }
     
-    if (disponible !== '') {
+    if (disponible !== undefined && disponible !== '') {
       sql += ` AND p.disponible = ?`;
+      countSql += ` AND p.disponible = ?`;
       params.push(disponible === 'true' ? 1 : 0);
+      countParams.push(disponible === 'true' ? 1 : 0);
     }
     
-    sql += ` ORDER BY r.nombre, p.destacado DESC, p.nombre`;
+    sql += ` ORDER BY r.nombre, p.destacado DESC, p.nombre
+      LIMIT ? OFFSET ?`;
+
+    params.push(parseInt(limit), offset);
     
     const [productos] = await db.execute(sql, params);
+    const [totalCountResult] = await db.execute(countSql, countParams);
+    const totalProductos = totalCountResult[0].total_count;
+    const totalPages = Math.ceil(totalProductos / parseInt(limit));
     
     // Get restaurants and categories for filters
     const [restaurantes] = await db.execute(`
       SELECT id, nombre FROM restaurantes ORDER BY nombre
     `);
     
+    // Obtener categorías globales para el filtro y el formulario
     const [categorias] = await db.execute(`
-      SELECT DISTINCT nombre FROM categorias_productos ORDER BY nombre
+      SELECT id, nombre FROM categorias_productos WHERE restaurante_id IS NULL AND activa = 1 ORDER BY orden_display, nombre
     `);
 
     res.render('admin/productos', {
@@ -1012,8 +1492,10 @@ router.get('/productos', requireAdmin, async (req, res) => {
       user: req.session.user,
       productos,
       restaurantes,
-      categorias,
+      categorias, // <-- ahora sí se envía 'categorias'
       filtros: { restaurante: restaurante || '', search: search || '', categoria: categoria || '', disponible: disponible || '' },
+      currentPage: parseInt(page),
+      totalPages,
       path: req.path
     });
   } catch (error) {
@@ -1101,193 +1583,7 @@ router.delete('/productos/:id/eliminar', requireAdmin, async (req, res) => {
   }
 });
 
-// ========== GESTIÓN DE COMPROBANTES ==========
-
-// Listar comprobantes de pago
-router.get('/comprobantes', requireAdmin, async (req, res) => {
-  try {
-    const { estado, restaurante, fecha_desde, fecha_hasta } = req.query;
-    
-    let sql = `
-      SELECT cp.*, cs.semana_inicio, cs.semana_fin, cs.monto_comision, cs.ventas_brutas,
-             r.nombre as restaurante_nombre,
-             u.nombre as admin_nombre, u.apellido as admin_apellido
-      FROM comprobantes_pago cp
-      JOIN cobros_semanales cs ON cp.cobro_semanal_id = cs.id
-      JOIN restaurantes r ON cp.restaurante_id = r.id
-      LEFT JOIN usuarios u ON cp.admin_revisor_id = u.id
-      WHERE 1=1
-    `;
-    
-    const params = [];
-    
-    if (estado) {
-      sql += ` AND cp.estado = ?`;
-      params.push(estado);
-    }
-    
-    if (restaurante) {
-      sql += ` AND cp.restaurante_id = ?`;
-      params.push(restaurante);
-    }
-    
-    if (fecha_desde) {
-      sql += ` AND cp.fecha_subida >= ?`;
-      params.push(fecha_desde);
-    }
-    
-    if (fecha_hasta) {
-      sql += ` AND cp.fecha_subida <= ?`;
-      params.push(fecha_hasta + ' 23:59:59');
-    }
-    
-    sql += ` ORDER BY cp.fecha_subida DESC`;
-    
-    const [comprobantes] = await db.execute(sql, params);
-    
-    // Get restaurants for filter
-    const [restaurantes] = await db.execute(`
-      SELECT id, nombre FROM restaurantes ORDER BY nombre
-    `);
-
-    res.render('admin/comprobantes', {
-      title: 'Gestión de Comprobantes - Admin',
-      user: req.session.user,
-      comprobantes,
-      restaurantes,
-      filtros: { 
-        estado: estado || '', 
-        restaurante: restaurante || '', 
-        fecha_desde: fecha_desde || '', 
-        fecha_hasta: fecha_hasta || '' 
-      },
-      path: req.path
-    });
-  } catch (error) {
-    console.error('Error loading payment receipts:', error);
-    res.render('error', {
-      title: 'Error',
-      message: 'Error cargando comprobantes',
-      error: {}
-    });
-  }
-});
-
-// Aprobar/rechazar comprobante
-router.post('/comprobantes/:id/revisar', requireAdmin, async (req, res) => {
-  const connection = await db.getConnection();
-  
-  try {
-    const comprobanteId = req.params.id;
-    const { accion, comentarios } = req.body; // 'aprobar' o 'rechazar'
-    
-    if (!['aprobar', 'rechazar'].includes(accion)) {
-      return res.status(400).json({ success: false, message: 'Acción inválida' });
-    }
-
-    await connection.beginTransaction();
-
-    // Update comprobante
-    await connection.execute(`
-      UPDATE comprobantes_pago 
-      SET estado = ?, fecha_revision = NOW(), admin_revisor_id = ?, comentarios_admin = ?
-      WHERE id = ?
-    `, [accion === 'aprobar' ? 'aprobado' : 'rechazado', req.session.user.id, comentarios || null, comprobanteId]);
-
-    // If approved, update the charge status
-    if (accion === 'aprobar') {
-      await connection.execute(`
-        UPDATE cobros_semanales cs
-        JOIN comprobantes_pago cp ON cs.id = cp.cobro_semanal_id
-        SET cs.estado = 'pagado', cs.fecha_pago = NOW()
-        WHERE cp.id = ?
-      `, [comprobanteId]);
-    }
-
-    await connection.commit();
-
-    // Log admin activity
-    await logAdminActivity(
-      req.session.user.id,
-      accion === 'aprobar' ? 'aprobar_pago' : 'rechazar_pago',
-      `Comprobante ${accion}do`,
-      'comprobante',
-      comprobanteId,
-      null,
-      { accion, comentarios },
-      req
-    );
-
-    res.json({ 
-      success: true, 
-      message: `Comprobante ${accion}do exitosamente` 
-    });
-
-  } catch (error) {
-    await connection.rollback();
-    console.error('Error reviewing payment receipt:', error);
-    res.status(500).json({ success: false, message: 'Error procesando la revisión' });
-  } finally {
-    connection.release();
-  }
-});
-
-// ========== RUTAS ADICIONALES ==========
-
-// Acción masiva de restaurantes
-router.post('/restaurantes/accion-masiva', requireAdmin, async (req, res) => {
-  try {
-    const { accion, restaurantIds } = req.body;
-    
-    if (!restaurantIds || restaurantIds.length === 0) {
-      return res.status(400).json({ success: false, message: 'No se seleccionaron restaurantes' });
-    }
-
-    const placeholders = restaurantIds.map(() => '?').join(',');
-    
-    let sql, params;
-    switch (accion) {
-      case 'activar':
-        sql = `UPDATE restaurantes SET activo = 1 WHERE id IN (${placeholders})`;
-        params = restaurantIds;
-        break;
-      case 'desactivar':
-        sql = `UPDATE restaurantes SET activo = 0 WHERE id IN (${placeholders})`;
-        params = restaurantIds;
-        break;
-      case 'eliminar':
-        // This would require more complex logic to handle foreign keys
-        return res.status(400).json({ success: false, message: 'Eliminación masiva no implementada por seguridad' });
-      default:
-        return res.status(400).json({ success: false, message: 'Acción inválida' });
-    }
-
-    await db.execute(sql, params);
-
-    // Log admin activity
-    await logAdminActivity(
-      req.session.user.id,
-      accion === 'activar' ? 'activar_restaurante' : 'desactivar_restaurante',
-      `Acción masiva: ${accion} aplicada a ${restaurantIds.length} restaurantes`,
-      'restaurante',
-      null,
-      null,
-      { accion, restaurantes_afectados: restaurantIds.length },
-      req
-    );
-
-    res.json({ 
-      success: true, 
-      message: `Acción ${accion} aplicada a ${restaurantIds.length} restaurantes` 
-    });
-
-  } catch (error) {
-    console.error('Error in bulk action:', error);
-    res.status(500).json({ success: false, message: 'Error procesando acción masiva' });
-  }
-});
-
-// Toggle product availability
+// Toggle disponibilidad de producto
 router.post('/productos/:id/toggle', requireAdmin, async (req, res) => {
   try {
     const productId = req.params.id;
@@ -1595,6 +1891,189 @@ router.get('/reportes', requireAdmin, async (req, res) => {
       message: 'Error cargando reportes',
       error: {}
     });
+  }
+});
+
+router.get('/dashboard', requireAdmin, (req, res) => {
+  res.redirect('/admin');
+});
+
+// Eliminar usuario
+router.delete('/usuarios/:id/eliminar', requireAdmin, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const [result] = await db.execute('DELETE FROM usuarios WHERE id = ?', [userId]);
+    if (result.affectedRows > 0) {
+      res.json({ success: true });
+    } else {
+      res.json({ success: false, message: 'Usuario no encontrado' });
+    }
+  } catch (error) {
+    console.error('Error eliminando usuario:', error);
+    res.json({ success: false, message: 'Error eliminando usuario' });
+  }
+});
+
+// ========== GESTIÓN DE COMPROBANTES ==========
+router.get('/comprobantes', requireAdmin, async (req, res) => {
+  try {
+    const { estado, restaurante, fecha_desde, fecha_hasta } = req.query;
+    let sql = `
+      SELECT cp.*, r.nombre as restaurante_nombre, r.id as restaurante_id, cs.semana_inicio, cs.semana_fin, cs.ventas_brutas, cs.monto_comision
+      FROM comprobantes_pago cp
+      JOIN cobros_semanales cs ON cp.cobro_semanal_id = cs.id
+      JOIN restaurantes r ON cs.restaurante_id = r.id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (estado) {
+      sql += ' AND cp.estado = ?';
+      params.push(estado);
+    }
+    if (restaurante) {
+      sql += ' AND r.id = ?';
+      params.push(restaurante);
+    }
+    if (fecha_desde) {
+      sql += ' AND cp.fecha_subida >= ?';
+      params.push(fecha_desde + ' 00:00:00');
+    }
+    if (fecha_hasta) {
+      sql += ' AND cp.fecha_subida <= ?';
+      params.push(fecha_hasta + ' 23:59:59');
+    }
+    sql += ' ORDER BY cp.fecha_subida DESC';
+    const [comprobantes] = await db.execute(sql, params);
+    const [restaurantes] = await db.execute('SELECT id, nombre FROM restaurantes ORDER BY nombre');
+    res.render('admin/comprobantes', {
+      title: 'Gestión de Comprobantes - Admin',
+      user: req.session.user,
+      comprobantes,
+      restaurantes,
+      filtros: {
+        estado: estado || '',
+        restaurante: restaurante || '',
+        fecha_desde: fecha_desde || '',
+        fecha_hasta: fecha_hasta || ''
+      },
+      path: req.path
+    });
+  } catch (error) {
+    console.error('Error cargando comprobantes:', error);
+    res.render('error', {
+      title: 'Error',
+      message: 'Error cargando comprobantes',
+      error: {}
+    });
+  }
+});
+
+// POST /admin/restaurantes/aprobar/:id
+router.post('/restaurantes/aprobar/:id', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+        // 1. Actualizar el estado del restaurante a 'verificado'
+        await db.execute('UPDATE restaurantes SET verificado = ? WHERE id = ?', [true, id]);
+
+        // 2. Obtener datos del restaurante y del usuario dueño
+        const [rows] = await db.execute(`
+            SELECT r.nombre AS nombreRestaurante, u.email, u.id AS usuarioId
+            FROM restaurantes r
+            JOIN usuarios u ON r.usuario_id = u.id
+            WHERE r.id = ?
+        `, [id]);
+
+        if (rows.length > 0) {
+            const { nombreRestaurante, email, usuarioId } = rows[0];
+
+            // 3. Actualizar el rol del usuario
+            await db.execute('UPDATE usuarios SET rol = ? WHERE id = ?', ['restaurante', usuarioId]);
+
+            // 4. Enviar correo de aprobación
+            await sendEmail(
+                email,
+                `¡Tu restaurante "${nombreRestaurante}" ha sido aprobado!`,
+                'restaurant-approved',
+                { nombreRestaurante: nombreRestaurante }
+            );
+        }
+
+        res.redirect('/admin/restaurantes');
+    } catch (error) {
+        console.error("Error al aprobar el restaurante:", error);
+        res.status(500).send('Error al aprobar el restaurante.');
+    }
+});
+
+router.get('/test-cobro-email', requireAdmin, async (req, res) => {
+  const { email } = req.query;
+  if (!email) {
+    return res.send('Falta el parámetro ?email=...');
+  }
+  try {
+    await sendEmail(
+      email,
+      'Prueba de cobro generado - A la Mesa',
+      'restaurant-charge',
+      {
+        nombreRestaurante: 'Restaurante de Prueba',
+        semana_inicio: '2024-07-01',
+        semana_fin: '2024-07-07',
+        ventas_brutas: 123456.78,
+        monto_comision: 12345.67,
+        fecha_vencimiento: '2024-07-14'
+      }
+    );
+    res.send('Correo de prueba enviado a ' + email);
+  } catch (error) {
+    res.status(500).send('Error enviando correo: ' + error.message);
+  }
+});
+
+// Revisar comprobante individual (GET)
+router.get('/comprobantes/:id/revisar', requireAdmin, async (req, res) => {
+  try {
+    const comprobanteId = req.params.id;
+    const [comprobantes] = await db.execute(`
+      SELECT cp.*, r.nombre as restaurante_nombre, cs.semana_inicio, cs.semana_fin, cs.monto_comision
+      FROM comprobantes_pago cp
+      JOIN cobros_semanales cs ON cp.cobro_semanal_id = cs.id
+      JOIN restaurantes r ON cp.restaurante_id = r.id
+      WHERE cp.id = ?
+    `, [comprobanteId]);
+    if (comprobantes.length === 0) {
+      return res.status(404).render('error', { message: 'Comprobante no encontrado' });
+    }
+    res.render('admin/comprobante-revisar', {
+      title: 'Revisar Comprobante',
+      comprobante: comprobantes[0],
+      user: req.session.user
+    });
+  } catch (error) {
+    console.error('Error cargando comprobante:', error);
+    res.status(500).render('error', { message: 'Error cargando comprobante', error });
+  }
+});
+
+// Aprobar o rechazar comprobante (POST)
+router.post('/comprobantes/:id/revisar', requireAdmin, async (req, res) => {
+  try {
+    const comprobanteId = req.params.id;
+    const { accion, comentarios_admin } = req.body;
+    let nuevoEstado = null;
+    if (accion === 'aprobar') nuevoEstado = 'aprobado';
+    if (accion === 'rechazar') nuevoEstado = 'rechazado';
+    if (!nuevoEstado) {
+      return res.status(400).json({ success: false, message: 'Acción inválida' });
+    }
+    await db.execute(`
+      UPDATE comprobantes_pago SET estado = ?, comentarios_admin = ?, admin_revisor_id = ?, fecha_revision = NOW()
+      WHERE id = ?
+    `, [nuevoEstado, comentarios_admin || null, req.session.user.id, comprobanteId]);
+    res.json({ success: true, message: `Comprobante ${nuevoEstado}` });
+  } catch (error) {
+    console.error('Error revisando comprobante:', error);
+    res.status(500).json({ success: false, message: 'Error revisando comprobante' });
   }
 });
 
