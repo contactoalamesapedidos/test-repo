@@ -1,0 +1,132 @@
+.order-detail-view-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none; /* Removed !important */
+    justify-content: center !important;
+    z-index: 1050;
+    padding: 10px !important;
+    box-sizing: border-box;
+    overflow-y: scroll;
+}
+
+.order-detail-container {
+    width: 90vw !important;
+    max-width: 450px !important;
+    max-height: 95vh !important;
+    background-color: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    margin-top: 250px;
+}
+
+
+.order-detail-container .card-body {
+    overflow-y: auto; /* Mover el scroll al body de la tarjeta */
+    flex-grow: 1; /* Permitir que el body crezca y ocupe el espacio disponible */
+}
+
+.order-detail-container .btn-close {
+    position: absolute;
+    top: 10px !important;
+    right: 10px !important;
+    z-index: 1060 !important;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 50%;
+    padding: 0.3rem 0.5rem;
+    font-size: 1rem;
+    color: #6c757d;
+    opacity: 1;
+    line-height: 1;
+}
+
+.order-detail-container .btn-close:hover {
+    background-color: #e2e6ea;
+    color: #495057;
+}
+
+.btn-action-text {
+    padding: 0.5rem 0.8rem; /* Reduced padding */
+    height: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem; /* Slightly reduced font size */
+    white-space: nowrap;
+    box-sizing: border-box;
+    flex-shrink: 1; /* Allow buttons to shrink */
+}
+
+.btn-action-text i {
+    margin-right: 8px;
+}
+
+.mobile-nav-item {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.8rem;
+}
+
+.mobile-nav-item i {
+    margin-bottom: 0.25rem;
+    font-size: 1.2rem;
+}
+
+/* Chat Styles */
+#chat-messages {
+    background-color: #e5ddd5;
+    background-image: url("https://www.transparenttextures.com/patterns/light-paper-fibers.png");
+}
+.message {
+    display: flex;
+    margin-bottom: 10px;
+}
+.message.sent {
+    justify-content: flex-end;
+}
+.message.received {
+    justify-content: flex-start;
+}
+.message-content {
+    max-width: 70%;
+    padding: 10px 15px;
+    border-radius: 12px;
+    word-wrap: break-word;
+    position: relative;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+}
+.message.sent .message-content {
+    background-color: #dcf8c6;
+    color: #333;
+}
+.message.received .message-content {
+    background-color: #fff;
+    color: #333;
+}
+.message-text {
+    margin: 0;
+    font-size: 0.9rem;
+}
+.message-time {
+    font-size: 0.7rem;
+    color: #999;
+    display: block;
+    margin-top: 5px;
+    text-align: right;
+}
+.chat-input {
+    padding: 15px;
+    border-top: 1px solid #e0e0e0;
+    background-color: #f8f9fa;
+}
+.chat-input .form-control {
+    border-radius: 20px;
+}

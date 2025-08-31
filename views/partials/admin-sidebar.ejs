@@ -1,0 +1,112 @@
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <h3>A la Mesa</h3>
+    </div>
+
+    <ul class="list-unstyled components">
+        <li class="active">
+            <a href="/admin">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+        </li>
+        
+        <li>
+            <a href="#restaurantesSubmenu" data-toggle="collapse" aria-expanded="false" class="dropdown-toggle">
+                <i class="fas fa-store"></i> Restaurantes
+            </a>
+            <ul class="collapse list-unstyled" id="restaurantesSubmenu">
+                <li>
+                    <a href="/admin/restaurantes">
+                        <i class="fas fa-list"></i> Lista de Restaurantes
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/restaurantes/nuevo">
+                        <i class="fas fa-plus"></i> Nuevo Restaurante
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <li>
+            <a href="#cobrosSubmenu" data-toggle="collapse" aria-expanded="false" class="dropdown-toggle">
+                <i class="fas fa-money-bill-wave"></i> Cobros y Comisiones
+            </a>
+            <ul class="collapse list-unstyled" id="cobrosSubmenu">
+                <li>
+                    <a href="/admin/cobros">
+                        <i class="fas fa-list"></i> Lista de Cobros
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/comisiones">
+                        <i class="fas fa-percentage"></i> Configurar Comisiones
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <li>
+            <a href="/admin/productos">
+                <i class="fas fa-box"></i> Productos
+            </a>
+        </li>
+
+        <li>
+            <a href="/admin/comprobantes">
+                <i class="fas fa-receipt"></i> Comprobantes
+            </li>
+
+        <li>
+            <a href="#usuariosSubmenu" data-toggle="collapse" aria-expanded="false" class="dropdown-toggle">
+                <i class="fas fa-users"></i> Usuarios
+            </a>
+            <ul class="collapse list-unstyled" id="usuariosSubmenu">
+                <li>
+                    <a href="/admin/usuarios">
+                        <i class="fas fa-list"></i> Lista de Usuarios
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/usuarios/nuevo">
+                        <i class="fas fa-plus"></i> Nuevo Usuario
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <li>
+            <a href="#reportesSubmenu" data-toggle="collapse" aria-expanded="false" class="dropdown-toggle">
+                <i class="fas fa-chart-bar"></i> Reportes
+            </a>
+            <ul class="collapse list-unstyled" id="reportesSubmenu">
+                <li>
+                    <a href="/admin/reportes/ventas">
+                        <i class="fas fa-shopping-cart"></i> Ventas
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/reportes/comisiones">
+                        <i class="fas fa-money-bill"></i> Comisiones
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <li>
+            <a href="/admin/configuracion">
+                <i class="fas fa-cog"></i> Configuración
+            </a>
+        </li>
+
+        <li>
+            <a href="/" target="_blank">
+                <i class="fas fa-external-link-alt"></i> Ver Sitio
+            </a>
+        </li>
+    </ul>
+</div>
+
+<!-- Overlay para el sidebar -->
+<div class="overlay"></div>

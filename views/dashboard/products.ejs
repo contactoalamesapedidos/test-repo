@@ -1,25 +1,7 @@
 <div class="container-fluid py-4">
     <div class="row">
-        <!-- Sidebar -->
         <div class="col-md-3 col-lg-2">
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        <a href="/dashboard" class="list-group-item list-group-item-action">
-                            <i class="fas fa-home me-2"></i> Dashboard
-                        </a>
-                        <a href="/dashboard/products" class="list-group-item list-group-item-action active">
-                            <i class="fas fa-utensils me-2"></i> Productos
-                        </a>
-                        <a href="/dashboard/orders" class="list-group-item list-group-item-action">
-                            <i class="fas fa-shopping-cart me-2"></i> Pedidos
-                        </a>
-                        <a href="/dashboard/cobros" class="list-group-item list-group-item-action">
-                            <i class="fas fa-money-bill-wave me-2"></i> Cobros
-                        </a>
-                    </div>
-                </div>
-            </div>
+            <%- include('partials/sidebar', { activePage: 'productos' }) %>
         </div>
 
         <!-- Main Content -->
@@ -29,7 +11,7 @@
                     <i class="fas fa-utensils me-2"></i>
                     Gestionar Productos
                 </h2>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#productModal">
+                <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#productModal" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">
                     <i class="fas fa-plus me-2"></i>
                     Nuevo Producto
                 </button>
@@ -42,8 +24,10 @@
                         <div class="col-md-6 col-lg-4 mb-4">
                             <div class="card h-100 border-0 shadow-sm">
                                 <% if (product.imagen) { %>
-                                    <img src="/uploads/<%= product.imagen %>" class="card-img-top" alt="<%= product.nombre %>"
-                                         style="height: 200px; object-fit: cover;">
+                                    <% const imgSrc = product.imagen.startsWith('/') ? product.imagen : ('/uploads/' + product.imagen); %>
+                                    <img src="<%= imgSrc %>" class="card-img-top" alt="<%= product.nombre %>"
+                                         style="height: 200px; object-fit: cover;"
+                                         onerror="this.src='/images/defaults/product.jpeg'">
                                 <% } else { %>
                                     <div class="card-img-top bg-light d-flex align-items-center justify-content-center"
                                          style="height: 200px;">
@@ -66,10 +50,11 @@
                                     <div class="d-flex justify-content-between align-items-center">
                                         <p class="text-primary fw-bold mb-0">$<%= Number(product.precio).toFixed(2) %></p>
                                         <div class="btn-group">
-                                            <button type="button" class="btn btn-sm btn-outline-primary edit-product"
+                                            <button type="button" class="btn btn-sm edit-product"
                                                     data-id="<%= product.id %>"
                                                     data-bs-toggle="tooltip"
-                                                    title="Editar producto">
+                                                    title="Editar producto"
+                                                    style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">
                                                 <i class="fas fa-edit"></i>
                                             </button>
                                             <button type="button" class="btn btn-sm btn-outline-danger delete-product"
@@ -114,8 +99,8 @@
                                 <input type="text" class="form-control" id="nombre" name="nombre" required>
                             </div>
                             <div class="mb-3">
-                                <label for="descripcion" class="form-label">Descripción *</label>
-                                <textarea class="form-control" id="descripcion" name="descripcion" rows="3" required></textarea>
+                                <label for="descripcion" class="form-label">Descripción</label>
+                                <textarea class="form-control" id="descripcion" name="descripcion" rows="3"></textarea>
                             </div>
                             <div class="mb-3">
                                 <label for="precio" class="form-label">Precio *</label>
@@ -128,8 +113,8 @@
                                 <label for="categoria_id" class="form-label">Categoría *</label>
                                 <select class="form-select" id="categoria_id" name="categoria_id" required>
                                     <option value="">Selecciona una categoría</option>
-                                    <% if (categories && categories.length > 0) { %>
-                                        <% categories.forEach(function(categoria) { %>
+                                    <% if (globalCategories && globalCategories.length > 0) { %>
+                                        <% globalCategories.forEach(function(categoria) { %>
                                             <option value="<%= categoria.id %>"><%= categoria.nombre %></option>
                                         <% }); %>
                                     <% } %>
@@ -161,105 +146,40 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Producto</button>
+                    <button type="submit" class="btn" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">
+                        <span class="spinner-border spinner-border-sm d-none" id="productSpinner" role="status" aria-hidden="true"></span>
+                        <span id="productBtnText">Guardar Producto</span>
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+
+<% if (typeof scripts !== 'undefined') { %>
+    <% scripts.forEach(script => { %>
+        <script src="<%= script %>"></script>
+    <% }); %>
+<% } %>
+
+<!-- Pass user data to frontend -->
+<script data-user='<%= JSON.stringify(user || {}) %>'></script>
+
 <script>
-// Preview de imagen
-document.getElementById('imagen').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    const preview = document.getElementById('imagePreview');
-    const previewImg = preview.querySelector('img');
-    
-    if (file) {
-        // Validar tamaño (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            alert('La imagen no debe superar los 5MB');
-            this.value = '';
-            preview.style.display = 'none';
-            return;
-        }
-        
-        // Validar tipo
-        if (!file.type.startsWith('image/')) {
-            alert('Por favor selecciona una imagen válida');
-            this.value = '';
-            preview.style.display = 'none';
-            return;
-        }
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            preview.style.display = 'block';
-        }
-        reader.readAsDataURL(file);
-    } else {
-        preview.style.display = 'none';
+document.addEventListener('DOMContentLoaded', function() {
+    // Asegurar que el dropdown de usuario funcione
+    const userDropdown = document.getElementById('userDropdown');
+    if (userDropdown && typeof bootstrap !== 'undefined') {
+        new bootstrap.Dropdown(userDropdown);
     }
 });
-
-// Form submission
-document.getElementById('productForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    try {
-        const formData = new FormData(this);
-        const response = await fetch('/dashboard/products/save', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        if (!data.success) {
-            throw new Error(data.message);
-        }
-        
-        // Close modal and reload page
-        bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
-        showNotification('Producto guardado exitosamente', 'success');
-        setTimeout(() => window.location.reload(), 1000);
-    } catch (error) {
-        console.error('Error:', error);
-        showNotification(error.message || 'Error guardando el producto', 'error');
-    }
-});
-
-// Reset form when modal is closed
-document.getElementById('productModal').addEventListener('hidden.bs.modal', function() {
-    document.getElementById('productForm').reset();
-    document.getElementById('imagePreview').style.display = 'none';
-});
-
-// Notification helper
-function showNotification(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
-    toast.setAttribute('role', 'alert');
-    toast.setAttribute('aria-live', 'assertive');
-    toast.setAttribute('aria-atomic', 'true');
-    
-    toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">
-                ${message}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-    `;
-    
-    document.body.appendChild(toast);
-    const bsToast = new bootstrap.Toast(toast);
-    bsToast.show();
-    
-    toast.addEventListener('hidden.bs.toast', () => {
-        document.body.removeChild(toast);
-    });
-}
 </script>
 
-<%- include('../partials/footer') %> 
+<!-- Toast Notifications -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+    <div id="toastContainer"></div>
+</div>

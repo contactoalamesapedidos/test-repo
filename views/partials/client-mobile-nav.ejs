@@ -1,0 +1,16 @@
+<nav class="client-mobile-nav" style="z-index:1050;">
+  <a href="/" class="client-mobile-nav-item <%= currentPath === '/' ? 'active' : '' %>">
+    <i class="fas fa-home"></i><span>Inicio</span>
+  </a>
+  <a href="/restaurants" class="client-mobile-nav-item <%= currentPath.startsWith('/restaurants') ? 'active' : '' %>">
+    <i class="fas fa-utensils"></i><span>Restaurantes</span>
+  </a>
+  <a href="#" class="client-mobile-nav-item cart-icon-container" onclick="toggleCartSidebar(event)">
+    <i class="fas fa-shopping-cart"></i><span>Carrito</span>
+    <span class="badge rounded-pill bg-danger cart-badge" data-cart-count>0</span>
+  </a>
+  <a href="#" class="client-mobile-nav-item" onclick="toggleUserMenu(event)">
+    <i class="fas fa-user"></i><span>Mi Perfil</span>
+  </a>
+  
+</nav>

@@ -1,0 +1,104 @@
+<nav class="dashboard-mobile-nav d-md-none d-lg-none d-xl-none fixed-bottom bg-white shadow-lg border-top d-flex flex-row justify-content-around flex-nowrap" style="z-index:1050;">
+  <a href="/dashboard" class="restaurant-mobile-nav-item <%= activePage === 'dashboard' ? 'active' : '' %>">
+    <i class="fas fa-home"></i><span>Inicio</span>
+  </a>
+  <a href="/dashboard/products" class="restaurant-mobile-nav-item <%= activePage === 'productos' ? 'active' : '' %>">
+    <i class="fas fa-utensils"></i><span>Productos</span>
+  </a>
+  <a href="/dashboard/orders" class="restaurant-mobile-nav-item <%= activePage === 'pedidos' ? 'active' : '' %>">
+    <i class="fas fa-shopping-cart"></i><span>Pedidos</span>
+  </a>
+  <a href="/dashboard/pagos" class="restaurant-mobile-nav-item <%= activePage === 'pagos' ? 'active' : '' %>">
+    <i class="fas fa-money-bill-wave"></i><span>Pagos</span>
+  </a>
+  <a href="/dashboard/estadisticas" class="restaurant-mobile-nav-item <%= activePage === 'estadisticas' ? 'active' : '' %>">
+    <i class="fas fa-chart-bar"></i><span>Estadísticas</span>
+  </a>
+  <a href="#" class="restaurant-mobile-nav-item" id="restaurantMobileNavMoreBtn">
+    <i class="fas fa-plus-circle"></i><span>Más</span>
+  </a>
+</nav>
+
+<!-- Menú desplegable de Más -->
+<div id="restaurantMobileNavMore" class="position-fixed w-100 bg-white shadow-lg border-bottom d-none" style="left:0; right:0; bottom:100px; z-index:1060; transition: all 0.3s ease-in-out; opacity: 0;">
+  <div class="d-flex flex-wrap justify-content-around align-items-center py-2" style="background: white;">
+    <a href="/dashboard/drivers" class="restaurant-mobile-nav-item <%= activePage === 'drivers' ? 'active' : '' %>" style="display: none;">
+      <i class="fas fa-motorcycle"></i><span>Repartidores</span>
+    </a>
+    <a href="/dashboard/cobros" class="restaurant-mobile-nav-item <%= activePage === 'cobros' ? 'active' : '' %>">
+      <i class="fas fa-dollar-sign"></i><span>Cobros</span>
+    </a>
+    <a href="/dashboard/settings" class="restaurant-mobile-nav-item <%= activePage === 'configuracion' ? 'active' : '' %>">
+      <i class="fas fa-cog"></i><span>Configuración</span>
+    </a>
+    <a href="/contact" class="restaurant-mobile-nav-item <%= activePage === 'contacto' ? 'active' : '' %>">
+      <i class="fas fa-envelope"></i><span>Contacto</span>
+    </a>
+    <a href="/auth/logout" class="mobile-nav-item text-danger">
+      <i class="fas fa-sign-out-alt"></i><span>Salir</span>
+    </a>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const moreBtn = document.getElementById('restaurantMobileNavMoreBtn');
+  const moreNav = document.getElementById('restaurantMobileNavMore');
+  let isMenuOpen = false;
+
+  function toggleMenu(show) {
+    if (!moreNav) return;
+    
+    if (show) {
+      moreNav.classList.remove('d-none');
+      // Pequeño retraso para permitir que se aplique el display:block antes de la animación
+      setTimeout(() => {
+        moreNav.style.opacity = '1';
+        moreNav.style.transform = 'translateY(-100%)';
+      }, 10);
+      document.body.style.overflow = 'hidden';
+      isMenuOpen = true;
+    } else {
+      moreNav.style.opacity = '0';
+      moreNav.style.transform = 'translateY(0)';
+      // Esperar a que termine la animación antes de ocultar
+      setTimeout(() => {
+        if (!isMenuOpen) moreNav.classList.add('d-none');
+      }, 300);
+      document.body.style.overflow = '';
+      isMenuOpen = false;
+    }
+  }
+
+  // Abrir menú
+  if (moreBtn) {
+    moreBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleMenu(!isMenuOpen);
+    });
+  }
+
+
+
+  // Cerrar al tocar fuera del menú
+  document.addEventListener('click', function(e) {
+    if (isMenuOpen && !moreNav.contains(e.target) && e.target !== moreBtn && !moreBtn.contains(e.target)) {
+      toggleMenu(false);
+    }
+  });
+
+  // Prevenir cierre al tocar dentro del menú
+  moreNav.addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
+  
+  // Cerrar menú al cambiar de ruta
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('a[href]');
+    if (link && link.getAttribute('href') !== '#' && link !== moreBtn) {
+      toggleMenu(false);
+    }
+  });
+});
+</script>

@@ -1,0 +1,53 @@
+// <%- include('../partials/header') %>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-clock text-warning" style="font-size: 4rem;"></i>
+                    </div>
+                    <h4 class="mb-2">Tiempo Expirado</h4>
+                    <p class="text-muted mb-3">El tiempo para dejar una reseña ha expirado</p>
+                    <a href="/orders" class="btn btn-primary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Volver a Mis Pedidos
+                    </a>
+                </div>
+            </div>
+
+            <!-- Order Info -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Información del Pedido
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Número de Pedido</h6>
+                            <p class="text-muted">#<%= review.numero_pedido %></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Fecha de Entrega</h6>
+                            <p class="text-muted">
+                                <%= new Date(review.fecha_entrega).toLocaleDateString('es-AR') %>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Nota:</strong> Las reseñas deben dejarse dentro de las 24 horas posteriores a la entrega del pedido.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+// <%- include('../partials/footer') %> 

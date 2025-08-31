@@ -1,0 +1,179 @@
+<%- contentFor('body') %>
+
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card border-0 shadow">
+        <div class="card-header text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+          <h4 class="mb-0 text-center">
+            <i class="fas fa-credit-card me-2"></i>
+            Completar Pago
+          </h4>
+        </div>
+        <div class="card-body p-4">
+          <% if (order) { %>
+            <div class="text-center mb-4">
+              <h5 class="text-primary">Pedido #<%= order.numero_pedido %></h5>
+              <p class="text-muted">Restaurante: <%= order.restaurante_nombre %></p>
+              <div class="alert alert-warning">
+                <i class="fas fa-clock me-2"></i>
+                <strong>Tiempo restante:</strong> 
+                <span id="timeRemaining" class="fw-bold"></span>
+              </div>
+            </div>
+
+            <div class="order-summary mb-4 p-3 bg-light rounded">
+              <h6 class="mb-3">Resumen del Pedido</h6>
+              <div class="d-flex justify-content-between mb-2">
+                <span>Subtotal:</span>
+                <strong>$<%= Number(order.subtotal || 0).toFixed(2) %></strong>
+              </div>
+              <div class="d-flex justify-content-between mb-2">
+                <span>Envío:</span>
+                <strong><%= Number(order.costo_delivery || 0) > 0 ? `$${Number(order.costo_delivery || 0).toFixed(2)}` : 'Gratis' %></strong>
+              </div>
+              <hr>
+              <div class="d-flex justify-content-between mb-2">
+                <span class="fs-5">Total:</span>
+                <strong class="fs-5 text-primary">$<%= Number(order.total || 0).toFixed(2) %></strong>
+              </div>
+            </div>
+
+            <form id="completePaymentForm">
+              <div class="mb-4">
+                <label class="form-label fw-bold">Método de Pago</label>
+                <div class="payment-methods">
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="paymentMethod" id="mercadopago" value="mercadopago" checked>
+                    <label class="form-check-label" for="mercadopago">
+                      <i class="fab fa-cc-mastercard me-2 text-primary"></i>
+                      MercadoPago (Tarjeta, Efectivo, Transferencia)
+                    </label>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="paymentMethod" id="efectivo" value="efectivo">
+                    <label class="form-check-label" for="efectivo">
+                      <i class="fas fa-money-bill-wave me-2 text-success"></i>
+                      Efectivo al entregar
+                    </label>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="paymentMethod" id="transferencia" value="transferencia">
+                    <label class="form-check-label" for="transferencia">
+                      <i class="fas fa-university me-2 text-info"></i>
+                      Transferencia Bancaria
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg" id="completePaymentBtn">
+                  <i class="fas fa-credit-card me-2"></i>
+                  Completar Pago
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="window.history.back()">
+                  <i class="fas fa-arrow-left me-2"></i>
+                  Volver
+                </button>
+              </div>
+            </form>
+
+            <div class="mt-4 text-center">
+              <small class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>
+                Tienes hasta 15 minutos desde que realizaste el pedido para completar el pago.
+              </small>
+            </div>
+          <% } else { %>
+            <div class="text-center">
+              <i class="fas fa-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+              <h5 class="mt-3 text-warning">Pedido No Encontrado</h5>
+              <p class="text-muted">El pedido que buscas no existe o ya no está disponible para completar el pago.</p>
+              <a href="/" class="btn btn-primary">
+                <i class="fas fa-home me-2"></i>
+                Volver al Inicio
+              </a>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  <% if (order) { %>
+    // Calcular tiempo restante
+    const orderTime = new Date('<%= order.fecha_pedido %>');
+    const timeLimit = 15 * 60 * 1000; // 15 minutos en milisegundos
+    
+    function updateTimeRemaining() {
+      const now = new Date();
+      const timeElapsed = now - orderTime;
+      const timeRemaining = timeLimit - timeElapsed;
+      
+      if (timeRemaining <= 0) {
+        // Tiempo expirado, redirigir
+        window.location.href = '/orders/<%= order.id %>?expired=true';
+        return;
+      }
+      
+      const minutes = Math.floor(timeRemaining / (1000 * 60));
+      const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+      
+      document.getElementById('timeRemaining').textContent = 
+        `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    // Actualizar cada segundo
+    updateTimeRemaining();
+    setInterval(updateTimeRemaining, 1000);
+    
+    // Manejar envío del formulario
+    document.getElementById('completePaymentForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('completePaymentBtn');
+      const originalText = submitBtn.innerHTML;
+      
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Procesando...';
+      
+      try {
+        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+        
+        const response = await fetch('/orders/<%= order.id %>/complete-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ paymentMethod })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          if (paymentMethod === 'mercadopago' && data.redirectUrl) {
+            // Redirigir a MercadoPago
+            window.location.href = data.redirectUrl;
+          } else {
+            // Mostrar mensaje de éxito
+            alert(data.message);
+            window.location.href = '/orders/<%= order.id %>';
+          }
+        } else {
+          alert(data.message || 'Error al completar el pago');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error al procesar la solicitud. Por favor, intenta nuevamente.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+    });
+  <% } %>
+});
+</script>

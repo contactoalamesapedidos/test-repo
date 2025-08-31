@@ -1,0 +1,94 @@
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-comments me-2"></i>
+                            Chat del Pedido #<%= order.numero_pedido %>
+                        </h5>
+                        <a href="/dashboard/orders" class="btn btn-sm btn-back-order">
+                            <i class="fas fa-arrow-left me-2"></i> Volver a Pedidos
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0 d-flex flex-column" style="height: 60vh;">
+                    <div id="chat-messages" class="p-3 overflow-auto flex-grow-1">
+                        <% if (messages && messages.length > 0) { %>
+                            <% messages.forEach(message => {
+                                // Asegurarse de que message.remitente_tipo sea una cadena válida
+                                const senderType = typeof message.remitente_tipo === 'string' ? message.remitente_tipo : '';
+                            %>
+                                <div class="message <%= senderType === 'restaurante' ? 'sent' : 'received' %>">
+                                    <div class="message-content">
+                                        <p class="message-text"><%= message.mensaje %></p>
+                                        <span class="message-time"><%= new Date(message.fecha_envio).toLocaleTimeString() %></span>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        <% } else { %>
+                            <p class="text-center text-muted">Aún no hay mensajes en este chat.</p>
+                        <% } %>
+                    </div>
+                    <form id="chat-form" class="chat-input border-top p-3 bg-light d-flex align-items-center">
+                        <input type="text" id="chat-message-input" class="form-control me-2" placeholder="Escribe un mensaje...">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Enviar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<script src="/js/socket.io.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/dashboard-orders-chat.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const orderId = <%= order.id %>;
+    const chatContainer = document.querySelector('.card-body');
+
+    // La función getUserData() está en app.js, que debería estar incluido en el layout principal.
+    // Nos aseguramos de que app.js se cargue antes que este script si es necesario.
+    if (typeof getUserData !== 'function') {
+        console.error('ERROR: getUserData() no está definida. Asegúrate de que app.js se carga antes que este script.');
+        if(chatContainer) {
+            chatContainer.querySelector('#chat-messages').innerHTML = '<p class="text-danger text-center">Error crítico al cargar el chat. Contacte a soporte.</p>';
+        }
+        return;
+    }
+
+    const currentUser = getUserData();
+    console.log('DEBUG: Current User in /orders/chat:', currentUser);
+
+    if (!currentUser || !currentUser.id || !currentUser.tipo_usuario) {
+        console.error('ERROR: No se pudieron obtener los datos del usuario para inicializar el chat.');
+        if(chatContainer) {
+            chatContainer.querySelector('#chat-messages').innerHTML = '<p class="text-danger text-center">No se pudo verificar tu identidad para el chat. Por favor, inicia sesión de nuevo.</p>';
+        }
+        return;
+    }
+
+    if (typeof initializeChatListeners === 'function') {
+        // Esperar a que el socket se conecte si es necesario (lógica similar a la otra vista)
+        function setupChatWhenSocketReady() {
+            if (window.socket && window.socket.connected) {
+                console.log('DEBUG: Socket.IO está conectado. Llamando a initializeChatListeners.');
+                initializeChatListeners(orderId, currentUser.id, currentUser.tipo_usuario, chatContainer);
+            } else {
+                console.log('DEBUG: Socket.IO no está conectado aún. Esperando...');
+                setTimeout(setupChatWhenSocketReady, 100); // Reintentar en 100ms
+            }
+        }
+        setupChatWhenSocketReady();
+    } else {
+        console.error('ERROR: initializeChatListeners no está definida.');
+    }
+});
+</script>

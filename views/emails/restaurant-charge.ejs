@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Nuevo Cobro Generado</title>
+</head>
+<body>
+    <h1>¡Hola <%= nombreRestaurante %>!</h1>
+    <p>Se ha generado un nuevo cobro de comisión para tu restaurante.</p>
+    <h2>Detalles del Cobro</h2>
+    <ul>
+        <li><strong>Período:</strong> <%= semana_inicio %> al <%= semana_fin %></li>
+        <li><strong>Ventas Brutas:</strong> $<%= ventas_brutas.toFixed(2) %></li>
+        <li><strong>Comisión (10%):</strong> $<%= monto_comision.toFixed(2) %></li>
+        <li><strong>Fecha de Vencimiento:</strong> <%= fecha_vencimiento %></li>
+    </ul>
+    <p>Puedes ver los detalles y realizar el pago en tu panel de control.</p>
+    <p>Atentamente,</p>
+    <p>El equipo de A la Mesa</p>
+</body>
+</html>

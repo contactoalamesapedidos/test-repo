@@ -1,0 +1,244 @@
+<%- include('../partials/header') %>
+<%- include('./partials/sidebar') %>
+
+<main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg ">
+    <!-- Navbar -->
+    <%- include('./partials/navbar') %>
+    <!-- End Navbar -->
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card my-4">
+                    <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
+                        <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3">
+                            <h6 class="text-white text-capitalize ps-3">Gestión de Repartidores</h6>
+                        </div>
+                    </div>
+                    <div class="card-body px-0 pb-2">
+                        <div class="table-responsive p-0">
+                            <div class="d-flex justify-content-end pe-4 pb-3">
+                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDriverModal">
+                                    <i class="material-icons opacity-10 me-2">person_add</i>Añadir Repartidor
+                                </button>
+                            </div>
+                            <div class="table-responsive p-0 d-none d-md-block">
+                                <thead>
+                                    <tr>
+                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Repartidor</th>
+                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Vehículo</th>
+                                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Estado</th>
+                                        <th class="text-secondary opacity-7">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (drivers.length > 0) { %>
+                                        <% drivers.forEach(driver => { %>
+                                            <tr>
+                                                <td data-label="Repartidor">
+                                                    <div class="d-flex px-2 py-1">
+                                                        <div>
+                                                            <img src="/images/defaults/user-avatar.png" class="avatar avatar-sm me-3 border-radius-lg" alt="user1">
+                                                        </div>
+                                                        <div class="d-flex flex-column justify-content-center">
+                                                            <h6 class="mb-0 text-sm"><%= driver.nombre %> <%= driver.apellido %></h6>
+                                                            <p class="text-xs text-secondary mb-0"><%= driver.email %></p>
+                                                            <p class="text-xs text-secondary mb-0"><%= driver.telefono %></p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td data-label="Vehículo">
+                                                    <p class="text-xs font-weight-bold mb-0"><%= driver.vehicle_type %></p>
+                                                </td>
+                                                <td data-label="Estado" class="align-middle text-center text-sm">
+                                                    <span class="badge badge-sm bg-gradient-<%= driver.status === 'available' ? 'success' : (driver.status === 'on_delivery' ? 'warning' : 'secondary') %>">
+                                                        <%= driver.status === 'available' ? 'Disponible' : (driver.status === 'on_delivery' ? 'En Reparto' : 'Desconectado') %>
+                                                    </span>
+                                                </td>
+                                                <td data-label="Acciones" class="align-middle">
+                                                    <button class="btn btn-link text-secondary mb-0 ps-0 edit-driver-btn"
+                                                            data-id="<%= driver.id %>"
+                                                            data-nombre="<%= driver.nombre %>"
+                                                            data-apellido="<%= driver.apellido %>"
+                                                            data-email="<%= driver.email %>"
+                                                            data-telefono="<%= driver.telefono %>"
+                                                            data-vehicle="<%= driver.vehicle_type %>"
+                                                            data-status="<%= driver.status %>"
+                                                            data-bs-toggle="modal" data-bs-target="#editDriverModal">
+                                                        <i class="material-icons text-sm">edit</i>
+                                                    </button>
+                                                    <button class="btn btn-link text-danger mb-0 ps-0 delete-driver-btn" data-id="<%= driver.id %>">
+                                                        <i class="material-icons text-sm">delete</i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    <% } else { %>
+                                        <tr>
+                                            <td colspan="4" class="text-center">No hay repartidores registrados.</td>
+                                        </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-md-none">
+                            <% if (drivers.length > 0) { %>
+                                <div class="row px-3">
+                                    <% drivers.forEach(driver => { %>
+                                        <div class="col-12 mb-3">
+                                            <div class="card driver-card-mobile shadow-sm">
+                                                <div class="card-body">
+                                                    <div class="d-flex align-items-center mb-2">
+                                                        <img src="/images/defaults/user-avatar.png" class="avatar avatar-sm me-3 border-radius-lg" alt="user-avatar">
+                                                        <div>
+                                                            <h6 class="mb-0 text-sm"><%= driver.nombre %> <%= driver.apellido %></h6>
+                                                            <p class="text-xs text-secondary mb-0"><%= driver.email %></p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <p class="text-xs font-weight-bold mb-0">Vehículo: <%= driver.vehicle_type %></p>
+                                                        <span class="badge badge-sm bg-gradient-<%= driver.status === 'available' ? 'success' : (driver.status === 'on_delivery' ? 'warning' : 'secondary') %>">
+                                                            <%= driver.status === 'available' ? 'Disponible' : (driver.status === 'on_delivery' ? 'En Reparto' : 'Desconectado') %>
+                                                        </span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-end">
+                                                        <button class="btn btn-link text-secondary mb-0 ps-0 edit-driver-btn"
+                                                                data-id="<%= driver.id %>"
+                                                                data-nombre="<%= driver.nombre %>"
+                                                                data-apellido="<%= driver.apellido %>"
+                                                                data-email="<%= driver.email %>"
+                                                                data-telefono="<%= driver.telefono %>"
+                                                                data-vehicle="<%= driver.vehicle_type %>"
+                                                                data-status="<%= driver.status %>"
+                                                                data-bs-toggle="modal" data-bs-target="#editDriverModal">
+                                                            <i class="material-icons text-sm">edit</i>
+                                                        </button>
+                                                        <button class="btn btn-link text-danger mb-0 ps-0 delete-driver-btn" data-id="<%= driver.id %>">
+                                                            <i class="material-icons text-sm">delete</i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                            <% } else { %>
+                                <div class="col-12 text-center py-4">
+                                    <p class="text-muted">No hay repartidores registrados.</p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <%- include('./partials/footer') %>
+    </div>
+</main>
+
+<!-- Add Driver Modal -->
+<div class="modal fade" id="addDriverModal" tabindex="-1" role="dialog" aria-labelledby="addDriverModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addDriverModalLabel">Añadir Nuevo Repartidor</h5>
+                <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addDriverForm">
+                    <div class="mb-3">
+                        <label for="addDriverNombre" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="addDriverNombre" name="nombre" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addDriverApellido" class="form-label">Apellido</label>
+                        <input type="text" class="form-control" id="addDriverApellido" name="apellido" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addDriverEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="addDriverEmail" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addDriverPassword" class="form-label">Contraseña</label>
+                        <input type="password" class="form-control" id="addDriverPassword" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addDriverTelefono" class="form-label">Teléfono (Opcional)</label>
+                        <input type="text" class="form-control" id="addDriverTelefono" name="telefono">
+                    </div>
+                    <div class="mb-3">
+                        <label for="addDriverVehicleType" class="form-label">Tipo de Vehículo</label>
+                        <select class="form-select" id="addDriverVehicleType" name="vehicle_type" required>
+                            <option value="">Seleccione...</option>
+                            <option value="moto">Moto</option>
+                            <option value="bicicleta">Bicicleta</option>
+                            <option value="auto">Auto</option>
+                            <option value="a_pie">A pie</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Añadir Repartidor</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Driver Modal -->
+<div class="modal fade" id="editDriverModal" tabindex="-1" role="dialog" aria-labelledby="editDriverModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editDriverModalLabel">Editar Repartidor</h5>
+                <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editDriverForm">
+                    <input type="hidden" id="editDriverId" name="id">
+                    <div class="mb-3">
+                        <label for="editDriverNombre" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="editDriverNombre" name="nombre" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDriverApellido" class="form-label">Apellido</label>
+                        <input type="text" class="form-control" id="editDriverApellido" name="apellido" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDriverEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="editDriverEmail" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDriverTelefono" class="form-label">Teléfono (Opcional)</label>
+                        <input type="text" class="form-control" id="editDriverTelefono" name="telefono">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDriverVehicleType" class="form-label">Tipo de Vehículo</label>
+                        <select class="form-select" id="editDriverVehicleType" name="vehicle_type" required>
+                            <option value="">Seleccione...</option>
+                            <option value="moto">Moto</option>
+                            <option value="bicicleta">Bicicleta</option>
+                            <option value="auto">Auto</option>
+                            <option value="a_pie">A pie</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDriverStatus" class="form-label">Estado</label>
+                        <select class="form-select" id="editDriverStatus" name="status" required>
+                            <option value="available">Disponible</option>
+                            <option value="on_delivery">En Reparto</option>
+                            <option value="offline">Desconectado</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>
+<script src="/js/dashboard/dashboard-drivers.js"></script>
+<%- include('partials/restaurant-mobile-nav', { activePage: 'drivers' }) %>

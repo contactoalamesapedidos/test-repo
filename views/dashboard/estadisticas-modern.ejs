@@ -1,0 +1,101 @@
+<!-- Estadísticas rápidas y gráficas modernas para el dashboard -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-white bg-primary shadow-sm">
+      <div class="card-body d-flex flex-column align-items-center justify-content-center">
+        <i class="bi bi-cart4" style="font-size:2.2em;"></i>
+        <h4 class="mt-2 mb-0">245</h4>
+        <span>Pedidos Totales</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white bg-success shadow-sm">
+      <div class="card-body d-flex flex-column align-items-center justify-content-center">
+        <i class="bi bi-currency-dollar" style="font-size:2.2em;"></i>
+        <h4 class="mt-2 mb-0">$120.500</h4>
+        <span>Ingresos</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white bg-warning shadow-sm">
+      <div class="card-body d-flex flex-column align-items-center justify-content-center">
+        <i class="bi bi-star-fill" style="font-size:2.2em;"></i>
+        <h4 class="mt-2 mb-0">4.8</h4>
+        <span>Calificación</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white bg-danger shadow-sm">
+      <div class="card-body d-flex flex-column align-items-center justify-content-center">
+        <i class="bi bi-people-fill" style="font-size:2.2em;"></i>
+        <h4 class="mt-2 mb-0">89</h4>
+        <span>Clientes</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4 shadow-sm">
+  <div class="card-header bg-gradient bg-info text-white">
+    <h5 class="mb-0">Pedidos por Mes</h5>
+  </div>
+  <div class="card-body">
+    <canvas id="pedidosPorMesChart" height="120"></canvas>
+  </div>
+</div>
+
+<script>
+// Datos ficticios para el gráfico
+const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago'];
+const pedidosPorMes = [20, 35, 40, 28, 50, 60, 45, 67];
+
+const ctx = document.getElementById('pedidosPorMesChart').getContext('2d');
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: meses,
+    datasets: [{
+      label: 'Pedidos',
+      data: pedidosPorMes,
+      backgroundColor: 'rgba(13,202,240,0.7)',
+      borderColor: 'rgba(13,202,240,1)',
+      borderWidth: 2,
+      borderRadius: 8,
+      maxBarThickness: 40
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      title: { display: false }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { beginAtZero: true, grid: { color: '#eee' } }
+    }
+  }
+});
+</script>
+
+<style>
+.card-header.bg-gradient {
+  background: linear-gradient(90deg, #0dcaf0 0%, #0d6efd 100%) !important;
+}
+.card {
+  border-radius: 1rem;
+}
+.card .card-body h4 {
+  font-weight: bold;
+}
+@media (max-width: 767.98px) {
+  .card .card-body h4 { font-size: 1.3em; }
+  .card .card-body i { font-size: 1.7em; }
+}
+</style>

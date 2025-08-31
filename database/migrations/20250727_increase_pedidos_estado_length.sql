@@ -1,0 +1,1 @@
+ALTER TABLE pedidos MODIFY COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'pendiente';

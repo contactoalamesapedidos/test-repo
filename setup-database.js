@@ -110,12 +110,12 @@ async function setupDatabase() {
         console.log('   🛒 Cliente: demo@alamesa.com / 123456');
         console.log('   🏪 Restaurante: restaurante@alamesa.com / 123456');
         console.log('\n🌐 URLs importantes:');
-        console.log('   🏠 Inicio: http://localhost:3000');
-        console.log('   🔐 Login: http://localhost:3000/auth/login');
-        console.log('   🛡️  PANEL ADMIN: http://localhost:3000/admin');
-        console.log('   🏪 Panel Restaurante: http://localhost:3000/dashboard');
-        console.log('   💰 Cobros Restaurante: http://localhost:3000/dashboard/cobros');
-        console.log('   ➕ Registro Restaurante: http://localhost:3000/auth/register-restaurant');
+        console.log('   🏠 Inicio: http://192.168.0.102:3000');
+        console.log('   🔐 Login: http://192.168.0.102:3000/auth/login');
+        console.log('   🛡️  PANEL ADMIN: http://192.168.0.102:3000/admin');
+        console.log('   🏪 Panel Restaurante: http://192.168.0.102:3000/dashboard');
+        console.log('   💰 Cobros Restaurante: http://192.168.0.102:3000/dashboard/cobros');
+        console.log('   ➕ Registro Restaurante: http://192.168.0.102:3000/auth/register-restaurant');
         console.log('\n💼 Funcionalidades del Panel Admin:');
         console.log('   • Gestión completa de restaurantes (CRUD)');
         console.log('   • Sistema de cobros semanales (10% comisión)');

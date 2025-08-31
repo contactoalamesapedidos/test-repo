@@ -1,0 +1,27 @@
+/* Hace que las tablas de estadísticas sean horizontales y scrolleables en mobile */
+@media (max-width: 767.98px) {
+  .table-responsive {
+    overflow-x: auto;
+  }
+  .table {
+    min-width: 600px;
+    font-size: 0.95rem;
+  }
+  .card-header h5, .card h2 {
+    font-size: 1.1rem;
+  }
+  .list-group-item {
+    font-size: 0.98rem;
+  }
+}
+
+/* Opcional: mejora la visualización de badges y progress en mobile */
+@media (max-width: 575.98px) {
+  .badge {
+    font-size: 0.85em;
+    padding: 0.4em 0.7em;
+  }
+  .progress {
+    height: 8px;
+  }
+}

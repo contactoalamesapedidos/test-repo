@@ -1,8 +1,6 @@
 <%- include('../partials/header') %>
 
-<!-- Admin Sidebar -->
-<div class="admin-layout">
-    <%- include('partials/sidebar') %>
+    <%- include('partials/sidebar', { activePage: 'restaurantes' }) %>
 
     <!-- Main Content -->
     <div class="admin-content">
@@ -29,6 +27,40 @@
 
         <!-- Content -->
         <div class="p-4">
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h3><%= totalPedidos %></h3>
+                            <small>Pedidos Totales</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm bg-success text-white">
+                        <div class="card-body text-center">
+                            <h3><%= entregados %></h3>
+                            <small>Pedidos Entregados</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h3><%= pendientes %></h3>
+                            <small>Pedidos Pendientes</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm bg-danger text-white">
+                        <div class="card-body text-center">
+                            <h3><%= cancelados %></h3>
+                            <small>Pedidos Cancelados</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!-- Restaurant Info -->
             <div class="row">
                 <!-- Main Info -->
@@ -36,10 +68,10 @@
                     <div class="card border-0 shadow-sm mb-4">
                         <div class="card-body">
                             <div class="d-flex align-items-center mb-4">
-                                <img src="/uploads/<%= restaurante.imagen_logo || 'no-image.png' %>" 
-                                     alt="<%= restaurante.nombre %>" 
-                                     class="rounded me-3" width="100" height="100"
-                                     onerror="this.src='/images/no-image.png'">
+                                <img src="<%= restaurante.imagen_logo ? '/uploads/' + restaurante.imagen_logo : '/images/defaults/restaurant-logo-default.svg' %>"
+                                     alt="Logo de <%= restaurante.nombre %>" class="img-fluid rounded me-3"
+                                     style="max-width: 200px; max-height: 200px; object-fit: cover;"
+                                     onerror="this.onerror=null;this.src='/images/defaults/restaurant-logo-default.svg';">
                                 <div>
                                     <h4 class="mb-1"><%= restaurante.nombre %></h4>
                                     <div class="d-flex gap-2 mb-2">
@@ -131,7 +163,11 @@
                                                                 <img src="/uploads/<%= producto.imagen %>" 
                                                                      alt="<%= producto.nombre %>" 
                                                                      class="rounded me-2" width="40" height="40"
-                                                                     onerror="this.src='/images/no-image.png'">
+                                                                     onerror="this.src='/images/defaults/product.jpeg'">
+                                                            <% } else { %>
+                                                                <img src="/images/defaults/product.jpeg" 
+                                                                     alt="<%= producto.nombre %>" 
+                                                                     class="rounded me-2" width="40" height="40">
                                                             <% } %>
                                                             <div>
                                                                 <div class="fw-bold"><%= producto.nombre %></div>
@@ -175,14 +211,18 @@
                         <div class="card-body">
                             <div class="d-flex align-items-center mb-3">
                                 <div class="flex-shrink-0">
-                                    <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                    <div class="avatar text-white rounded-circle d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);" 
                                          style="width: 50px; height: 50px;">
-                                        <%= restaurante.nombre.charAt(0) %><%= restaurante.apellido.charAt(0) %>
+                                        <% if (restaurante.usuario_nombre && restaurante.usuario_apellido) { %>
+                                            <%= restaurante.usuario_nombre.charAt(0) %><%= restaurante.usuario_apellido.charAt(0) %>
+                                        <% } else { %>
+                                            <i class="fas fa-user"></i>
+                                        <% } %>
                                     </div>
                                 </div>
                                 <div class="flex-grow-1 ms-3">
-                                    <h6 class="mb-1"><%= restaurante.nombre %> <%= restaurante.apellido %></h6>
-                                    <p class="text-muted mb-0"><%= restaurante.email %></p>
+                                    <h6 class="mb-1"><%= restaurante.usuario_nombre || '' %> <%= restaurante.usuario_apellido || '' %></h6>
+                                    <p class="text-muted mb-0"><%= restaurante.usuario_email || '' %></p>
                                 </div>
                             </div>
                             <ul class="list-unstyled mb-0">
@@ -230,6 +270,12 @@
                                             <small class="text-muted d-block">
                                                 <%= new Date(pedido.fecha_pedido).toLocaleString() %>
                                             </small>
+                                            <div class="mt-2">
+                                                <a href="/admin/pedidos/<%= pedido.id %>/chat" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-comments me-1"></i> Chat
+                                                </a>
+                                            </div>
+                                        </div>
                                         </div>
                                     <% }) %>
                                 </div>

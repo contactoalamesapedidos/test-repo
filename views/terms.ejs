@@ -1,161 +1,75 @@
-<%- include('partials/header') %>
-
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="text-center mb-5">
-                <h1 class="display-4 text-primary">Términos y Condiciones</h1>
-                <p class="lead">Última actualización: <%= new Date().toLocaleDateString('es-AR') %></p>
-            </div>
-
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-5">
-                    <h2>1. Introducción</h2>
-                    <p>
-                        Bienvenido a A la Mesa. Estos términos y condiciones ("Términos") rigen el uso de nuestro 
-                        sitio web, aplicación móvil y servicios (el "Servicio") operados por A la Mesa ("nosotros", 
-                        "nuestro" o "nos").
-                    </p>
-                    <p>
-                        Al acceder o usar nuestro Servicio, usted acepta estar sujeto a estos Términos. 
-                        Si no está de acuerdo con alguna parte de estos términos, no podrá acceder al Servicio.
-                    </p>
-
-                    <h2>2. Descripción del Servicio</h2>
-                    <p>
-                        A la Mesa es una plataforma digital que conecta usuarios con restaurantes locales 
-                        para realizar pedidos de comida online. Facilitamos la comunicación entre clientes 
-                        y restaurantes, pero no somos responsables de la preparación o entrega de los alimentos.
-                    </p>
-
-                    <h2>3. Registro de Cuenta</h2>
-                    <p>Para usar ciertos aspectos del Servicio, debe registrar una cuenta. Usted se compromete a:</p>
-                    <ul>
-                        <li>Proporcionar información precisa, actual y completa durante el proceso de registro</li>
-                        <li>Mantener la seguridad de su contraseña</li>
-                        <li>Actualizar inmediatamente cualquier información que cambie</li>
-                        <li>Aceptar toda la responsabilidad por todas las actividades que ocurran bajo su cuenta</li>
-                    </ul>
-
-                    <h2>4. Uso Aceptable</h2>
-                    <p>Usted se compromete a usar el Servicio solo para propósitos legales y de acuerdo con estos Términos. No puede:</p>
-                    <ul>
-                        <li>Usar el Servicio de manera que viole leyes locales, estatales, nacionales o internacionales</li>
-                        <li>Transmitir material dañino, amenazante, abusivo, acosador, difamatorio o obsceno</li>
-                        <li>Intentar obtener acceso no autorizado a otros sistemas informáticos</li>
-                        <li>Interferir con o interrumpir el Servicio o los servidores conectados al Servicio</li>
-                        <li>Usar información obtenida del Servicio para acosar, abusar o dañar a otra persona</li>
-                    </ul>
-
-                    <h2>5. Pedidos y Pagos</h2>
-                    <h3>5.1 Proceso de Pedidos</h3>
-                    <p>
-                        Los pedidos se realizan a través de nuestra plataforma y se transmiten a los restaurantes 
-                        correspondientes. Los precios mostrados incluyen todos los impuestos aplicables.
-                    </p>
-                    
-                    <h3>5.2 Métodos de Pago</h3>
-                    <p>
-                        Aceptamos varios métodos de pago incluyendo tarjetas de crédito, débito, y otros 
-                        métodos electrónicos. El pago se procesa al momento de realizar el pedido.
-                    </p>
-
-                    <h3>5.3 Cancelaciones y Reembolsos</h3>
-                    <p>
-                        Las cancelaciones deben realizarse dentro de los primeros 5 minutos después de 
-                        confirmar el pedido. Los reembolsos se procesan según las políticas específicas 
-                        de cada restaurante y el método de pago utilizado.
-                    </p>
-
-                    <h2>6. Responsabilidades de los Restaurantes</h2>
-                    <p>Los restaurantes asociados son responsables de:</p>
-                    <ul>
-                        <li>La calidad, preparación y empaque de los alimentos</li>
-                        <li>El cumplimiento de las regulaciones sanitarias locales</li>
-                        <li>Los tiempos de preparación estimados</li>
-                        <li>La precisión de la información del menú y precios</li>
-                    </ul>
-
-                    <h2>7. Entrega</h2>
-                    <p>
-                        Los tiempos de entrega son estimados y pueden variar debido a factores como 
-                        el clima, el tráfico, la demanda y la disponibilidad de repartidores. 
-                        No garantizamos tiempos de entrega específicos.
-                    </p>
-
-                    <h2>8. Limitación de Responsabilidad</h2>
-                    <p>
-                        A la Mesa actúa como intermediario entre clientes y restaurantes. No somos 
-                        responsables por la calidad de los alimentos, retrasos en la entrega, 
-                        problemas de salud relacionados con el consumo de alimentos, o daños 
-                        indirectos derivados del uso del Servicio.
-                    </p>
-
-                    <h2>9. Propiedad Intelectual</h2>
-                    <p>
-                        Todo el contenido del Servicio, incluyendo textos, gráficos, logos, íconos, 
-                        imágenes, clips de audio, descargas digitales y software, es propiedad de 
-                        A la Mesa o sus proveedores de contenido y está protegido por derechos de autor.
-                    </p>
-
-                    <h2>10. Privacidad</h2>
-                    <p>
-                        Su privacidad es importante para nosotros. Nuestra Política de Privacidad 
-                        explica cómo recopilamos, usamos y protegemos su información cuando usa el Servicio.
-                    </p>
-
-                    <h2>11. Modificaciones de los Términos</h2>
-                    <p>
-                        Nos reservamos el derecho de modificar estos Términos en cualquier momento. 
-                        Las modificaciones entrarán en vigor inmediatamente después de su publicación 
-                        en el Servicio. Su uso continuado del Servicio después de dichas modificaciones 
-                        constituye su aceptación de los nuevos Términos.
-                    </p>
-
-                    <h2>12. Terminación</h2>
-                    <p>
-                        Podemos terminar o suspender su cuenta y acceso al Servicio inmediatamente, 
-                        sin previo aviso o responsabilidad, por cualquier motivo, incluyendo sin 
-                        limitación si usted incumple los Términos.
-                    </p>
-
-                    <h2>13. Ley Aplicable</h2>
-                    <p>
-                        Estos Términos se regirán e interpretarán de acuerdo con las leyes de Argentina, 
-                        sin tener en cuenta sus disposiciones sobre conflicto de leyes.
-                    </p>
-
-                    <h2>14. Contacto</h2>
-                    <p>
-                        Si tiene alguna pregunta sobre estos Términos y Condiciones, puede contactarnos en:
-                    </p>
-                    <ul>
-                        <li>Email: legal@alamesa.com</li>
-                        <li>Teléfono: +54 9 11 2345-6789</li>
-                        <li>Dirección: Av. Corrientes 1234, Ciudad Autónoma de Buenos Aires, Argentina</li>
-                    </ul>
-
-                    <div class="alert alert-info mt-4">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Nota importante:</strong> Al continuar usando A la Mesa, usted acepta 
-                        estos términos y condiciones en su totalidad. Le recomendamos que imprima 
-                        o guarde una copia de estos términos para sus registros.
-                    </div>
-                </div>
-            </div>
-
-            <div class="text-center mt-4 mb-5">
-                <a href="/" class="btn btn-primary">
-                    <i class="fas fa-home"></i>
-                    Volver al Inicio
-                </a>
-                <a href="/contact" class="btn btn-outline-primary">
-                    <i class="fas fa-envelope"></i>
-                    ¿Tienes preguntas?
-                </a>
-            </div>
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-success text-white">
+          <h1 class="h3 mb-0">
+            <i class="fas fa-store me-2"></i>
+            Términos y Condiciones para Restaurantes – A la Mesa
+          </h1>
         </div>
+        <div class="card-body p-4">
+          <section class="mb-4">
+            <h2 class="h5 text-success">A La Mesa: Términos y Condiciones del Servicio</h2>
+            <p class="mb-1"><strong>Última actualización:</strong> 26 de agosto de 2025</p>
+            <p>Bienvenido a <strong>A La Mesa</strong>. Al acceder y utilizar nuestra plataforma, aceptas los siguientes términos y condiciones. Por favor, léelos detenidamente antes de realizar un pedido.</p>
+          </section>
+          <section class="mb-4">
+            <h3 class="h6 text-primary">1. Sobre el Servicio</h3>
+            <p>A La Mesa es una plataforma intermediaria que conecta a clientes con restaurantes para la compra y entrega de comida a domicilio. No producimos alimentos ni controlamos su manipulación. La responsabilidad exclusiva de la calidad, preparación, precios y condiciones de los productos es de cada Restaurante Asociado.</p>
+          </section>
+          <section class="mb-4">
+            <h3 class="h6 text-primary">2. Cuentas de Usuario</h3>
+            <ul>
+              <li>El uso de nuestra plataforma requiere que proporciones datos reales y actualizados.</li>
+              <li>No se permite realizar prácticas fraudulentas.</li>
+              <li>A La Mesa se reserva el derecho de suspender, sancionar o inhabilitar cuentas si se incumplen estos términos.</li>
+            </ul>
+          </section>
+          <section class="mb-4">
+            <h3 class="h6 text-primary">3. Obligaciones y Responsabilidades</h3>
+            <h4 class="fw-bold">Clientes</h4>
+            <ul>
+              <li><strong>Datos y Recepción:</strong> Proporciona datos correctos y está disponible para recibir el pedido.</li>
+              <li><strong>Conducta:</strong> Usa la plataforma de forma responsable y no realices pedidos fraudulentos.</li>
+              <li><strong>Cancelaciones:</strong> Si realizaste más de 10 pedidos, no canceles más del 20%.</li>
+            </ul>
+            <h4 class="fw-bold mt-3">Restaurantes Asociados</h4>
+            <ul>
+              <li><strong>Servicio y Calidad:</strong> Responsable de la calidad, higiene y preparación de los alimentos.</li>
+              <li><strong>Logística:</strong> Debes contar con tu propio servicio de delivery.</li>
+              <li><strong>Gestión de Pedidos:</strong> Acepta/rechaza pedidos en tiempo razonable y prepáralos en el tiempo acordado.</li>
+              <li><strong>Entrega:</strong> Entrega el pedido completo y en buen estado.</li>
+              <li><strong>Cancelaciones:</strong> No canceles pedidos injustificadamente. Si recibiste más de 10 pedidos, no canceles más del 10%. Cancelaciones reiteradas pueden implicar sanciones.</li>
+            </ul>
+          </section>
+          <section class="mb-4">
+            <h3 class="h6 text-primary">4. Políticas Financieras</h3>
+            <ul>
+              <li><strong>Comisión:</strong> A La Mesa percibe una comisión del 10% sobre el valor de cada pedido. Sujeta a modificaciones notificadas previamente.</li>
+              <li><strong>Pagos y Descuentos:</strong> Los clientes pueden pagar por Mercado Pago, efectivo o transferencia. Los restaurantes ofrecen un 5% de descuento por pago en efectivo o transferencia.</li>
+              <li><strong>Pagos del Restaurante:</strong> Los restaurantes deben pagar las comisiones semanalmente y de forma puntual.</li>
+            </ul>
+          </section>
+          <section class="mb-4">
+            <h3 class="h6 text-primary">5. Política de Comunicación</h3>
+            <p>No se pueden compartir datos de contacto entre clientes y restaurantes a través de la plataforma. El incumplimiento puede implicar sanciones.</p>
+          </section>
+          <section class="mb-4">
+            <h3 class="h6 text-primary">6. Política de Cancelación de Pedidos</h3>
+            <ul>
+              <li>Un pedido puede ser cancelado solo antes de que el restaurante lo confirme.</li>
+              <li>Si el pedido ya fue aceptado y comenzó la preparación, no habrá reembolso salvo acuerdo directo con el local.</li>
+              <li>Si un pedido cobrado no puede ser cumplido por el restaurante, este debe emitir un reembolso total al cliente por el mismo medio de pago.</li>
+              <li>El restaurante no puede cancelar un pedido que ya ha confirmado.</li>
+            </ul>
+          </section>
+          <section class="mb-2">
+            <h3 class="h6 text-primary">7. Modificación de los Términos</h3>
+            <p>Estos Términos y Condiciones pueden ser modificados en cualquier momento. Los cambios entrarán en vigor al ser publicados en la plataforma. Es tu responsabilidad revisarlos periódicamente. El uso continuado implica aceptación de las nuevas condiciones.</p>
+          </section>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
-
-<%- include('partials/footer') %>

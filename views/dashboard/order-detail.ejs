@@ -1,0 +1,398 @@
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-lg-8 mx-auto">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <% if (locals.restaurant && locals.restaurant.imagen_logo) { %>
+                <img src="<%= locals.restaurant.imagen_logo.startsWith('/uploads/') ? locals.restaurant.imagen_logo : '/uploads/' + locals.restaurant.imagen_logo %>" 
+                     alt="Logo del restaurante" 
+                     class="me-3" 
+                     style="width: 40px; height: 40px; object-fit: cover; border-radius: 50%;">
+              <% } %>
+              <h5 class="mb-0">
+                <i class="fas fa-receipt me-2"></i>
+                Pedido #<%= order.numero_pedido %>
+              </h5>
+            </div>
+            <span class="badge bg-<%= order.estado === 'pendiente' ? 'warning' :
+                                       order.estado === 'pendiente_pago' ? 'warning' :
+                                       order.estado === 'confirmado' ? 'info' :
+                                       order.estado === 'preparando' ? 'primary' :
+                                       order.estado === 'listo' ? 'primary' :
+                                       order.estado === 'en_camino' ? 'info' :
+                                       order.estado === 'entregado' ? 'success' :
+                                       order.estado === 'cancelado' ? 'danger' : 'secondary' %>">
+              <% if (order.estado === 'pendiente_pago') { %>
+                Pendiente de Pago
+              <% } else { %>
+                <%= order.estado.charAt(0).toUpperCase() + order.estado.slice(1).replace('_', ' ') %>
+              <% } %>
+            </span>
+            <button type="button" class="btn-close btn-close-white" aria-label="Close" id="close-order-details"></button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="status-change-container" class="mt-4 d-flex gap-2">
+            <!-- Dynamic status change button will be rendered here by JavaScript -->
+          </div>
+          <% if ((order.estado === 'confirmado' || order.estado === 'preparando' || order.estado === 'listo') && !order.repartidor_id) { %>
+            <div class="card mt-4 shadow-sm">
+              <div class="card-header bg-secondary text-white">Asignar Repartidor</div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label for="driverSelect" class="form-label">Seleccionar Repartidor Propio</label>
+                  <select class="form-select" id="driverSelect">
+                    <option value="">Cargando repartidores...</option>
+                  </select>
+                </div>
+                <button id="assignDriverBtn" class="btn btn-primary" data-order-id="<%= order.id %>" disabled>Asignar Repartidor Propio</button>
+                <p class="mt-2 text-muted">Solo se muestran repartidores propios disponibles.</p>
+                <hr>
+                <button id="requestPrivateDriverBtn" class="btn btn-info w-100" data-order-id="<%= order.id %>">
+                  <i class="fas fa-motorcycle me-2"></i> Solicitar Repartidor Privado
+                </button>
+                <p class="mt-2 text-muted text-center">Si no tienes repartidores propios o están ocupados.</p>
+              </div>
+            </div>
+          <% } else if (order.repartidor_id) { %>
+            <div class="alert alert-info mt-4">
+              <i class="fas fa-truck me-2"></i>
+              Pedido asignado al repartidor: <strong><%= order.repartidor_nombre %> <%= order.repartidor_apellido %></strong>
+            </div>
+          <% } %>
+          <div class="order-items mb-4">
+            <h6 class="mb-3">Productos</h6>
+            <% if (items && items.length > 0) { %>
+              <% items.forEach(item => { %>
+                <div class="order-item d-flex align-items-center mb-3 p-3 border rounded">
+                  <img src="<%= item.imagen ? (item.imagen.startsWith('/uploads/') ? item.imagen : '/uploads/' + item.imagen) : '/images/defaults/product.jpeg' %>"
+                       alt="<%= item.nombre || 'Producto' %>"
+                       class="rounded me-3" width="80" height="80"
+                       style="object-fit: cover;">
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1"><%= item.nombre || 'Producto sin nombre' %></h6>
+                    <% if (item.notas_especiales) { %>
+                      <small class="text-muted d-block mb-1">
+                        <i class="fas fa-comment-alt me-1"></i>
+                        <%= item.notas_especiales %>
+                      </small>
+                    <% } %>
+                    <div class="d-flex justify-content-between align-items-center">
+                      <span class="text-muted">Cantidad: <%= item.cantidad || 0 %></span>
+                      <strong>$<%= (Number(item.precio_unitario || 0) * Number(item.cantidad || 0)).toFixed(2) %></strong>
+                    </div>
+                  </div>
+                </div>
+              <% }) %>
+            <% } else { %>
+              <div class="alert alert-info">No hay productos en este pedido</div>
+            <% } %>
+          </div>
+
+          <!-- Resumen del Pedido -->
+          <div class="order-summary p-3 bg-light rounded">
+            <h6 class="mb-3">Resumen del Pedido</h6>
+            <div class="d-flex justify-content-between mb-2">
+              <span>Subtotal:</span>
+              <strong>$<%= Number(order.subtotal || 0).toFixed(2) %></strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span>Envío:</span>
+              <strong><%= Number(order.costo_delivery || 0) > 0 ? `$${Number(order.costo_delivery || 0).toFixed(2)}` : 'Gratis' %></strong>
+            </div>
+            <hr>
+            <div class="d-flex justify-content-between mb-2">
+              <span class="fs-5">Total:</span>
+              <strong class="fs-5 text-primary">$<%= Number(order.total || 0).toFixed(2) %></strong>
+            </div>
+          </div>
+
+          <!-- Información de Entrega -->
+          <div class="delivery-info mt-4">
+            <h6 class="mb-3">Información de Entrega</h6>
+            <div class="p-3 bg-light rounded">
+              <p class="mb-2">
+                <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                <strong>Dirección:</strong> <%= order.direccion_entrega %>
+                <% if (order.latitud_entrega && order.longitud_entrega) { %>
+                  <button class="btn btn-sm btn-outline-info" data-action="open-chat" data-order-id="<%= order.id %>" title="Abrir Chat"><i class="fas fa-comment"></i></button>
+                <% } %>
+              </p>
+              <% if (order.notas_especiales) { %>
+                <p class="mb-0">
+                  <i class="fas fa-comment-alt text-primary me-2"></i>
+                  <strong>Notas:</strong> <%= order.notas_especiales %>
+                </p>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Información de Pago -->
+          <div class="payment-info mt-4">
+            <h6 class="mb-3">Información de Pago</h6>
+            <div class="p-3 bg-light rounded">
+              <p class="mb-2">
+                <i class="fas fa-credit-card text-primary me-2"></i>
+                <strong>Método de Pago:</strong>
+                <%= order.metodo_pago === 'mercadopago' ? 'MercadoPago' :
+                     order.metodo_pago === 'efectivo' ? 'Efectivo' :
+                     order.metodo_pago === 'transferencia' ? 'Transferencia Bancaria' :
+                     order.metodo_pago %>
+              </p>
+              <p class="mb-2">
+                <i class="fas fa-info-circle text-primary me-2"></i>
+                <strong>Estado del Pago:</strong>
+                <% if (order.estado === 'pendiente_pago') { %>
+                  <span class="badge bg-warning">Pendiente de Pago</span>
+                  <small class="d-block text-muted mt-1">
+                    El cliente aún no ha completado el pago. Tiene hasta 15 minutos para completarlo.
+                  </small>
+                <% } else if (order.estado === 'pendiente') { %>
+                  <span class="badge bg-info">Pago Completado</span>
+                  <small class="d-block text-muted mt-1">
+                    El pago ha sido confirmado. Puedes proceder con la preparación.
+                  </small>
+                <% } else { %>
+                  <span class="badge bg-success">Pago Confirmado</span>
+                <% } %>
+              </p>
+              <% if (order.metodo_pago === 'transferencia' && order.comprobante_pago_url) { %>
+                <hr>
+                <h6 class="mt-3">Comprobante de Pago</h6>
+                <a href="/uploads/comprobantes/<%= order.comprobante_pago_url %>" target="_blank">
+                  <img src="/uploads/comprobantes/<%= order.comprobante_pago_url %>" alt="Comprobante de pago" class="img-thumbnail" style="max-width: 200px;">
+                </a>
+                <p class="mt-2"><strong>Archivo:</strong> <%= order.comprobante_pago_url %></p>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Estado del Pedido -->
+          <div class="order-timeline mt-4">
+            <h6 class="mb-3">Estado del Pedido</h6>
+            <div class="timeline">
+              <% const estados = ['pendiente', 'confirmado', 'preparando', 'listo', 'en_camino', 'entregado', 'cancelado']; %>
+              <% estados.forEach((estado, index) => {
+                let iconClass = '';
+                let statusText = '';
+                let dotClass = '';
+
+                switch(estado) {
+                  case 'pendiente': iconClass = 'clock'; statusText = 'Pendiente'; break;
+                  case 'confirmado': iconClass = 'check'; statusText = 'Confirmado'; break;
+                  case 'preparando': iconClass = 'utensils'; statusText = 'Preparando'; break;
+                  case 'listo': iconClass = 'clipboard-check'; statusText = 'Listo para Recoger'; break;
+                  case 'en_camino': iconClass = 'truck'; statusText = 'En Camino'; break;
+                  case 'entregado': iconClass = 'check-circle'; statusText = 'Entregado'; break;
+                  case 'cancelado': iconClass = 'times-circle'; statusText = 'Cancelado'; break;
+                }
+
+                if (order.estado === estado) {
+                  dotClass = 'active';
+                  statusText = 'Estado actual';
+                } else if (estados.indexOf(order.estado) > index) {
+                  dotClass = 'completed';
+                  statusText = 'Completado';
+                } else {
+                  statusText = 'Pendiente';
+                }
+              %>
+                <div class="timeline-item d-flex mb-3">
+                  <div class="timeline-icon me-3">
+                    <div class="timeline-dot <%= dotClass %>">
+                      <i class="fas fa-<%= iconClass %>"></i>
+                    </div>
+                    <% if (index < estados.length - 1) { %>
+                      <div class="timeline-line"></div>
+                    <% } %>
+                  </div>
+                  <div class="timeline-content">
+                    <h6 class="mb-1"><%= estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ') %></h6>
+                    <small class="text-muted">
+                      <%= statusText %>
+                    </small>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+          <div class="d-flex justify-content-center gap-2 mt-4 flex-nowrap">
+            <% if (order.estado === 'pendiente') { %>
+              <button class="btn btn-success btn-action-text" data-action="update-status" data-order-id="<%= order.id %>" data-status="confirmado">
+                <i class="fas fa-check-circle"></i> Aceptar
+              </button>
+              <button class="btn btn-danger btn-action-text" data-action="cancel-order" data-order-id="<%= order.id %>">
+                <i class="fas fa-times-circle"></i> Rechazar
+              </button>
+            <% } else if (order.estado === 'confirmado' || order.estado === 'preparando' || order.estado === 'listo' || order.estado === 'en_camino') { %>
+              <button class="btn btn-danger btn-action-text" data-action="cancel-order" data-order-id="<%= order.id %>">
+                <i class="fas fa-times-circle"></i> Cancelar Pedido
+              </button>
+            <% } %>
+          </div>
+        </div>
+      </div>
+      <a href="/dashboard/orders" class="btn btn-outline-primary">
+        <i class="fas fa-arrow-left me-2"></i>
+        Volver a Pedidos
+      </a>
+    </div>
+  </div>
+</div> 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const orderId = <%= order.id %>;
+  const orderStatus = '<%= order.estado %>';
+  const driverSelect = document.getElementById('driverSelect');
+  const assignDriverBtn = document.getElementById('assignDriverBtn');
+
+  // Fetch available drivers if the order is ready for assignment
+  if (orderStatus === 'confirmado' || orderStatus === 'preparando' || orderStatus === 'listo') {
+    fetch('/dashboard/drivers/available')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.drivers.length > 0) {
+          driverSelect.innerHTML = '<option value="">Selecciona un repartidor</option>';
+          data.drivers.forEach(driver => {
+            const option = document.createElement('option');
+            option.value = driver.id;
+            option.textContent = `${driver.nombre} ${driver.apellido} (${driver.vehicle_type})`;
+            driverSelect.appendChild(option);
+          });
+          assignDriverBtn.disabled = false;
+        } else {
+          driverSelect.innerHTML = '<option value="">No hay repartidores disponibles</option>';
+          assignDriverBtn.disabled = true;
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching available drivers:', error);
+        driverSelect.innerHTML = '<option value="">Error al cargar repartidores</option>';
+        assignDriverBtn.disabled = true;
+      });
+  }
+
+  // Assign driver button click handler
+  if (assignDriverBtn) {
+    assignDriverBtn.addEventListener('click', () => {
+      const selectedDriverId = driverSelect.value;
+      if (selectedDriverId) {
+        fetch(`/dashboard/orders/${orderId}/assign-driver`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ driverId: selectedDriverId })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Repartidor asignado exitosamente!');
+            window.location.reload(); // Reload to show updated status
+          } else {
+            alert('Error al asignar repartidor: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error assigning driver:', error);
+          alert('Ocurrió un error al asignar el repartidor.');
+        });
+      } else {
+        alert('Por favor, selecciona un repartidor.');
+      }
+    });
+  }
+
+  // Request private driver button click handler
+  const requestPrivateDriverBtn = document.getElementById('requestPrivateDriverBtn');
+  if (requestPrivateDriverBtn) {
+    requestPrivateDriverBtn.addEventListener('click', async () => {
+      if (confirm('¿Estás seguro de que quieres solicitar un repartidor privado para este pedido?')) {
+        try {
+          const response = await fetch(`/dashboard/orders/${orderId}/request-private-driver`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          const data = await response.json();
+          if (data.success) {
+            alert(data.message);
+            window.location.reload();
+          } else {
+            alert('Error al solicitar repartidor privado: ' + data.message);
+          }
+        } catch (error) {
+          console.error('Error requesting private driver:', error);
+          alert('Ocurrió un error al solicitar el repartidor privado.');
+        }
+      }
+    });
+  }
+
+  // Existing form submission logic
+  document.querySelectorAll('.card-body form[action*="/dashboard/orders/"][method="post"]').forEach(form => {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault(); // Prevent default form submission
+      const form = e.target;
+      const formData = new FormData(form);
+      const actionUrl = form.action;
+
+      fetch(actionUrl, {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Reload the page to reflect the new status
+          window.location.reload();
+        } else {
+          alert('Error: ' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Ocurrió un error al actualizar el estado del pedido.');
+      });
+    });
+  });
+});
+</script> 
+<!-- Modal para ver ubicación -->
+<div class="modal fade" id="orderLocationModal" tabindex="-1" aria-labelledby="orderLocationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="orderLocationModalLabel">Ubicación de Entrega</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="orderLocationMap" style="height:350px; border-radius:12px; border:1px solid #ccc;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+function showOrderLocation(lat, lng) {
+  var modal = new bootstrap.Modal(document.getElementById('orderLocationModal'));
+  modal.show();
+  setTimeout(function() {
+    var mapDiv = document.getElementById('orderLocationMap');
+    mapDiv.innerHTML = '';
+    var map = L.map('orderLocationMap').setView([lat, lng], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap',
+      crossOrigin: true
+    }).addTo(map);
+    L.marker([lat, lng]).addTo(map);
+    setTimeout(function() { map.invalidateSize(); }, 300);
+  }, 300);
+}
+</script>
+

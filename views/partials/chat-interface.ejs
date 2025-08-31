@@ -1,0 +1,67 @@
+<div class="card-body" id="chat-main-content">
+    <div class="chat-window" style="height: 400px; overflow-y: scroll; border: 1px solid #e0e0e0; padding: 15px; border-radius: 5px; background-color: #f9f9f9;">
+        <!-- Mensajes del chat se cargarán aquí -->
+    </div>
+    <div class="input-group mt-3">
+        <input type="text" id="chat-message-input" class="form-control" placeholder="Escribe tu mensaje...">
+        <div class="input-group-append">
+            <button class="btn btn-primary" id="send-chat-message-btn">Enviar</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .chat-window {
+        display: flex;
+        flex-direction: column;
+    }
+    .message {
+        margin-bottom: 15px; /* Increased spacing between messages */
+        display: flex;
+    }
+    .message-bubble {
+        padding: 8px 12px;
+        border-radius: 15px;
+        max-width: 100%; /* Todos los mensajes tienen el mismo ancho */
+        position: relative;
+        border: 1px solid #ccc; /* Added subtle border */
+    }
+    .my-message {
+        align-self: flex-end;
+    }
+    .my-message .message-bubble {
+        background-color: #007bff; /* Azul */
+        color: white;
+        border-bottom-right-radius: 2px;
+        border-color: #007bff; /* Border color for own messages */
+    }
+    .other-message {
+        align-self: flex-start;
+    }
+    .other-message .message-bubble {
+        background-color: #e9ecef; /* Gris claro */
+        color: #333;
+        border-bottom-left-radius: 2px;
+        border-color: #e9ecef; /* Border color for other messages */
+    }
+    .message-sender {
+        font-weight: bold;
+        font-size: 0.8em;
+        margin-bottom: 2px;
+        display: block;
+    }
+    .message-text {
+        margin: 0;
+        word-wrap: break-word;
+    }
+    .message-time {
+        font-size: 0.7em;
+        color: rgba(255, 255, 255, 0.7);
+        text-align: right;
+        display: block;
+        margin-top: 2px;
+    }
+    .other-message .message-time {
+        color: rgba(0, 0, 0, 0.5);
+    }
+</style>

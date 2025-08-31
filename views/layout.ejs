@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %> - A la Mesa</title>
+    <title><%= typeof title !== 'undefined' ? title : 'A la Mesa' %> - A la Mesa</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -12,100 +12,299 @@
     <link href="/css/style.css" rel="stylesheet">
     <link href="/css/cart.css" rel="stylesheet">
     <link href="/css/admin.css" rel="stylesheet">
-    <%- style %>
+    <link href="/css/dashboard-responsive.css" rel="stylesheet">
+    <link href="/css/dashboard-stats-responsive.css" rel="stylesheet">
+    <link href="/css/orders-history-responsive.css" rel="stylesheet">
+    <link href="/css/orders-history-cards.css" rel="stylesheet">
+    <link href="/css/cobros-cards.css" rel="stylesheet">
+    <link href="/css/cookie-consent.css" rel="stylesheet">
+    <link href="/css/dashboard-orders.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="icon" type="image/png" href="/images/logo-a-la-mesa.png">
+    <%- typeof style !== 'undefined' ? style : '' %>
 </head>
 <body>
-    <%- include('partials/header') %>
+    <%- include('partials/header', { currentPath: currentPath, user: user }) %>
 
     <!-- Main Content -->
     <main class="container py-4" style="padding-top: 76px !important;">
         <%- body %>
     </main>
 
-    <!-- Cart Sidebar -->
-    <div class="cart-overlay" id="cartOverlay"></div>
-    <div class="cart-sidebar" id="cartSidebar">
-        <div class="cart-header">
-            <h3 class="mb-0">Mi Carrito</h3>
-            <button class="close-cart" onclick="closeCartSidebar()">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="cart-body">
-            <% if (cart && cart.length > 0) { %>
-                <div class="cart-restaurant-info p-3 bg-light">
-                    <h4 class="mb-0"><%= cart[0].restaurante_nombre %></h4>
-                </div>
-                <div class="cart-items" id="cartItems">
-                    <% cart.forEach(item => { %>
-                        <div class="cart-item" data-product-id="<%= item.productId %>">
-                            <img src="<%= item.imagen.startsWith('/') ? item.imagen : '/uploads/' + item.imagen %>" 
-                                 alt="<%= item.name %>" 
-                                 class="cart-item-image"
-                                 onerror="this.src='/images/no-image.png'">
-                            <div class="cart-item-details">
-                                <h4><%= item.name %></h4>
-                                <p class="cart-item-price">$<%= item.price.toFixed(2) %></p>
-                                <div class="cart-item-quantity">
-                                    <button onclick="updateCartItemQuantity(<%= item.productId %>, -1)">-</button>
-                                    <span><%= item.quantity %></span>
-                                    <button onclick="updateCartItemQuantity(<%= item.productId %>, 1)">+</button>
-                                </div>
-                            </div>
-                            <button class="remove-item" onclick="removeFromCart(<%= item.productId %>)">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    <% }); %>
-                </div>
-                <div class="cart-summary" id="cartSummary">
-                    <div class="cart-summary-item">
-                        <span>Subtotal:</span>
-                        <span>$<%= cart.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2) %></span>
-                    </div>
-                    <div class="cart-summary-item">
-                        <span>Envío:</span>
-                        <span>$<%= deliveryFee.toFixed(2) %></span>
-                    </div>
-                    <div class="cart-summary-item total">
-                        <span>Total:</span>
-                        <span>$<%= (cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + (cart.length > 0 ? 350 : 0)).toFixed(2) %></span>
-                    </div>
-                    <div class="cart-actions">
-                        <a href="/orders/checkout" class="btn btn-primary w-100 mb-2">
-                            <i class="fas fa-credit-card me-2"></i>
-                            Proceder al Pago
-                        </a>
-                        <button class="btn btn-outline-danger w-100" onclick="clearCart()">
-                            <i class="fas fa-trash me-2"></i>
-                            Vaciar Carrito
-                        </button>
-                    </div>
-                </div>
-            <% } else { %>
-                <div class="text-center py-4">
-                    <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
-                    <p class="text-muted mb-0">Tu carrito está vacío</p>
-                </div>
-            <% } %>
-        </div>
+    <!-- Cart Container -->
+    <div class="cart-container">
+        <!-- Cart Overlay -->
+        <div class="cart-overlay" id="cartOverlay"></div>
+        <!-- Cart Sidebar (vacío, el JS lo llenará) -->
+        <div class="cart-sidebar" id="cartSidebar"></div>
     </div>
+
+    <!-- User Menu Container -->
+    <div class="user-menu-container">
+        <!-- User Menu Overlay -->
+        <div class="user-menu-overlay" id="userMenuOverlay"></div>
+        <!-- User Menu Sidebar -->
+        <div class="user-menu-sidebar" id="userMenuSidebar"></div>
+    </div>
+
+    <!-- Toast Container Global -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;"></div>
+
+    <!-- Navegación móvil general o dashboard según usuario y ruta -->
+    <% if (user && user.tipo_usuario === 'restaurante' && ((typeof isDashboardPage !== 'undefined' && isDashboardPage) || (currentPath && (currentPath.startsWith('/dashboard') || currentPath.startsWith('/dashboard/orders'))))) { %>
+      <!-- Menú móvil dashboard restaurante -->
+      <nav class="mobile-nav mobile-only dashboard-mobile-nav d-md-none d-lg-none d-xl-none">
+        <a href="/dashboard" class="mobile-nav-item <%= currentPath === '/dashboard' ? 'active' : '' %>">
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="/dashboard/products" class="mobile-nav-item <%= currentPath === '/dashboard/products' ? 'active' : '' %>">
+            <i class="fas fa-utensils"></i>
+            <span>Productos</span>
+        </a>
+        <a href="/dashboard/orders" class="mobile-nav-item <%= currentPath === '/dashboard/orders' ? 'active' : '' %>" style="position: relative;">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Pedidos</span>
+            <% if (typeof pedidosNoEntregados !== 'undefined' && pedidosNoEntregados !== null) { %>
+                <!-- DEBUG: pedidosNoEntregados = <%= pedidosNoEntregados %> -->
+                <% if (pedidosNoEntregados > 0) { %>
+                    <span class="badge bg-danger rounded-pill" style="position: absolute; top: -7px; right: 3px; font-size: 1.17em; padding: 0.52em 0.78em;"><%= pedidosNoEntregados %></span>
+                <% } %>
+            <% } %>
+        </a>
+        <a href="/dashboard/settings" class="mobile-nav-item <%= currentPath === '/dashboard/settings' ? 'active' : '' %>">
+            <i class="fas fa-cog"></i>
+            <span>Config</span>
+        </a>
+        <a href="#" class="mobile-nav-item" id="dashboardMoreBtn">
+            <i class="fas fa-ellipsis-h"></i>
+            <span>Más</span>
+        </a>
+      </nav>
+
+      <!-- Dashboard Mobile Overlay Menu -->
+      <div class="dashboard-mobile-overlay-menu" id="dashboardMobileOverlayMenu">
+        <div class="overlay-header">
+          <button class="close-overlay-btn" id="closeDashboardOverlayBtn">&times;</button>
+          <h5>Menú del Restaurante</h5>
+        </div>
+        <div class="overlay-content">
+          <a href="/dashboard/estadisticas" class="overlay-nav-item <%= currentPath === '/dashboard/estadisticas' ? 'active' : '' %>">
+              <i class="fas fa-chart-bar"></i>
+              <span>Estadísticas</span>
+          </a>
+          <a href="/dashboard/drivers" class="overlay-nav-item <%= currentPath === '/dashboard/drivers' ? 'active' : '' %>" style="display: none;">
+              <i class="fas fa-motorcycle"></i>
+              <span>Repartidores</span>
+          </a>
+          <a href="/dashboard/pagos" class="overlay-nav-item <%= currentPath === '/dashboard/pagos' ? 'active' : '' %>">
+              <i class="fas fa-money-bill-wave"></i>
+              <span>Pagos y Cobros</span>
+          </a>
+          
+          <a href="/auth/logout" class="overlay-nav-item">
+              <i class="fas fa-sign-out-alt"></i>
+              <span>Cerrar Sesión</span>
+          </a>
+        </div>
+      </div>
+    <% } else if (user && user.tipo_usuario === 'admin') { %>
+      <!-- Menú móvil admin -->
+      <%- include('partials/admin-mobile-nav', { currentPath: currentPath, user: user }) %>
+    <% } else if (!(currentPath && currentPath.startsWith('/dashboard'))) { %>
+      <!-- Menú móvil cliente -->
+      <%- include('partials/client-mobile-nav', { currentPath: currentPath }) %>
+    <% } %>
 
     <!-- Footer -->
     <footer class="bg-light py-4 mt-auto">
-        <div class="container text-center">
-            <p class="mb-0">&copy; 2024 A la Mesa. Todos los derechos reservados.</p>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <h5 class="mb-3" style="color: #ff6b35;">
+                        <i class="fas fa-utensils me-2"></i>
+                        A la Mesa
+                    </h5>
+                    <p class="text-muted">
+                        Tu plataforma de delivery de comida favorita. 
+                        Conectamos los mejores restaurantes con nuestros clientes.
+                    </p>
+                    <div class="social-links">
+                        <a href="#" class="text-muted me-3"><i class="fab fa-facebook fa-lg"></i></a>
+                        <a href="#" class="text-muted me-3"><i class="fab fa-instagram fa-lg"></i></a>
+                        <a href="mailto:alamesa.contacto@gmail.com" class="text-muted me-3"><i class="fas fa-envelope fa-lg"></i></a>
+                        <!-- <a href="#" class="text-muted me-3"><i class="fab fa-twitter fa-lg"></i></a> -->
+                        <!-- <a href="#" class="text-muted"><i class="fab fa-linkedin fa-lg"></i></a> -->
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h6 class="text-dark mb-3">Enlaces Útiles</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a href="/about" class="text-muted text-decoration-none">
+                                <i class="fas fa-info-circle me-2"></i>Sobre Nosotros
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="/contact" class="text-muted text-decoration-none">
+                                <i class="fas fa-envelope me-2"></i>Contacto
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="/restaurant-requirements" class="text-muted text-decoration-none">
+                                <i class="fas fa-store me-2"></i>Únete como Restaurante
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="/search" class="text-muted text-decoration-none">
+                                <i class="fas fa-search me-2"></i>Buscar Restaurantes
+                            </a>
+                        </li>
+                        <% if (typeof hideFooterBeneficios === 'undefined' || !hideFooterBeneficios) { %>
+                        <li class="mb-2">
+                            <a href="/beneficios-clientes" class="text-muted text-decoration-none">
+                                <i class="fas fa-heart me-2"></i>Beneficios para Clientes
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="/beneficios-restaurantes" class="text-muted text-decoration-none">
+                                <i class="fas fa-building me-2"></i>Beneficios para Restaurantes
+                            </a>
+                        </li>
+                        <% } %>
+                        <li class="mb-2">
+                            <a href="/bienvenido" class="text-muted text-decoration-none">
+                                <i class="fas fa-hand-sparkles me-2"></i>Bienvenido
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h6 class="text-dark mb-3">Información Legal</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a href="/terms" class="text-muted text-decoration-none">
+                                <i class="fas fa-file-contract me-2"></i>Términos y Condiciones
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="/privacy" class="text-muted text-decoration-none">
+                                <i class="fas fa-user-shield me-2"></i>Política de Privacidad
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="/legal-info" class="text-muted text-decoration-none">
+                                <i class="fas fa-balance-scale me-2"></i>Información Legal
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="/restaurant-requirements" class="text-muted text-decoration-none">
+                                <i class="fas fa-clipboard-check me-2"></i>Requisitos Restaurantes
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="my-3">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="mb-0 text-muted">
+                        &copy; 2025 A la Mesa. Todos los derechos reservados.
+                    </p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-0 text-muted">
+                        <i class="fas fa-map-marker-alt me-1"></i>
+                        Colón, Bs As
+                    </p>
+                </div>
+            </div>
         </div>
     </footer>
 
+    <%- include('partials/cookie-consent') %>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Socket.IO fallback loader -->
+    <script src="/js/socket.io.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <!-- Custom JavaScript -->
+    <script src="/js/app.js"></script>
     <script src="/js/cart.js"></script>
-    <%- script %>
-
+    <script src="/js/dashboard/products.js"></script>
+    <script src="/js/cookie-consent.js"></script>
     
+    <!-- Bloque de datos de usuario para notificaciones push -->
+    <% if (typeof user !== 'undefined' && user) { %>
+      <script id="user-data-script" type="application/json">
+        <%- JSON.stringify(user) %>
+      </script>
+    <% } %>
+    <!-- Scripts principales -->
+    <script src="/js/push-notifications.js"></script>
+    
+    <script>
+    // Event listener para el carrito móvil global
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        
+        // Los event listeners del carrito ahora se manejan centralmente en app.js
+        // No es necesario asignarlos aquí para evitar duplicados
+        
+        // Event listener para el menú de usuario móvil
 
+        
+        // Event listener para cerrar el menú de usuario con overlay
+        const userMenuOverlay = document.getElementById('userMenuOverlay');
+        if (userMenuOverlay) {
+            userMenuOverlay.addEventListener('click', function(e) {
+                if (typeof window.closeUserMenu === 'function') {
+                    window.closeUserMenu();
+                }
+            });
+        }
 
+        // Event listener para el enlace "Mi Perfil" en la navegación móvil
+        const profileLink = document.querySelector('.client-mobile-nav-item[href="/auth/profile"]');
+        if (profileLink) {
+            profileLink.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevenir la navegación por defecto
+                if (typeof window.toggleUserMenu === 'function') {
+                    window.toggleUserMenu(e);
+                }
+            });
+        }
+        
+        // Event listener para cerrar menús con Escape
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                if (typeof window.closeCartSidebar === 'function') {
+                    window.closeCartSidebar();
+                }
+                if (typeof window.closeUserMenu === 'function') {
+                    window.closeUserMenu();
+                }
+            }
+        });
+        
+        // Marcar como activo el item del menú correspondiente a la página actual
+        const currentPath = window.location.pathname;
+        const mobileNavItems = document.querySelectorAll('.mobile-nav .mobile-nav-item');
+        mobileNavItems.forEach(item => {
+            const href = item.getAttribute('href');
+            if (href === currentPath || (currentPath === '/' && href === '/')) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    });
+    </script>
+    
+    <%- script %>
 </body>
 </html>

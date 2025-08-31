@@ -1,11 +1,8 @@
-
-<%- include('../partials/header') %>
-
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white text-center">
+                <div class="card-header text-white text-center" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
                     <h3 class="mb-0">
                         <i class="fas fa-store me-2"></i>
                         Registrar Restaurante
@@ -31,33 +28,21 @@
                     <form method="POST" action="/auth/register-restaurant">
                         <!-- Información del Usuario -->
                         <div class="section-title mb-3">
-                            <h5 class="text-primary">
-                                <i class="fas fa-user me-2"></i>
+                            <h5 style="color: #ff6b35;">
+                                <i class="fas fa-user me-2" style="color: #ff6b35;"></i>
                                 Información Personal
                             </h5>
                         </div>
                         
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="nombre" class="form-label">Nombre *</label>
-                                <input type="text" class="form-control" id="nombre" name="nombre" required>
+                                <label for="nombre_apellido" class="form-label">Nombre y Apellido del Contacto *</label>
+                                <input type="text" class="form-control" id="nombre_apellido" name="nombre_apellido" required>
                             </div>
                             <div class="col-md-6">
-                                <label for="apellido" class="form-label">Apellido *</label>
-                                <input type="text" class="form-control" id="apellido" name="apellido" required>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="email" class="form-label">Email *</label>
+                                <label for="email" class="form-label">Email de Contacto *</label>
                                 <input type="email" class="form-control" id="email" name="email" required>
                                 <div class="form-text">Este será tu email de acceso</div>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="telefono" class="form-label">Teléfono</label>
-                                <input type="tel" class="form-control" id="telefono" name="telefono" 
-                                       placeholder="Ej: +5491123456789">
                             </div>
                         </div>
 
@@ -65,13 +50,14 @@
                             <div class="col-md-6">
                                 <label for="ciudad" class="form-label">Ciudad *</label>
                                 <input type="text" class="form-control" id="ciudad" name="ciudad" 
-                                       value="Ciudad Autónoma de Buenos Aires"
+                                       value="Colón, Bs As"
+                                       placeholder="Ciudad"
                                        required minlength="2" maxlength="50"
-                                       pattern="[A-Za-záéíóúÁÉÍÓÚñÑ\s]+"
-                                       title="Por favor ingresa el nombre de la ciudad (solo letras y espacios)"
-                                       onchange="this.value = this.value.trim() || 'Ciudad Autónoma de Buenos Aires'"
-                                       onblur="this.value = this.value.trim() || 'Ciudad Autónoma de Buenos Aires'">
-                                <div class="form-text">Ingresa el nombre completo de tu ciudad</div>
+                                       pattern="[A-Za-záéíóúÁÉÍÓÚñÑ\s,\.]+"
+                                       title="Por favor ingresa el nombre de la ciudad (ej: Colón, Bs As)"
+                                       onchange="this.value = this.value.trim() || 'Colón, Bs As'"
+                                       onblur="this.value = this.value.trim() || 'Colón, Bs As'">
+                                <div class="form-text">Ej: Colón, Bs As</div>
                             </div>
                             <div class="col-md-6">
                                 <label for="password" class="form-label">Contraseña *</label>
@@ -85,8 +71,8 @@
 
                         <!-- Información del Restaurante -->
                         <div class="section-title mb-3">
-                            <h5 class="text-primary">
-                                <i class="fas fa-store me-2"></i>
+                            <h5 style="color: #ff6b35;">
+                                <i class="fas fa-store me-2" style="color: #ff6b35;"></i>
                                 Información del Restaurante
                             </h5>
                         </div>
@@ -125,14 +111,14 @@
                                 <label for="categoria_id" class="form-label">Categoría Principal *</label>
                                 <select class="form-select" id="categoria_id" name="categoria_id" required>
                                     <option value="">Selecciona una categoría</option>
-                                    <option value="1">Comida Rápida</option>
-                                    <option value="2">Pizza</option>
-                                    <option value="3">Parrilla</option>
-                                    <option value="4">Asiática</option>
-                                    <option value="5">Italiana</option>
-                                    <option value="6">Mexicana</option>
-                                    <option value="7">Saludable</option>
-                                    <option value="8">Postres</option>
+                                    <option value="11">Empanadas</option>
+                                    <option value="12">Pizzas</option>
+                                    <option value="13">Sandwiches</option>
+                                    <option value="14">Pastas</option>
+                                    <option value="10">Hamburguesas</option>
+                                    <option value="6">Bebidas</option>
+                                    <option value="7">Postres</option>
+                                    <option value="5">Otros</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
@@ -162,7 +148,7 @@
 
                         <!-- Submit Button -->
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">
+                            <button type="submit" class="btn btn-lg" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">
                                 <i class="fas fa-store me-2"></i>
                                 Registrar Restaurante
                             </button>
@@ -190,7 +176,7 @@
                 </div>
                 <div class="col-md-4 text-center mb-3">
                     <div class="benefit-item">
-                        <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                        <i class="fas fa-users fa-3x mb-3" style="color: #ff6b35;"></i>
                         <h6>Más Clientes</h6>
                         <p class="text-muted">Accede a miles de usuarios que buscan comida en tu zona</p>
                     </div>
@@ -248,7 +234,7 @@ document.querySelector('form').addEventListener('submit', function(e) {
     // Asegurar que ciudad tenga un valor
     const ciudadInput = document.getElementById('ciudad');
     if (!ciudadInput.value.trim()) {
-        ciudadInput.value = 'Ciudad Autónoma de Buenos Aires';
+        ciudadInput.value = 'Colón, Bs As';
     }
     
     const descripcion = document.getElementById('restaurante_descripcion').value;
@@ -278,5 +264,3 @@ document.getElementById('restaurante_descripcion').addEventListener('input', fun
     }
 });
 </script>
-
-<%- include('../partials/footer') %>

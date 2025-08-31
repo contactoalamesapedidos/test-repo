@@ -1,18 +1,36 @@
-<%- include('../partials/header') %>
-
+<% // Header ya incluido en layout.ejs %>
 <div class="container py-4">
     <div class="row">
         <!-- Perfil -->
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
+                <div class="card-header text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                    <h5 class="mb-0 d-flex align-items-center gap-2">
                         <i class="fas fa-user me-2"></i>
                         Mi Perfil
                     </h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="form-check form-switch m-0 d-flex align-items-center" title="Notificaciones de nuevos pedidos">
+                            <input class="form-check-input" type="checkbox" id="pushNotificationsSwitch" style="cursor:pointer">
+                            <label class="form-check-label ms-2" for="pushNotificationsSwitch">
+                                <i class="fas fa-bell"></i>
+                            </label>
+                        </div>
+                        <button id="editProfileBtn" class="btn btn-light btn-sm" title="Editar perfil" type="button">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <form id="profileForm">
+                    <div id="pushPermissionHelp" class="alert alert-warning d-none" role="alert">
+                        Las notificaciones están bloqueadas para este sitio. Para activarlas:
+                        <ul class="mb-0 mt-2">
+                            <li>Haz clic en el candado de la barra de direcciones y permite "Notificaciones".</li>
+                            <li>En Chrome/Edge: Configuración del sitio → Permisos → Notificaciones → Permitir.</li>
+                            <li>En Windows: Configuración → Sistema → Notificaciones → activa notificaciones del navegador.</li>
+                        </ul>
+                    </div>
+                    <form id="profileForm" style="display: none;">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="nombre" class="form-label">Nombre *</label>
@@ -34,34 +52,104 @@
                                 <input type="tel" class="form-control" id="telefono" name="telefono" 
                                        value="<%= user.telefono || '' %>">
                             </div>
-                            <div class="col-12">
-                                <hr>
-                                <h6 class="mb-3">Cambiar Contraseña</h6>
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label for="password" class="form-label">Nueva Contraseña</label>
-                                        <input type="password" class="form-control" id="password" name="password" 
-                                               minlength="6">
-                                        <small class="text-muted">Dejar en blanco para mantener la actual</small>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="confirmPassword" class="form-label">Confirmar Contraseña</label>
-                                        <input type="password" class="form-control" id="confirmPassword" 
-                                               name="confirmPassword" minlength="6">
-                                    </div>
-                                </div>
+                            <div class="col-md-6">
+                                <label for="ciudad" class="form-label">Ciudad</label>
+                                <input type="text" class="form-control" id="ciudad" name="ciudad" value="<%= user.ciudad || '' %>">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="direccion" class="form-label">Dirección <small class="text-muted">(opcional)</small></label>
+                                <input type="text" class="form-control" id="direccion" name="direccion" value="<%= user.direccion_principal || '' %>" maxlength="255" placeholder="Tu dirección completa">
                             </div>
                             <div class="col-12">
                                 <hr>
+                                <div class="form-check form-switch mb-3" title="Notificaciones por email">
+                                    <input class="form-check-input" type="checkbox" id="recibirNotificaciones" name="recibir_notificaciones" <%= user.recibir_notificaciones ? 'checked' : '' %> />
+                                    <label class="form-check-label" for="recibirNotificaciones">
+                                        Recibir notificaciones por email
+                                    </label>
+                                </div>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <small class="text-muted">
                                         Miembro desde <%= new Date(user.fecha_registro).toLocaleDateString('es-AR') %>
                                     </small>
-                                    <button type="submit" class="btn btn-primary">
+                                    <button type="submit" class="btn" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">
                                         <i class="fas fa-save me-2"></i>
                                         Guardar Cambios
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="profileView">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Nombre</label>
+                                <div><%= user.nombre %></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Apellido</label>
+                                <div><%= user.apellido %></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Email</label>
+                                <div><%= user.email %></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Teléfono</label>
+                                <div><%= user.telefono || '-' %></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Ciudad</label>
+                                <div><%= user.ciudad || '-' %></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Dirección</label>
+                                <div><%= user.direccion_principal || '-' %></div>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <small class="text-muted">
+                                Miembro desde <%= new Date(user.fecha_registro).toLocaleDateString('es-AR') %>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario de Cambio de Contraseña -->
+        <div class="col-lg-8 mt-4">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                    <h5 class="mb-0">
+                        <i class="fas fa-key me-2"></i>
+                        Cambiar Contraseña
+                    </h5>
+                    <button id="editPasswordBtn" class="btn btn-light btn-sm" title="Editar contraseña" type="button">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <form id="changePasswordForm" action="/auth/change-password" method="POST">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label for="current_password" class="form-label">Contraseña Actual *</label>
+                                <input type="password" class="form-control" id="current_password" name="current_password" required disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="new_password" class="form-label">Nueva Contraseña *</label>
+                                <input type="password" class="form-control" id="new_password" name="new_password" minlength="6" required disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="confirm_new_password" class="form-label">Confirmar Nueva Contraseña *</label>
+                                <input type="password" class="form-control" id="confirm_new_password" name="confirm_new_password" minlength="6" required disabled>
+                            </div>
+                            <div class="col-12 text-end">
+                                <button id="savePasswordBtn" type="submit" class="btn" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;" disabled>
+                                    <i class="fas fa-save me-2"></i>
+                                    Actualizar Contraseña
+                                </button>
                             </div>
                         </div>
                     </form>
@@ -72,7 +160,7 @@
         <!-- Pedidos Recientes -->
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
                     <h5 class="mb-0">
                         <i class="fas fa-shopping-cart me-2"></i>
                         Pedidos Recientes
@@ -105,7 +193,7 @@
                             <% }); %>
                         </div>
                         <div class="card-footer bg-transparent text-center">
-                            <a href="/orders" class="btn btn-outline-primary btn-sm">
+                            <a href="/orders/history" class="btn btn-outline-primary btn-sm" style="border-color: #ff6b35; color: #ff6b35;">
                                 Ver Todos los Pedidos
                             </a>
                         </div>
@@ -113,7 +201,7 @@
                         <div class="text-center py-4">
                             <i class="fas fa-shopping-cart text-muted fs-1 mb-3"></i>
                             <p class="text-muted">No tienes pedidos recientes</p>
-                            <a href="/restaurants" class="btn btn-primary btn-sm">
+                            <a href="/restaurants" class="btn btn-sm" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">
                                 <i class="fas fa-utensils me-2"></i>
                                 Ver Restaurantes
                             </a>
@@ -125,45 +213,106 @@
     </div>
 </div>
 
+<!-- Switch movido al header de la tarjeta de perfil -->
+
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Inicializar switch push según suscripción existente
+  const switchElem = document.getElementById('pushNotificationsSwitch');
+  const help = document.getElementById('pushPermissionHelp');
+  if (switchElem && 'serviceWorker' in navigator && 'PushManager' in window) {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+      // Mostrar ayuda si ya está denegado el permiso
+      if (help) help.classList.remove('d-none');
+      switchElem.checked = false;
+      switchElem.disabled = false; // Permitimos click para reintentar tras habilitar en navegador
+    }
+    navigator.serviceWorker.ready.then(function(registration) {
+      registration.pushManager.getSubscription().then(function(subscription) {
+        switchElem.checked = !!subscription;
+      });
+    });
+    // Bind handler
+    switchElem.addEventListener('change', () => togglePushNotifications(switchElem));
+  }
+});
+
 document.getElementById('profileForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const form = e.target;
     const submitBtn = form.querySelector('button[type="submit"]');
-    const formData = new FormData(form);
     
     // Disable submit button and show loading
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
     
     try {
+        // Crear URLSearchParams para enviar como form data
+        const formData = new URLSearchParams();
+        formData.append('nombre', form.nombre.value);
+        formData.append('apellido', form.apellido.value);
+        formData.append('email', form.email.value);
+        formData.append('telefono', form.telefono.value);
+        formData.append('ciudad', form.ciudad.value);
+        formData.append('direccion', form.direccion.value);
+        if (form.recibir_notificaciones && form.recibir_notificaciones.checked) {
+            formData.append('recibir_notificaciones', 'on');
+        }
+        
         const response = await fetch('/auth/profile', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: JSON.stringify(Object.fromEntries(formData))
+            body: formData.toString()
         });
         
-        const data = await response.json();
-        
-        if (data.success) {
+        if (response.ok) {
             showNotification('Perfil actualizado exitosamente', 'success');
             
-            // Clear password fields
-            form.password.value = '';
-            form.confirmPassword.value = '';
+            // Reload page to show updated data
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
         } else {
-            showNotification(data.message || 'Error actualizando el perfil', 'error');
+            showNotification('Error actualizando el perfil', 'error');
         }
     } catch (error) {
+        console.error('Error:', error);
         showNotification('Error actualizando el perfil', 'error');
     } finally {
         // Re-enable submit button
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Cambios';
     }
+});
+
+document.getElementById('editProfileBtn').addEventListener('click', function() {
+    document.getElementById('profileForm').style.display = 'block';
+    document.getElementById('profileView').style.display = 'none';
+});
+
+// Habilitar/Deshabilitar edición de contraseña
+document.getElementById('editPasswordBtn').addEventListener('click', function() {
+  const form = document.getElementById('changePasswordForm');
+  const inputs = form.querySelectorAll('input[type="password"]');
+  const saveBtn = document.getElementById('savePasswordBtn');
+  const enable = inputs[0].disabled; // si está deshabilitado, habilitamos
+  inputs.forEach(i => i.disabled = !enable ? true : false);
+  saveBtn.disabled = !enable ? true : false;
+  // Alternamos: si estaba deshabilitado ahora habilitamos
+  if (enable) {
+    inputs.forEach(i => i.disabled = false);
+    saveBtn.disabled = false;
+    this.innerHTML = '<i class="fas fa-times"></i>'; // icono cancelar
+    this.title = 'Cancelar';
+  } else {
+    inputs.forEach(i => { i.disabled = true; i.value = ''; });
+    saveBtn.disabled = true;
+    this.innerHTML = '<i class="fas fa-pen"></i>';
+    this.title = 'Editar contraseña';
+  }
 });
 
 // Función para mostrar notificaciones
@@ -191,6 +340,53 @@ function showNotification(message, type = 'success') {
         document.body.removeChild(toast);
     });
 }
+
+function togglePushNotifications(checkbox) {
+  // Validaciones básicas
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    showNotification('Tu navegador no soporta notificaciones push.', 'danger');
+    checkbox.checked = false;
+    return;
+  }
+
+  if (checkbox.checked) {
+    // Pedir permiso primero
+    Notification.requestPermission().then(permission => {
+      if (permission !== 'granted') {
+        showNotification('Permiso denegado. Habilita las notificaciones del sitio y vuelve a intentar.', 'danger');
+        const help = document.getElementById('pushPermissionHelp');
+        if (help) help.classList.remove('d-none');
+        checkbox.checked = false;
+        return;
+      }
+      // Suscribir
+      if (typeof subscribeUserToPush === 'function') {
+        Promise.resolve(subscribeUserToPush())
+          .then(() => showNotification('Notificaciones activadas. Recibirás avisos de pedidos y novedades.', 'success'))
+          .catch(() => {
+            checkbox.checked = false;
+            showNotification('No se pudo activar las notificaciones.', 'danger');
+          });
+      } else {
+        // Fallback sin implementación
+        showNotification('Notificaciones activadas. Recibirás avisos de pedidos y novedades.', 'success');
+      }
+    });
+  } else {
+    if (typeof unsubscribeUserFromPush === 'function') {
+      Promise.resolve(unsubscribeUserFromPush()).finally(() => {
+        showNotification('Notificaciones desactivadas.', 'info');
+      });
+    } else {
+      showNotification('Notificaciones desactivadas.', 'info');
+    }
+  }
+}
 </script>
 
-<%- include('../partials/footer') %> 
+<style>
+.toast.position-fixed {
+  z-index: 10800 !important;
+}
+</style>
+<% // Footer ya incluido en layout.ejs %>

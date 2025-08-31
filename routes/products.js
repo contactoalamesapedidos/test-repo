@@ -74,4 +74,20 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Actualizar visibilidad de un producto
+router.put('/:id/visibility', async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const { visible } = req.body;
+    if (typeof visible === 'undefined') {
+      return res.status(400).json({ success: false, message: 'Falta el campo visible' });
+    }
+    await db.execute('UPDATE productos SET visible = ? WHERE id = ?', [!!visible, productId]);
+    res.json({ success: true, message: 'Visibilidad actualizada' });
+  } catch (error) {
+    console.error('Error actualizando visibilidad:', error);
+    res.status(500).json({ success: false, message: 'Error interno del servidor' });
+  }
+});
+
 module.exports = router;

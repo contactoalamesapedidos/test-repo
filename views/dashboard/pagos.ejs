@@ -1,0 +1,481 @@
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-3 col-lg-2">
+            <%- include('partials/sidebar', { activePage: 'pagos' }) %>
+        </div>
+
+        <!-- Main content -->
+        <div class="col-md-9 col-lg-10">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>
+                    Mis Pagos y Comisiones
+                </h2>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-info me-3">
+                        <%= restaurant.nombre %>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Información del Sistema -->
+            <div class="alert alert-info">
+                <h6><i class="fas fa-info-circle me-2"></i>Sistema de Comisiones</h6>
+                <p class="mb-2">
+                    <strong>A la Mesa</strong> cobra una comisión del <strong>10%</strong> sobre tus ventas brutas semanales. 
+                    Esto incluye todos los pedidos confirmados y entregados.
+                </p>
+                <p class="mb-0">
+                    <small>
+                        • Los pagos se generan automáticamente cada semana<br>
+                        • Tienes 7 días para realizar el pago desde la fecha de vencimiento<br>
+                        • Sube tu comprobante de pago para confirmar el pago
+                    </small>
+                </p>
+            </div>
+
+            <!-- Resumen de Estado -->
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="card border-0 bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h3><%= cobros.filter(c => c.estado === 'pendiente').length %></h3>
+                            <small>Pendientes</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card border-0 bg-success text-white">
+                        <div class="card-body text-center">
+                            <h3><%= cobros.filter(c => c.estado === 'pagado').length %></h3>
+                            <small>Pagados</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card border-0 bg-danger text-white">
+                        <div class="card-body text-center">
+                            <h3><%= cobros.filter(c => c.estado === 'vencido').length %></h3>
+                            <small>Vencidos</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card border-0 bg-info text-white">
+                        <div class="card-body text-center">
+                            <h3>$<%= Math.round(cobros.reduce((sum, c) => sum + parseFloat(c.monto_comision || 0), 0)).toLocaleString() %></h3>
+                            <small>Total Comisiones</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Pagos -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        Historial de Pagos
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <% if (cobros.length > 0) { %>
+                        <!-- Vista de tabla para desktop -->
+                        <div class="table-responsive table-cobros">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Período</th>
+                                        <th>Ventas Brutas</th>
+                                        <th>Comisión (10%)</th>
+                                        <th>Estado</th>
+                                        <th>Vencimiento</th>
+                                        <th>Comprobantes</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% cobros.forEach(cobro => { %>
+                                        <tr class="<%= cobro.estado === 'vencido' ? 'table-danger' : cobro.estado === 'pagado' ? 'table-success' : '' %>">
+                                            <td>
+                                                <div class="small">
+                                                    <strong>Desde:</strong> <%= new Date(cobro.semana_inicio).toLocaleDateString('es-AR') %><br>
+                                                    <strong>Hasta:</strong> <%= new Date(cobro.semana_fin).toLocaleDateString('es-AR') %>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="text-end">
+                                                    <strong class="text-primary">$<%= cobro.ventas_brutas.toLocaleString() %></strong>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="text-end">
+                                                    <strong class="text-danger">$<%= cobro.monto_comision.toLocaleString() %></strong>
+                                                    <br><small class="text-muted"><%= cobro.porcentaje_comision %>%</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <% if (cobro.estado === 'pendiente') { %>
+                                                    <span class="badge bg-warning">Pendiente</span>
+                                                    <% if (new Date(cobro.fecha_vencimiento) < new Date()) { %>
+                                                        <br><span class="badge bg-danger mt-1">Vencido</span>
+                                                    <% } %>
+                                                <% } else if (cobro.estado === 'pagado') { %>
+                                                    <span class="badge bg-success">Pagado</span>
+                                                    <% if (cobro.fecha_pago) { %>
+                                                        <br><small class="text-muted">
+                                                            <%= new Date(cobro.fecha_pago).toLocaleDateString('es-AR') %>
+                                                        </small>
+                                                    <% } %>
+                                                <% } else if (cobro.estado === 'vencido') { %>
+                                                    <span class="badge bg-danger">Vencido</span>
+                                                <% } else if (cobro.estado === 'exonerado') { %>
+                                                    <span class="badge bg-secondary">Exonerado</span>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <div class="small">
+                                                    <%= new Date(cobro.fecha_vencimiento).toLocaleDateString('es-AR') %>
+                                                    <% const diasRestantes = Math.ceil((new Date(cobro.fecha_vencimiento) - new Date()) / (1000 * 60 * 60 * 24)); %>
+                                                    <% if (diasRestantes > 0 && cobro.estado === 'pendiente') { %>
+                                                        <br><small class="text-info">
+                                                            <i class="fas fa-clock"></i> <%= diasRestantes %> día<%= diasRestantes > 1 ? 's' : '' %> restante<%= diasRestantes > 1 ? 's' : '' %>
+                                                        </small>
+                                                    <% } else if (diasRestantes <= 0 && cobro.estado === 'pendiente') { %>
+                                                        <br><small class="text-danger">
+                                                            <i class="fas fa-exclamation-triangle"></i> Vencido
+                                                        </small>
+                                                    <% } %>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <% if (cobro.comprobantes_count > 0) { %>
+                                                    <span class="badge bg-info">
+                                                        <%= cobro.comprobantes_count %> subido<%= cobro.comprobantes_count > 1 ? 's' : '' %>
+                                                    </span>
+                                                    <% if (cobro.monto_pagado_aprobado > 0) { %>
+                                                        <br><small class="text-success">
+                                                            $<%= cobro.monto_pagado_aprobado.toLocaleString() %> aprobado
+                                                        </small>
+                                                    <% } %>
+                                                <% } else { %>
+                                                    <span class="badge bg-light text-dark">Sin comprobantes</span>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group">
+                                                    
+                                                    <% if (cobro.estado === 'pendiente') { %>
+                                                        <button class="btn btn-sm btn-primary pagar-mp-btn" data-cobro-id="<%= cobro.id %>" data-amount="<%= cobro.monto_comision %>">
+                                                            <i class="fas fa-credit-card"></i> Pagar (MP)
+                                                        </button>
+                                                        <button class="btn btn-sm btn-success" onclick="window.location.href='/dashboard/pagos/<%= cobro.id %>'">
+                                                            <i class="fas fa-upload"></i> Subir Comprobante
+                                                        </button>
+                                                    <% } %>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Vista de tarjetas para móviles -->
+                        <div class="cobros-cards-list p-3">
+                            <% cobros.forEach(cobro => { %>
+                                <% const diasRestantes = Math.ceil((new Date(cobro.fecha_vencimiento) - new Date()) / (1000 * 60 * 60 * 24)); %>
+                                <div class="cobro-card-mobile <%= cobro.estado %>">
+                                    <div class="cobro-header">
+                                        <div class="cobro-periodo">
+                                            <%= new Date(cobro.semana_inicio).toLocaleDateString('es-AR') %> - <%= new Date(cobro.semana_fin).toLocaleDateString('es-AR') %>
+                                        </div>
+                                        <div class="cobro-estado">
+                                            <% if (cobro.estado === 'pendiente') { %>
+                                                <span class="badge bg-warning">Pendiente</span>
+                                                <% if (new Date(cobro.fecha_vencimiento) < new Date()) { %>
+                                                    <span class="badge bg-danger">Vencido</span>
+                                                <% } %>
+                                            <% } else if (cobro.estado === 'pagado') { %>
+                                                <span class="badge bg-success">Pagado</span>
+                                            <% } else if (cobro.estado === 'vencido') { %>
+                                                <span class="badge bg-danger">Vencido</span>
+                                            <% } else if (cobro.estado === 'exonerado') { %>
+                                                <span class="badge bg-secondary">Exonerado</span>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="cobro-body">
+                                        <div class="cobro-info-row">
+                                            <div class="cobro-label">Ventas Brutas:</div>
+                                            <div class="cobro-value ventas">$<%= cobro.ventas_brutas.toLocaleString() %></div>
+                                        </div>
+                                        
+                                        <div class="cobro-info-row">
+                                            <div class="cobro-label">Comisión (<%= cobro.porcentaje_comision %>%):</div>
+                                            <div class="cobro-value comision">$<%= cobro.monto_comision.toLocaleString() %></div>
+                                        </div>
+                                        
+                                        <div class="cobro-info-row">
+                                            <div class="cobro-label">Vencimiento:</div>
+                                            <div class="cobro-value">
+                                                <%= new Date(cobro.fecha_vencimiento).toLocaleDateString('es-AR') %>
+                                                <% if (diasRestantes > 0 && cobro.estado === 'pendiente') { %>
+                                                    <small class="text-info d-block">
+                                                        <i class="fas fa-clock"></i> <%= diasRestantes %> día<%= diasRestantes > 1 ? 's' : '' %> restante<%= diasRestantes > 1 ? 's' : '' %>
+                                                    </small>
+                                                <% } else if (diasRestantes <= 0 && cobro.estado === 'pendiente') { %>
+                                                    <small class="text-danger d-block">
+                                                        <i class="fas fa-exclamation-triangle"></i> Vencido
+                                                    </small>
+                                                <% } %>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="cobro-info-row">
+                                            <div class="cobro-label">Comprobantes:</div>
+                                            <div class="cobro-value">
+                                                <% if (cobro.comprobantes_count > 0) { %>
+                                                    <span class="badge bg-info">
+                                                        <%= cobro.comprobantes_count %> subido<%= cobro.comprobantes_count > 1 ? 's' : '' %>
+                                                    </span>
+                                                    <% if (cobro.monto_pagado_aprobado > 0) { %>
+                                                        <small class="text-success d-block">
+                                                            $<%= cobro.monto_pagado_aprobado.toLocaleString() %> aprobado
+                                                        </small>
+                                                    <% } %>
+                                                <% } else { %>
+                                                    <span class="badge bg-light text-dark">Sin comprobantes</span>
+                                                <% } %>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <% if (cobro.estado === 'pendiente') { %>
+                                        <div class="cobro-footer">
+                                            <div class="cobro-actions">
+                                                <a href="<%= cobro.mercadopago_url || '#' %>" target="_blank" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-credit-card"></i> Pagar (MP)
+                                                </a>
+                                                <button class="btn btn-sm btn-success" onclick="window.location.href='/dashboard/pagos/<%= cobro.id %>'">
+                                                    <i class="fas fa-upload"></i> Subir Comprobante
+                                                </button>
+                                            </div>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            <% }); %>
+                        </div>
+                    <% } else { %>
+                        <div class="text-center py-5">
+                            <i class="fas fa-money-bill-wave text-muted fs-1 mb-3"></i>
+                            <p class="text-muted">No hay pagos registrados</p>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+<script src="/js/app.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Asegurar que el dropdown de usuario funcione
+    const userDropdown = document.getElementById('userDropdown');
+    if (userDropdown && typeof bootstrap !== 'undefined') {
+        new bootstrap.Dropdown(userDropdown);
+    }
+
+    // Manejar el clic del botón Pagar (MP)
+    document.querySelectorAll('.pagar-mp-btn').forEach(button => {
+        button.addEventListener('click', async function() {
+            const cobroId = this.dataset.cobroId;
+            const amount = this.dataset.amount;
+            const originalButtonText = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
+
+            try {
+                const response = await fetch(`/dashboard/payments/mercadopago/create?cobro_id=${cobroId}&amount=${amount}`);
+                const data = await response.json();
+
+                if (data.success && data.preferenceId) {
+                    // Redirigir al usuario a la URL de pago de Mercado Pago
+                    const mercadopagoCheckoutUrl = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${data.preferenceId}`;
+                    window.location.href = mercadopagoCheckoutUrl;
+                } else {
+                    showNotification(data.message || 'Error al generar el link de pago de Mercado Pago', 'error');
+                }
+            } catch (error) {
+                console.error('Error al procesar pago con Mercado Pago:', error);
+                showNotification('Error de red o servidor al intentar pagar con Mercado Pago', 'error');
+            } finally {
+                this.disabled = false;
+                this.innerHTML = originalButtonText;
+            }
+        });
+    });
+});
+
+// Función para subir comprobante
+function subirComprobante(cobroId) {
+    // Redirigir a la ruta recomendada para subir comprobante
+    window.location.href = `/dashboard/pagos/${cobroId}/comprobante`;
+}
+
+// Mejorar mensaje de éxito tras la carga
+function showNotification(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class='fas fa-check-circle me-2'></i> ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    toast.addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toast);
+    });
+}
+</script>
+
+<!-- Nav mobile restaurante solo para móviles -->
+<nav class="mobile-nav mobile-only dashboard-mobile-nav d-md-none d-lg-none d-xl-none" style="position:fixed;bottom:0;left:0;width:100vw;z-index:1050;background:#fff;border-top:1px solid #eee;box-shadow:0 -2px 8px rgba(0,0,0,0.05);">
+    <a href="/dashboard" class="mobile-nav-item <%= currentPath === '/dashboard' ? 'active' : '' %>">
+        <i class="fas fa-home"></i>
+        <span>Dashboard</span>
+    </a>
+    <a href="/dashboard/products" class="mobile-nav-item <%= currentPath === '/dashboard/products' ? 'active' : '' %>">
+        <i class="fas fa-utensils"></i>
+        <span>Productos</span>
+    </a>
+    <a href="/dashboard/orders" class="mobile-nav-item <%= currentPath === '/dashboard/orders' ? 'active' : '' %>" style="position:relative;">
+        <i class="fas fa-shopping-cart"></i>
+        <span>Pedidos</span>
+        <% if (typeof pedidos_no_entregados !== 'undefined' && pedidos_no_entregados > 0) { %>
+            <span class="badge bg-danger rounded-pill" style="position:absolute;top:2px;right:8px;font-size:0.7em;padding:0.3em 0.5em;"><%= pedidos_no_entregados %></span>
+        <% } %>
+    </a>
+    <a href="/dashboard/pagos" class="mobile-nav-item <%= currentPath === '/dashboard/pagos' ? 'active' : '' %>">
+        <i class="fas fa-money-bill-wave"></i>
+        <span>Cobros</span>
+    </a>
+    <a href="/dashboard/settings" class="mobile-nav-item <%= currentPath === '/dashboard/settings' ? 'active' : '' %>">
+        <i class="fas fa-cog"></i>
+        <span>Config</span>
+    </a>
+</nav>
+
+<style>
+/* Estilos para la tabla de cobros */
+.table-cobros {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .table-cobros {
+        display: block;
+    }
+    .cobros-cards-list {
+        display: none;
+    }
+}
+
+/* Estilos para las tarjetas de cobros en móviles */
+.cobro-card-mobile {
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.cobro-card-mobile:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.cobro-card-mobile.pendiente {
+    border-left: 4px solid #ffc107;
+}
+
+.cobro-card-mobile.pagado {
+    border-left: 4px solid #198754;
+}
+
+.cobro-card-mobile.vencido {
+    border-left: 4px solid #dc3545;
+}
+
+.cobro-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+}
+
+.cobro-periodo {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.cobro-body {
+    padding: 1rem;
+}
+
+.cobro-info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.cobro-label {
+    color: #6c757d;
+}
+
+.cobro-value {
+    font-weight: 500;
+}
+
+.cobro-value.ventas {
+    color: #0d6efd;
+}
+
+.cobro-value.comision {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.cobro-footer {
+    padding: 0.75rem 1rem;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+}
+
+.cobro-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+</style>

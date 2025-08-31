@@ -10,7 +10,7 @@
         </div>
         <span class="badge bg-<%= order.estado === 'pendiente' ? 'warning' :
                               order.estado === 'confirmado' ? 'info' :
-                              order.estado === 'en_preparacion' ? 'primary' :
+                              order.estado === 'preparando' ? 'primary' :
                               order.estado === 'en_camino' ? 'secondary' :
                               order.estado === 'entregado' ? 'success' :
                               order.estado === 'cancelado' ? 'danger' : 'secondary' %>">
@@ -26,10 +26,6 @@
         <p class="mb-2">
             <i class="fas fa-user text-primary me-2"></i>
             <strong>Cliente:</strong> <%= order.cliente_nombre %> <%= order.cliente_apellido %>
-        </p>
-        <p class="mb-2">
-            <i class="fas fa-phone text-primary me-2"></i>
-            <strong>Teléfono:</strong> <%= order.cliente_telefono %>
         </p>
         <p class="mb-0">
             <i class="fas fa-envelope text-primary me-2"></i>
@@ -125,7 +121,7 @@
 <div class="order-timeline mb-4">
     <h6 class="mb-3">Estado del Pedido</h6>
     <div class="timeline">
-        <% const estados = ['pendiente', 'confirmado', 'en_preparacion', 'en_camino', 'entregado'] %>
+        <% const estados = ['pendiente', 'confirmado', 'preparando', 'en_camino', 'entregado'] %>
         <% estados.forEach((estado, index) => { %>
             <div class="timeline-item d-flex mb-3">
                 <div class="timeline-icon me-3">
@@ -133,9 +129,9 @@
                                                estados.indexOf(order.estado) > index ? 'completed' : '' %>">
                         <i class="fas fa-<%= estado === 'pendiente' ? 'clock' :
                                        estado === 'confirmado' ? 'check' :
-                                       estado === 'en_preparacion' ? 'utensils' :
-                                       estado === 'en_camino' ? 'truck' :
-                                       'check-circle' %>"></i>
+                    estado === 'preparando' ? 'utensils' :
+                    estado === 'en_camino' ? 'truck' :
+                    'check-circle' %>"></i>
                     </div>
                     <% if (index < estados.length - 1) { %>
                         <div class="timeline-line"></div>
@@ -156,8 +152,15 @@
                                     class="btn btn-sm btn-primary"
                                     data-order-id="<%= order.id %>"
                                     data-status="<%= estado %>"
-                                    onclick="updateOrderStatus(this)">
+                                    onclick="updateOrderStatusFromModal(this)">
                                 Cambiar a <%= estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ') %>
+                            </button>
+                        <% } else if (estados.indexOf(order.estado) < index && index < estados.length - 1) { %>
+                            <button type="button" 
+                                    class="btn btn-sm btn-outline-secondary" 
+                                    disabled
+                                    title="<%= estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ') %> - No disponible aún">
+                                <%= estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ') %>
                             </button>
                         <% } %>
                     </div>
@@ -172,171 +175,110 @@
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
         <i class="fas fa-times me-2"></i>Cerrar
     </button>
-    <% if (order.estado === 'pendiente') { %>
+    
+    <!-- Botones de estados - mostrar todos los futuros -->
+    <% 
+        const estados = ['pendiente', 'confirmado', 'en_camino', 'entregado'];
+        const estadoActual = order.estado;
+        const indiceActual = estados.indexOf(estadoActual);
+    %>
+    
+    <!-- Botón Confirmar (si está pendiente) -->
+    <% if (estadoActual === 'pendiente') { %>
         <button type="button"
-                class="btn btn-primary"
+                class="btn btn-success"
                 data-order-id="<%= order.id %>"
                 data-status="confirmado"
-                onclick="updateOrderStatus(this)">
+                onclick="updateOrderStatusFromModal(this)">
             <i class="fas fa-check me-2"></i>Confirmar Pedido
         </button>
-    <% } else if (order.estado === 'confirmado') { %>
         <button type="button"
-                class="btn btn-primary"
-                data-order-id="<%= order.id %>"
-                data-status="en_preparacion"
-                onclick="updateOrderStatus(this)">
-            <i class="fas fa-utensils me-2"></i>Iniciar Preparación
+                class="btn btn-danger ms-2"
+                onclick="confirmCancelOrder('<%= order.id %>')">
+            <i class="fas fa-times me-2"></i>Cancelar Pedido
         </button>
-    <% } else if (order.estado === 'en_preparacion') { %>
+    <% } %>
+    
+    <!-- Botón Enviar Pedido (si está confirmado) -->
+    <% if (estadoActual === 'confirmado' || estadoActual === 'preparando') { %>
         <button type="button"
-                class="btn btn-primary"
+                class="btn btn-warning"
                 data-order-id="<%= order.id %>"
                 data-status="en_camino"
-                onclick="updateOrderStatus(this)">
-            <i class="fas fa-truck me-2"></i>Enviar Pedido
+                onclick="updateOrderStatusFromModal(this)">
+            <i class="fas fa-truck me-2"></i>En Camino
         </button>
-    <% } else if (order.estado === 'en_camino') { %>
+        <button type="button"
+                class="btn btn-danger ms-2"
+                onclick="confirmCancelOrder('<%= order.id %>')">
+            <i class="fas fa-times me-2"></i>Cancelar Pedido
+        </button>
+    <% } %>
+    
+    <!-- Botón Marcar como Entregado (si está en camino) -->
+    <% if (estadoActual === 'en_camino') { %>
         <button type="button"
                 class="btn btn-success"
                 data-order-id="<%= order.id %>"
                 data-status="entregado"
-                onclick="updateOrderStatus(this)">
+                onclick="updateOrderStatusFromModal(this)">
             <i class="fas fa-check-circle me-2"></i>Marcar como Entregado
         </button>
+        <button type="button"
+                class="btn btn-danger ms-2"
+                onclick="confirmCancelOrder('<%= order.id %>')">
+            <i class="fas fa-times me-2"></i>Cancelar Pedido
+        </button>
     <% } %>
-</div>
 
 <script>
-async function updateOrderStatus(button) {
-    const orderId = button.dataset.orderId;
-    const newStatus = button.dataset.status;
-    
-    if (!orderId || !newStatus) {
-        showNotification('Error: datos del pedido no disponibles', 'error');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/dashboard/orders/${orderId}/status`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ status: newStatus })
+function confirmCancelOrder(orderId) {
+    if (confirm('¿Estás seguro de que deseas cancelar este pedido?')) {
+        // Aquí deberías llamar a la función real de cancelación, por ejemplo:
+        updateOrderStatusFromModal({
+            dataset: { orderId: orderId, status: 'cancelado' }
         });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            // Cerrar el modal actual
-            const modal = bootstrap.Modal.getInstance(document.getElementById('orderDetailsModal'));
-            modal.hide();
-            
-            // Mostrar notificación
-            showNotification('Estado del pedido actualizado', 'success');
-            
-            // Recargar la página después de un breve delay
-            setTimeout(() => {
-                location.reload();
-            }, 1000);
-        } else {
-            showNotification(data.message || 'Error al actualizar el estado', 'error');
-        }
-    } catch (error) {
-        console.error('Error actualizando estado:', error);
-        showNotification('Error al actualizar el estado del pedido', 'error');
     }
 }
 </script>
+    
+    <!-- Mostrar botones futuros deshabilitados -->
+    <% estados.forEach((estado, index) => { %>
+        <% if (index > indiceActual && index < estados.length - 1) { %>
+            <button type="button"
+                    class="btn btn-outline-secondary" 
+                    disabled
+                    title="<%= estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ') %> - No disponible aún">
+                <i class="fas fa-<%= 
+                    estado === 'confirmado' ? 'check' :
+                    estado === 'preparando' ? 'utensils' :
+                    estado === 'en_camino' ? 'truck' :
+                    'check-circle' %> me-2"></i>
+                <%= estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ') %>
+            </button>
+        <% } %>
+    <% }) %>
+</div>
 
-<style>
-.timeline {
-    position: relative;
-    padding-left: 30px;
-}
-
-.timeline-item {
-    position: relative;
-}
-
-.timeline-icon {
-    position: absolute;
-    left: -30px;
-    top: 0;
-    width: 30px;
-    text-align: center;
-}
-
-.timeline-dot {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background-color: #e9ecef;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #6c757d;
-}
-
-.timeline-dot.active {
-    background-color: #0d6efd;
-    color: white;
-}
-
-.timeline-dot.completed {
-    background-color: #198754;
-    color: white;
-}
-
-.timeline-line {
-    position: absolute;
-    left: 15px;
-    top: 30px;
-    bottom: -30px;
-    width: 2px;
-    background-color: #e9ecef;
-}
-
-.timeline-item:last-child .timeline-line {
-    display: none;
-}
-
-.timeline-content {
-    flex: 1;
-}
-
-.btn-primary {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-}
-
-.btn-primary:hover {
-    background-color: #0b5ed7;
-    border-color: #0a58ca;
-}
-
-.btn-success {
-    background-color: #198754;
-    border-color: #198754;
-}
-
-.btn-success:hover {
-    background-color: #157347;
-    border-color: #146c43;
-}
-
-.btn-secondary {
-    background-color: #6c757d;
-    border-color: #6c757d;
-}
-
-.btn-secondary:hover {
-    background-color: #5c636a;
-    border-color: #565e64;
-}
-
-.gap-2 {
-    gap: 0.5rem !important;
-}
-</style> 
+<!-- Chat Section -->
+<div class="chat-section mt-4">
+    <h6 class="mb-3">Chat del Pedido</h6>
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0 d-flex flex-column" style="height: 300px;">
+            <div id="chatMessages" class="p-3 overflow-auto flex-grow-1">
+                <!-- Los mensajes del chat se cargarán aquí -->
+                <div class="text-center text-muted py-5">Cargando mensajes...</div>
+            </div>
+            <div class="chat-input border-top p-3 bg-light d-flex align-items-center">
+                <input type="text" 
+                       id="chatInput" 
+                       class="form-control me-2" 
+                       placeholder="Escribe un mensaje...">
+                <button id="sendChatMessageBtn" 
+                        class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i> Enviar
+                </button>
+            </div>
+        </div>
+    </div>
+</div> 

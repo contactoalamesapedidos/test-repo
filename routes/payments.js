@@ -2,32 +2,28 @@ const express = require('express');
 const router = express.Router();
 const mercadopago = require('mercadopago');
 const db = require('../config/database');
+require('dotenv').config();
+const BASE_URL = process.env.BASE_URL || 'https://alamesaargentina.loca.lt';
 
-// Configure MercadoPago
-mercadopago.configure({
-    access_token: process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-YOUR-ACCESS-TOKEN',
-});
-
-// Middleware to check if user is authenticated
 const requireAuth = (req, res, next) => {
     if (!req.session.user) {
-        return res.status(401).json({
-            success: false,
-            message: 'Debes estar logueado para realizar un pago'
-        });
+        return res.status(401).json({ success: false, message: 'Debes estar logueado para realizar esta acción' });
     }
     next();
 };
 
 // Create payment preference
 router.post('/create-preference', requireAuth, async (req, res) => {
+    console.log('POST /create-preference received.');
+    console.log('Request body:', req.body);
     try {
         const { orderId } = req.body;
         const userId = req.session.user.id;
+        console.log('Creating preference for orderId:', orderId, 'by userId:', userId);
 
-        // Get order details
+        // Get order details to find the restaurant_id
         const [orders] = await db.execute(`
-            SELECT o.*, r.nombre as restaurante_nombre 
+            SELECT o.*, r.nombre as restaurante_nombre, r.mp_access_token, r.mp_user_id
             FROM pedidos o
             JOIN restaurantes r ON o.restaurante_id = r.id
             WHERE o.id = ? AND o.cliente_id = ?
@@ -39,15 +35,30 @@ router.post('/create-preference', requireAuth, async (req, res) => {
                 message: 'Pedido no encontrado'
             });
         }
-
         const order = orders[0];
+        console.log('Restaurant Mercado Pago credentials for order', orderId, ':', {
+            mp_access_token: order.mp_access_token ? '[REDACTED]' : 'N/A',
+            mp_user_id: order.mp_user_id
+        });
+
+        // Check if restaurant has Mercado Pago credentials
+        if (!order.mp_access_token || !order.mp_user_id) {
+            console.log('Restaurant does not have Mercado Pago credentials configured.');
+            return res.status(400).json({ success: false, message: 'El restaurante no tiene configurado Mercado Pago para recibir pagos.' });
+        }
+
+        // Configure Mercado Pago with the restaurant's access token
+        mercadopago.configure({
+            access_token: order.mp_access_token
+        });
+        console.log('Mercado Pago configured with restaurant access token.');
 
         // Get order items
         const [items] = await db.execute(`
-            SELECT pi.*, p.nombre, p.descripcion, p.imagen
-            FROM pedido_items pi
-            JOIN productos p ON pi.producto_id = p.id
-            WHERE pi.pedido_id = ?
+            SELECT ip.*, p.nombre, p.descripcion, p.imagen
+            FROM items_pedido ip
+            JOIN productos p ON ip.producto_id = p.id
+            WHERE ip.pedido_id = ?
         `, [orderId]);
 
         // Create preference items for MercadoPago
@@ -55,104 +66,87 @@ router.post('/create-preference', requireAuth, async (req, res) => {
             title: item.nombre,
             unit_price: parseFloat(item.precio_unitario),
             quantity: item.cantidad,
-            description: item.descripcion || '',
-            picture_url: item.imagen ? `${req.protocol}://${req.get('host')}/uploads/${item.imagen}` : null,
-            category_id: 'food',
-            currency_id: 'ARS'
         }));
 
-        // Add delivery cost if exists
-        if (order.costo_envio > 0) {
-            preferenceItems.push({
-                title: 'Costo de envío',
-                unit_price: parseFloat(order.costo_envio),
-                quantity: 1,
-                category_id: 'delivery',
-                currency_id: 'ARS'
-            });
-        }
+        // Calculate application fee (10% commission)
+        const applicationFee = parseFloat((order.total * 0.10).toFixed(2));
+        console.log('Calculated applicationFee:', applicationFee);
 
+        // Create preference
         const preference = {
             items: preferenceItems,
-            payer: {
-                name: req.session.user.nombre,
-                surname: req.session.user.apellido,
-                email: req.session.user.email,
-                phone: {
-                    area_code: '',
-                    number: req.session.user.telefono || ''
-                },
-                identification: {
-                    type: 'DNI',
-                    number: ''
-                }
-            },
-            payment_methods: {
-                excluded_payment_methods: [],
-                excluded_payment_types: [],
-                installments: 12
-            },
+            external_reference: orderId.toString(),
             back_urls: {
-                success: `${req.protocol}://${req.get('host')}/payments/success`,
-                failure: `${req.protocol}://${req.get('host')}/payments/failure`,
-                pending: `${req.protocol}://${req.get('host')}/payments/pending`
+                success: `${BASE_URL}/payments/success`,
+                failure: `${BASE_URL}/payments/failure`,
+                pending: `${BASE_URL}/payments/pending`,
             },
             auto_return: 'approved',
-            external_reference: orderId.toString(),
-            notification_url: `${req.protocol}://${req.get('host')}/payments/webhook`,
-            statement_descriptor: 'A LA MESA',
-            metadata: {
-                order_id: orderId,
-                user_id: userId,
-                restaurant_id: order.restaurante_id
-            }
+            payment_methods: {
+                excluded_payment_types: [
+                    { id: 'ticket' }
+                ],
+                installments: 1,
+            },
+            notification_url: `${BASE_URL}/payments/webhook`,
+            statement_descriptor: 'ALAMESA',
+            application_fee: applicationFee,
+            payer: {
+                entity_type: 'individual',
+                type: 'customer',
+                // You might want to pass customer details here if available
+            },
+            // This is crucial for split payments: the platform's user ID
+            sponsor_id: process.env.MP_PLATFORM_USER_ID, // Your platform's Mercado Pago User ID
+            // The restaurant's Mercado Pago User ID to receive the payment
+            collector_id: order.mp_user_id
         };
+        console.log('Mercado Pago preference object created with sponsor_id:', process.env.MP_PLATFORM_USER_ID, 'and collector_id:', order.mp_user_id);
 
-        const response = await mercadopago.preferences.create(preference);
-
-        // Save payment preference
-        await db.execute(`
-            UPDATE pedidos 
-            SET mp_preference_id = ?, estado_pago = 'pending'
-            WHERE id = ?
-        `, [response.body.id, orderId]);
-
-        res.json({
-            success: true,
-            preferenceId: response.body.id,
-            initPoint: response.body.init_point,
-            sandboxInitPoint: response.body.sandbox_init_point
-        });
+        const result = await mercadopago.preferences.create(preference);
+        res.json({ success: true, preferenceId: result.body.id });
 
     } catch (error) {
-        console.error('Error creating payment preference:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error creando preferencia de pago',
-            error: error.message
-        });
+        console.error('Error creating Mercado Pago preference:', error);
+        res.status(500).json({ success: false, message: 'Error al crear la preferencia de pago.' });
     }
 });
 
 // Payment success page
 router.get('/success', async (req, res) => {
+    console.log('--- PAYMENT SUCCESS ROUTE HIT ---');
+    console.log('Query params:', req.query);
+    console.log('Payment success page loaded', req.query);
     try {
         const { collection_id, collection_status, payment_id, status, external_reference } = req.query;
         
         if (external_reference) {
+            console.log(`Updating order ${external_reference} with status ${collection_status || status}`);
+            const paymentStatus = collection_status || status;
             // Update order status
-            await db.execute(`
-                UPDATE pedidos 
-                SET estado_pago = ?, mp_payment_id = ?, fecha_pago = NOW()
-                WHERE id = ?
-            `, [collection_status || status, payment_id || collection_id, external_reference]);
+            if (paymentStatus === 'approved') {
+                const [updateResult] = await db.execute(`
+                    UPDATE pedidos 
+                    SET estado_pago = ?, mp_payment_id = ?, fecha_pago = NOW(), estado = 'confirmado'
+                    WHERE id = ?
+                `, [paymentStatus, payment_id || collection_id, external_reference]);
+                console.log('Update result for approved status:', updateResult);
+            } else {
+                const [updateResult] = await db.execute(`
+                    UPDATE pedidos 
+                    SET estado_pago = ?, mp_payment_id = ?, fecha_pago = NOW()
+                    WHERE id = ?
+                `, [paymentStatus, payment_id || collection_id, external_reference]);
+                console.log('Update result for other status:', updateResult);
+            }
         }
 
         res.render('payments/success', {
             title: 'Pago Exitoso - A la Mesa',
             paymentId: payment_id || collection_id,
             orderId: external_reference,
-            status: collection_status || status
+            status: collection_status || status,
+            hideFooterBeneficios: true
         });
     } catch (error) {
         console.error('Error in payment success:', error);
@@ -233,6 +227,12 @@ router.post('/webhook', async (req, res) => {
         const { type, data } = req.body;
         
         if (type === 'payment') {
+            // Configure Mercado Pago with platform credentials
+            mercadopago.configure({
+                client_id: process.env.MP_APP_ID,
+                client_secret: process.env.MP_CLIENT_SECRET
+            });
+
             const paymentId = data.id;
             
             // Get payment information from MercadoPago
@@ -260,8 +260,8 @@ router.post('/webhook', async (req, res) => {
                 if (paymentInfo.status === 'approved') {
                     await db.execute(`
                         UPDATE pedidos 
-                        SET estado = 'confirmed'
-                        WHERE id = ? AND estado = 'pending'
+                        SET estado = 'confirmado'
+                        WHERE id = ? AND estado IN ('pending', 'pendiente_pago')
                     `, [orderId]);
                     
                     // Notify restaurant via socket
@@ -350,6 +350,25 @@ router.post('/test-payment', requireAuth, async (req, res) => {
             success: false,
             message: 'Error en pago de prueba'
         });
+    }
+});
+
+router.get('/public-key/:restaurantId', async (req, res) => {
+    console.log('GET /public-key/:restaurantId received.');
+    try {
+        const { restaurantId } = req.params;
+        console.log('Fetching public key for restaurantId:', restaurantId);
+        const [rows] = await db.execute('SELECT mp_public_key FROM restaurantes WHERE id = ?', [restaurantId]);
+
+        if (rows.length === 0 || !rows[0].mp_public_key) {
+            console.error(`No se encontró la clave pública para el restaurante ${restaurantId}.`);
+            return res.status(404).json({ error: 'No se encontró la clave pública para este restaurante.' });
+        }
+        console.log('Returning public key:', rows[0].mp_public_key ? '[REDACTED]' : 'N/A');
+        res.json({ publicKey: rows[0].mp_public_key });
+    } catch (error) {
+        console.error('Error al obtener la clave pública:', error);
+        res.status(500).json({ error: 'Error interno del servidor.' });
     }
 });
 

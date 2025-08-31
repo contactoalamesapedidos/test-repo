@@ -121,7 +121,8 @@
                 </div>
                 <div class="card-body p-0">
                     <% if (comprobantes.length > 0) { %>
-                        <div class="table-responsive">
+                        <!-- Vista de tabla para pantallas grandes -->
+                        <div class="table-responsive d-none d-md-block">
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
                                     <tr>
@@ -168,13 +169,15 @@
                                             </td>
                                             <td>
                                                 <div class="text-end">
-                                                    <strong class="text-success">$<%= comprobante.monto_pagado.toLocaleString() %></strong>
-                                                    <% if (comprobante.monto_pagado < comprobante.monto_comision) { %>
+                                                    <strong class="text-success">
+                                                        $<%= comprobante.monto_pagado !== null ? Number(comprobante.monto_pagado).toLocaleString() : '-' %>
+                                                    </strong>
+                                                    <% if (comprobante.monto_pagado !== null && comprobante.monto_pagado < comprobante.monto_comision) { %>
                                                         <br><small class="text-warning">
                                                             <i class="fas fa-exclamation-triangle"></i>
                                                             Pago parcial
                                                         </small>
-                                                    <% } else if (comprobante.monto_pagado > comprobante.monto_comision) { %>
+                                                    <% } else if (comprobante.monto_pagado !== null && comprobante.monto_pagado > comprobante.monto_comision) { %>
                                                         <br><small class="text-info">
                                                             <i class="fas fa-info-circle"></i>
                                                             Sobrepago
@@ -266,6 +269,109 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Vista de tarjetas para móviles -->
+                        <div class="d-md-none row g-3 p-3">
+                            <% comprobantes.forEach(comprobante => { %>
+                                <div class="col-12 mb-3">
+                                    <div class="card shadow-sm <%= comprobante.estado === 'aprobado' ? 'border-success' : comprobante.estado === 'rechazado' ? 'border-danger' : 'border-warning' %>">
+                                        <div class="card-body">
+                                            <h5 class="card-title mb-1"><%= comprobante.restaurante_nombre %></h5>
+                                            <h6 class="card-subtitle mb-2 text-muted">ID Restaurante: <%= comprobante.restaurante_id %></h6>
+                                            <p class="card-text mb-1">
+                                                <strong>Período:</strong> <%= new Date(comprobante.semana_inicio).toLocaleDateString('es-AR') %> al <%= new Date(comprobante.semana_fin).toLocaleDateString('es-AR') %>
+                                            </p>
+                                            <p class="card-text mb-1">
+                                                <strong>Ventas Brutas:</strong> $<%= comprobante.ventas_brutas.toLocaleString() %><br>
+                                                <strong>Comisión:</strong> $<%= comprobante.monto_comision.toLocaleString() %>
+                                            </p>
+                                            <p class="card-text mb-1">
+                                                <strong>Método de Pago:</strong> <span class="text-capitalize"><%= comprobante.metodo_pago.replace('_', ' ') %></span>
+                                                <% if (comprobante.referencia_pago) { %>
+                                                    <br><small class="text-muted">Ref: <%= comprobante.referencia_pago %></small>
+                                                <% } %>
+                                                <br><small class="text-muted">Fecha pago: <%= new Date(comprobante.fecha_pago_declarada).toLocaleDateString('es-AR') %></small>
+                                            </p>
+                                            <p class="card-text mb-1">
+                                                <strong>Monto:</strong> <strong class="text-success">$<%= comprobante.monto_pagado !== null ? Number(comprobante.monto_pagado).toLocaleString() : '-' %></strong>
+                                                <% if (comprobante.monto_pagado !== null && comprobante.monto_pagado < comprobante.monto_comision) { %>
+                                                    <span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Pago parcial</span>
+                                                <% } else if (comprobante.monto_pagado !== null && comprobante.monto_pagado > comprobante.monto_comision) { %>
+                                                    <span class="text-info"><i class="fas fa-info-circle"></i> Sobrepago</span>
+                                                <% } %>
+                                            </p>
+                                            <p class="card-text mb-1">
+                                                <strong>Fecha Subida:</strong> <%= new Date(comprobante.fecha_subida).toLocaleDateString('es-AR') %> <%= new Date(comprobante.fecha_subida).toLocaleTimeString('es-AR', {hour: '2-digit', minute: '2-digit'}) %>
+                                            </p>
+                                            <p class="card-text mb-3">
+                                                <strong>Estado:</strong> 
+                                                <% if (comprobante.estado === 'pendiente') { %>
+                                                    <span class="badge bg-warning">Pendiente</span>
+                                                <% } else if (comprobante.estado === 'aprobado') { %>
+                                                    <span class="badge bg-success">Aprobado</span>
+                                                    <% if (comprobante.fecha_revision) { %>
+                                                        <br><small class="text-muted">(<%= new Date(comprobante.fecha_revision).toLocaleDateString('es-AR') %>)</small>
+                                                    <% } %>
+                                                    <% if (comprobante.admin_nombre) { %>
+                                                        <br><small class="text-muted">por <%= comprobante.admin_nombre %></small>
+                                                    <% } %>
+                                                <% } else if (comprobante.estado === 'rechazado') { %>
+                                                    <span class="badge bg-danger">Rechazado</span>
+                                                    <% if (comprobante.fecha_revision) { %>
+                                                        <br><small class="text-muted">(<%= new Date(comprobante.fecha_revision).toLocaleDateString('es-AR') %>)</small>
+                                                    <% } %>
+                                                <% } %>
+                                            </p>
+                                            <div class="d-grid gap-2">
+                                                <% if (comprobante.archivo_comprobante) { %>
+                                                    <a href="/uploads/comprobantes/<%= comprobante.archivo_comprobante %>" 
+                                                       target="_blank" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-file-alt me-2"></i>Ver Comprobante
+                                                    </a>
+                                                <% } else { %>
+                                                    <button class="btn btn-sm btn-outline-secondary" disabled>
+                                                        <i class="fas fa-file-alt me-2"></i>Sin Comprobante
+                                                    </button>
+                                                <% } %>
+                                                <% if (comprobante.estado === 'pendiente') { %>
+                                                    <button class="btn btn-sm btn-success" 
+                                                            onclick="revisarComprobante(<%= comprobante.id %>, 'aprobar')">
+                                                        <i class="fas fa-check me-2"></i>Aprobar
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger" 
+                                                            onclick="revisarComprobante(<%= comprobante.id %>, 'rechazar')">
+                                                        <i class="fas fa-times me-2"></i>Rechazar
+                                                    </button>
+                                                <% } else { %>
+                                                    <button class="btn btn-sm btn-outline-secondary" 
+                                                            onclick="verDetalleComprobante(<%= comprobante.id %>)">
+                                                        <i class="fas fa-eye me-2"></i>Ver Detalle
+                                                    </button>
+                                                <% } %>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+
+                        <!-- Paginación -->
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center mt-4">
+                                <li class="page-item <%= currentPage === 1 ? 'disabled' : '' %>">
+                                    <a class="page-link" href="?page=<%= currentPage - 1 %>&estado=<%= filtros.estado %>&restaurante=<%= filtros.restaurante %>&fecha_desde=<%= filtros.fecha_desde %>&fecha_hasta=<%= filtros.fecha_hasta %>">Anterior</a>
+                                </li>
+                                <% for (let i = 1; i <= totalPages; i++) { %>
+                                    <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+                                        <a class="page-link" href="?page=<%= i %>&estado=<%= filtros.estado %>&restaurante=<%= filtros.restaurante %>&fecha_desde=<%= filtros.fecha_desde %>&fecha_hasta=<%= filtros.fecha_hasta %>"><%= i %></a>
+                                    </li>
+                                <% } %>
+                                <li class="page-item <%= currentPage === totalPages ? 'disabled' : '' %>">
+                                    <a class="page-link" href="?page=<%= currentPage + 1 %>&estado=<%= filtros.estado %>&restaurante=<%= filtros.restaurante %>&fecha_desde=<%= filtros.fecha_desde %>&fecha_hasta=<%= filtros.fecha_hasta %>">Siguiente</a>
+                                </li>
+                            </ul>
+                        </nav>
+
                     <% } else { %>
                         <div class="text-center py-5">
                             <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
@@ -315,6 +421,21 @@
         </div>
     </div>
 </div>
+
+<% if (user && user.tipo_usuario === 'admin') { %>
+<nav class="admin-mobile-nav admin-mobile-nav-main d-md-none d-lg-none d-xl-none">
+  <a href="/admin" class="admin-mobile-nav-item <%= currentPath === '/admin' ? 'active' : '' %>"><i class="fas fa-chart-bar"></i><span>Dashboard</span></a>
+  <a href="/admin/restaurantes" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/restaurantes') ? 'active' : '' %>"><i class="fas fa-store"></i><span>Restaurantes</span></a>
+  <a href="/admin/cobros" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/cobros') ? 'active' : '' %>"><i class="fas fa-money-bill-wave"></i><span>Cobros</span></a>
+  <a href="/admin/productos" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/productos') ? 'active' : '' %>"><i class="fas fa-utensils"></i><span>Productos</span></a>
+</nav>
+<nav class="admin-mobile-nav admin-mobile-nav-secondary d-md-none d-lg-none d-xl-none">
+  <a href="/admin/comprobantes" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/comprobantes') ? 'active' : '' %>"><i class="fas fa-receipt"></i><span>Comprobantes</span></a>
+  <a href="/admin/usuarios" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/usuarios') ? 'active' : '' %>"><i class="fas fa-users"></i><span>Usuarios</span></a>
+  <a href="/admin/reportes" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/reportes') ? 'active' : '' %>"><i class="fas fa-chart-line"></i><span>Reportes</span></a>
+  <a href="/admin/configuracion" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/configuracion') ? 'active' : '' %>"><i class="fas fa-cog"></i><span>Config</span></a>
+</nav>
+<% } %>
 
 <script>
 // Review receipt

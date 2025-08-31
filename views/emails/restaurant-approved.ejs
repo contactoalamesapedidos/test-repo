@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Tu restaurante ha sido aprobado! - A la Mesa</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header { background-color: #ff6600; padding: 40px; text-align: center; }
+        .header img { max-width: 150px; }
+        .content { padding: 40px; text-align: left; line-height: 1.6; }
+        .content h1 { color: #ff6600; font-size: 24px; }
+        .content p { font-size: 16px; margin-bottom: 20px; }
+        .button-container { text-align: center; margin-top: 30px; }
+        .button { background-color: #ff6600; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; display: inline-block; }
+        .footer { background-color: #333333; color: #ffffff; text-align: center; padding: 20px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="cid:logo@alamesa.com" alt="Logo A la Mesa" style="max-width: 150px;">
+        </div>
+        <div class="content">
+            <h1>¡Felicidades, <%= nombreRestaurante %>! Tu restaurante ha sido aprobado.</h1>
+            <p>Nos complace informarte que tu restaurante ha sido verificado y ya está activo en la plataforma A la Mesa. Tus clientes ya pueden encontrarte y realizar pedidos.</p>
+            <p>Puedes acceder a tu panel de control para gestionar tus productos, horarios, pedidos y mucho más.</p>
+            <div class="button-container">
+                <a href="<%= webUrl %>/dashboard" class="button">Ir a mi Dashboard</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>&copy; <%= new Date().getFullYear() %> A la Mesa. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html> 

@@ -1,162 +1,87 @@
-<!-- Cart Sidebar -->
-<div class="cart-sidebar" id="cartSidebar">
-    <div class="cart-sidebar-header">
-        <h5 class="mb-0">
-            <i class="fas fa-shopping-cart me-2"></i>
-            Tu Carrito
-            <button type="button" class="btn-close float-end" onclick="closeCartSidebar()"></button>
-        </h5>
-    </div>
-    <div class="cart-sidebar-body">
-        <% if (cart && cart.length > 0) { %>
-            <!-- Restaurant Info -->
-            <div class="restaurant-info mb-3 p-2 bg-light rounded">
-                <div class="d-flex align-items-center">
-                    <img src="<%= cart[0].restaurant_logo || '/images/no-image.png' %>" 
-                         alt="<%= cart[0].restaurante_nombre %>" 
-                         class="rounded me-2" width="40" height="40">
-                    <div>
-                        <h6 class="mb-0 small"><%= cart[0].restaurante_nombre %></h6>
-                        <small class="text-muted">Solo productos del mismo restaurante</small>
-                    </div>
+<!-- Cart Sidebar Content (solo el contenido, sin el div contenedor) -->
+<div class="cart-sidebar-header">
+    <h5 class="mb-0">
+        <i class="fas fa-shopping-cart me-2"></i>
+        Tu Carrito
+        <button type="button" class="btn-close float-end cart-close-btn"></button>
+    </h5>
+</div>
+<div class="cart-sidebar-body">
+    <% if (cart && cart.length > 0) { %>
+        <!-- Restaurant Info -->
+        <div class="restaurant-info mb-4 p-3 bg-light rounded">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-store text-primary fs-4 me-3"></i>
+                <div>
+                    <h6 class="mb-1"><%= cart[0].restaurante_nombre %></h6>
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Solo puedes agregar productos del mismo restaurante
+                    </small>
                 </div>
             </div>
+        </div>
 
-            <!-- Cart Items -->
-            <div class="cart-items">
-                <% cart.forEach(item => { %>
-                    <div class="cart-item d-flex align-items-center mb-2 p-2 border rounded">
-                        <img src="<%= item.imagen || '/images/no-image.png' %>" 
-                             alt="<%= item.name %>" 
-                             class="rounded me-2" width="50" height="50"
-                             style="object-fit: cover;">
-                        <div class="flex-grow-1">
-                            <h6 class="mb-0 small"><%= item.name %></h6>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted">$<%= item.price.toFixed(2) %> x <%= item.quantity %></small>
-                                <div class="quantity-controls">
-                                    <button class="btn btn-sm btn-outline-secondary" 
-                                            onclick="updateCartItemQuantity(<%= item.productId %>, -1)">
-                                        <i class="fas fa-minus"></i>
-                                    </button>
-                                    <span class="mx-2"><%= item.quantity %></span>
-                                    <button class="btn btn-sm btn-outline-secondary" 
-                                            onclick="updateCartItemQuantity(<%= item.productId %>, 1)">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <% if (item.specialInstructions) { %>
-                                <small class="text-muted d-block">
-                                    <i class="fas fa-comment-alt me-1"></i>
-                                    <%= item.specialInstructions %>
-                                </small>
-                            <% } %>
+        <!-- Cart Items -->
+        <div class="cart-items">
+            <% cart.forEach(item => { %>
+                <div class="cart-item-row">
+                    <div class="cart-item-img-container">
+                        <img src="<%= item.imagen ? item.imagen : '/images/defaults/product.jpeg' %>"
+                             alt="<%= item.name %>"
+                             class="cart-item-image"
+                             onerror="this.onerror=null;this.src='/images/defaults/product.jpeg';">
+                    </div>
+                    <div class="cart-item-main">
+                        <div>
+                            <div class="cart-item-name"><%= item.name %></div>
+                            <div class="cart-item-price-unit">$<%= item.price.toFixed(2) %> c/u</div>
                         </div>
-                        <button class="btn btn-sm btn-outline-danger ms-2" 
-                                onclick="removeFromCart(<%= item.productId %>)">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <div class="cart-item-controls-row">
+                            <div class="quantity-controls">
+                                <button class="cart-qty-btn" data-action="decrement" data-producto-id="<%= item.producto_id %>">
+                                    <i class="fa-solid fa-minus"></i>
+                                </button>
+                                <span class="btn-quantity-text"><%= item.quantity %></span>
+                                <button class="cart-qty-btn" data-action="increment" data-producto-id="<%= item.producto_id %>">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                                <button class="remove-item-btn" data-producto-id="<%= item.producto_id %>">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                            <div class="cart-item-price-total">
+                                <strong>$<%= (item.price * item.quantity).toFixed(2) %></strong>
+                            </div>
+                        </div>
                     </div>
-                <% }) %>
-            </div>
+                </div>
+            <% }) %>
+        </div>
 
-            <!-- Cart Summary -->
-            <div class="cart-summary mt-3 pt-3 border-top">
-                <div class="d-flex justify-content-between mb-2">
-                    <span>Subtotal:</span>
-                    <strong>$<%= subtotal.toFixed(2) %></strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span>Envío:</span>
-                    <strong>$<%= deliveryFee.toFixed(2) %></strong>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="fs-5">Total:</span>
-                    <strong class="fs-5 text-primary">$<%= total.toFixed(2) %></strong>
-                </div>
-                
-                <a href="/orders/checkout" class="btn btn-primary w-100 mb-2">
-                    <i class="fas fa-credit-card me-2"></i>
-                    Proceder al Pago
-                </a>
-                
-                <button class="btn btn-outline-danger w-100" onclick="clearCart()">
+        <!-- Cart Summary -->
+        <div class="cart-summary">
+            <!-- Clear Cart Button -->
+            <div class="text-end mt-3">
+                <button class="btn btn-outline-danger clear-cart-btn">
                     <i class="fas fa-trash me-2"></i>
                     Vaciar Carrito
                 </button>
             </div>
-        <% } else { %>
-            <div class="text-center py-5">
-                <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
-                <h6>Tu carrito está vacío</h6>
-                <p class="text-muted small">Agrega productos de tus restaurantes favoritos</p>
-                <a href="/search" class="btn btn-primary btn-sm mt-2">
-                    <i class="fas fa-utensils me-2"></i>
-                    Ver Restaurantes
-                </a>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Subtotal</span>
+                <strong>$<%= subtotal.toFixed(2) %></strong>
             </div>
-        <% } %>
-    </div>
+        </div>
+    <% } else { %>
+        <div class="text-center py-5">
+            <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+            <h5>Tu carrito está vacío</h5>
+            <p class="text-muted">Agrega productos de tus restaurantes favoritos</p>
+            <a href="/search" class="btn mt-3" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">
+                <i class="fas fa-utensils me-2"></i>
+                Ver Restaurantes
+            </a>
+        </div>
+    <% } %>
 </div>
-
-<style>
-.cart-sidebar {
-    position: fixed;
-    top: 0;
-    right: -400px;
-    width: 400px;
-    height: 100vh;
-    background: white;
-    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-    z-index: 1050;
-    transition: right 0.3s ease-in-out;
-    display: flex;
-    flex-direction: column;
-}
-
-.cart-sidebar.active {
-    right: 0;
-}
-
-.cart-sidebar-header {
-    padding: 1rem;
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.cart-sidebar-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1rem;
-}
-
-.quantity-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-.quantity-controls button {
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.cart-item img {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-}
-
-@media (max-width: 576px) {
-    .cart-sidebar {
-        width: 100%;
-        right: -100%;
-    }
-}
-</style> 

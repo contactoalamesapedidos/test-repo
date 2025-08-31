@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Actualización de Pedido</title>
+  <style>
+    body { font-family: Arial, sans-serif; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 16px; }
+    .header { text-align: center; }
+    .card { background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 16px; }
+    .btn { display: inline-block; padding: 10px 16px; background: #28a745; color: #fff !important; text-decoration: none; border-radius: 6px; }
+    .muted { color: #777; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="cid:logo@alamesa.com" alt="A la Mesa" width="120" />
+      <h2>Actualización de tu pedido</h2>
+    </div>
+    <div class="card">
+      <p>Hola,</p>
+      <p>Tu pedido <strong>#<%= numero_pedido %></strong> en <strong><%= restaurante_nombre %></strong> ha cambiado de estado a:</p>
+      <h3><%= estado %></h3>
+      <p>Puedes ver el detalle del pedido desde tu historial en el siguiente enlace:</p>
+      <p>
+        <a class="btn" href="<%= webUrl %>/orders/history">Ver mis pedidos</a>
+      </p>
+      <p class="muted">Si no esperabas este correo, puedes ignorarlo.</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow-sm" id="restaurant-chat-container">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Chat del Pedido #<%= order.numero_pedido %></h4>
+                    <a href="/orders/<%= order.id %>" class="btn btn-light btn-sm">Volver al Pedido</a>
+                </div>
+                <%- include('../partials/chat-interface') %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .chat-window {
+        display: flex;
+        flex-direction: column;
+    }
+    .message {
+        margin-bottom: 15px; /* Increased spacing between messages */
+        display: flex;
+    }
+    .message-bubble {
+        padding: 8px 12px;
+        border-radius: 15px;
+        max-width: 85%; /* Increased width */
+        position: relative;
+        border: 1px solid #ccc; /* Added subtle border */
+    }
+    .my-message {
+        align-self: flex-end;
+    }
+    .my-message .message-bubble {
+        background-color: #007bff;
+        color: white;
+        border-bottom-right-radius: 2px;
+        border-color: #007bff; /* Border color for own messages */
+    }
+    .other-message {
+        align-self: flex-start;
+    }
+    .other-message .message-bubble {
+        background-color: #e9ecef;
+        color: #333;
+        border-bottom-left-radius: 2px;
+        border-color: #e9ecef; /* Border color for other messages */
+    }
+    .message-sender {
+        font-weight: bold;
+        font-size: 0.8em;
+        margin-bottom: 2px;
+        display: block;
+    }
+    .message-text {
+        margin: 0;
+        word-wrap: break-word;
+    }
+    .message-time {
+        font-size: 0.7em;
+        color: rgba(255, 255, 255, 0.7);
+        text-align: right;
+        display: block;
+        margin-top: 2px;
+    }
+    .other-message .message-time {
+        color: rgba(0, 0, 0, 0.5);
+    }
+</style>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/dashboard-orders-chat.js"></script>
+<div id="chat-config" 
+     data-order-id="<%= order.id %>"
+     data-user-id="<%= user.id %>"
+     data-user-type="<%= user.tipo_usuario %>"
+     style="display: none;"></div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const chatConfigDiv = document.getElementById('chat-config');
+        const orderId = chatConfigDiv.dataset.orderId;
+        const userId = chatConfigDiv.dataset.userId;
+        const userType = chatConfigDiv.dataset.userType;
+        
+        console.log('DEBUG: Datos de chat-config:', { orderId, userId, userType });
+
+        const chatContainer = document.getElementById('chat-main-content');
+        console.log('DEBUG: chatContainer en order-chat.ejs (usando ID directo):', chatContainer);
+        initializeChatListeners(orderId, userId, userType, chatContainer);
+    });
+</script>

@@ -1,241 +1,139 @@
-// Funciones para manejar el carrito flotante
-console.log('cart.js loaded and executing');
+document.addEventListener('DOMContentLoaded', () => {
+    const cartContainer = document.querySelector('.cart-items');
+    const subtotalElement = document.querySelector('.card-body strong:nth-of-type(1)');
+    const deliveryFeeElement = document.querySelector('.card-body strong:nth-of-type(2)');
+    const totalElement = document.querySelector('.card-body strong.text-orange');
+    const clearCartBtn = document.querySelector('.clear-cart-btn');
+    const cartEmptyMessage = document.querySelector('.text-center.py-5');
 
-function toggleCartSidebar(event) {
-    console.log('toggleCartSidebar called');
-    if (event) {
-        event.stopPropagation();
-        console.log('Event propagation stopped');
+    // Función para mostrar notificaciones (si no existe ya)
+    if (typeof showNotification === 'undefined') {
+        window.showNotification = function(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            
+            const toastBody = document.createElement('div');
+            toastBody.className = 'toast-body';
+            toastBody.textContent = message;
+            
+            toast.appendChild(toastBody);
+            document.body.appendChild(toast);
+            
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            
+            toast.addEventListener('hidden.bs.toast', () => {
+                document.body.removeChild(toast);
+            });
+        };
     }
-    const sidebar = document.getElementById('cartSidebar');
-    const overlay = document.getElementById('cartOverlay');
-    
-    console.log('Sidebar element:', sidebar);
-    console.log('Overlay element:', overlay);
 
-    if (sidebar && overlay) {
-        if (sidebar.classList.contains('show')) {
-            console.log('Cart is show, closing it.');
-            sidebar.classList.remove('show');
-            overlay.classList.remove('show');
-            document.body.style.overflow = '';
-            console.log('Sidebar show class removed:', sidebar.classList.contains('show'));
-            console.log('Overlay show class removed:', overlay.classList.contains('show'));
+    // Función para actualizar la UI del carrito
+    function updateCartUI(data) {
+        if (data.cartCount === 0) {
+            cartContainer.innerHTML = ''; // Limpiar items
+            document.querySelector('.restaurant-info').style.display = 'none';
+            document.querySelector('.clear-cart-btn').style.display = 'none';
+            document.querySelector('.proceed-checkout-btn').style.display = 'none';
+            cartEmptyMessage.style.display = 'block';
+            subtotalElement.textContent = '$0.00';
+            deliveryFeeElement.textContent = '$0.00';
+            totalElement.textContent = '$0.00';
         } else {
-            console.log('Cart is not show, opening it.');
-            sidebar.classList.add('show');
-            overlay.classList.add('show');
-            document.body.style.overflow = 'hidden';
-            console.log('Sidebar show class added:', sidebar.classList.contains('show'));
-            console.log('Overlay show class added:', overlay.classList.contains('show'));
+            subtotalElement.textContent = `$${data.subtotal.toFixed(2)}`;
+            deliveryFeeElement.textContent = `$${data.deliveryFee.toFixed(2)}`;
+            totalElement.textContent = `$${data.total.toFixed(2)}`;
         }
     }
-}
 
-function closeCartSidebar() {
-    console.log('closeCartSidebar called');
-    const sidebar = document.getElementById('cartSidebar');
-    const overlay = document.getElementById('cartOverlay');
-    
-    if (sidebar && overlay) {
-        sidebar.classList.remove('show');
-        overlay.classList.remove('show');
-        document.body.style.overflow = '';
-    }
-}
+    // Manejar cambios de cantidad
+    if (cartContainer) {
+        cartContainer.addEventListener('click', async (e) => {
+            const target = e.target;
+            if (target.classList.contains('cart-qty-btn')) {
+                const productId = target.dataset.productoId;
+                const action = target.dataset.action;
+                const change = action === 'increment' ? 1 : -1;
 
-// Función para actualizar la cantidad de un item en el carrito
-async function updateCartItemQuantity(productId, change) {
-    try {
-        const response = await fetch('/cart/update', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ productId, change })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-            updateCartUI(data.cart || []);
-            updateCartCount(data.cartCount || 0);
-        } else {
-            showToast(data.message || 'Error actualizando el carrito', 'error');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        showToast('Error actualizando el carrito', 'error');
-    }
-}
+                try {
+                    const response = await fetch('/cart/update', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ productId, change })
+                    });
+                    const data = await response.json();
 
-// Función para eliminar un item del carrito
-async function removeFromCart(productId) {
-    try {
-        const response = await fetch('/cart/remove', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ productId })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-            updateCartUI(data.cart || []);
-            updateCartCount(data.cartCount || 0);
-        } else {
-            showToast(data.message || 'Error eliminando del carrito', 'error');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        showToast('Error eliminando del carrito', 'error');
-    }
-}
+                    if (data.success) {
+                        const itemElement = target.closest('.cart-item');
+                        if (data.newQuantity > 0) {
+                            itemElement.querySelector('span').textContent = data.newQuantity;
+                            itemElement.querySelector('.price strong').textContent = `$${data.newPrice.toFixed(2)}`;
+                        } else {
+                            itemElement.remove();
+                        }
+                        updateCartUI(data);
+                    } else {
+                        // showNotification(data.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error actualizando cantidad:', error);
+                    showNotification('Ocurrió un error al actualizar la cantidad. Por favor, intenta de nuevo.', 'error');
+                }
+            } else if (target.classList.contains('remove-item-btn') || target.closest('.remove-item-btn')) {
+                const productId = target.closest('.remove-item-btn').dataset.productoId;
+                
+                try {
+                    const response = await fetch('/cart/remove', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ productId })
+                    });
+                    const data = await response.json();
 
-// Función para vaciar el carrito
-async function clearCart() {
-    if (!confirm('¿Estás seguro de que quieres vaciar el carrito?')) {
-        return;
-    }
-    
-    try {
-        const response = await fetch('/cart/clear', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
+                    if (data.success) {
+                        target.closest('.cart-item').remove();
+                        updateCartUI(data);
+                        showNotification('Producto eliminado del carrito', 'success');
+                    } else {
+                        showNotification(data.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error eliminando producto:', error);
+                    showNotification('Error de conexión al eliminar el producto', 'error');
+                }
             }
         });
-        
-        const data = await response.json();
-        if (data.success) {
-            updateCartUI([]);
-            updateCartCount(0);
-            closeCartSidebar();
-        } else {
-            showToast(data.message || 'Error limpiando el carrito', 'error');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        showToast('Error limpiando el carrito', 'error');
     }
-}
 
-// Función para actualizar la UI del carrito
-function updateCartUI(cart = null) {
-    const cartItemsContainer = document.getElementById('cartItems');
-    const cartSummary = document.getElementById('cartSummary');
-    
-    if (!cartItemsContainer || !cartSummary) return;
-
-    // Obtener los datos del carrito del servidor para asegurar que siempre estén actualizados
-    fetch('/cart/data')
-        .then(response => response.json())
-        .then(data => {
-            const currentCart = data.cart || [];
-            const subtotal = data.subtotal || 0;
-            const deliveryFee = data.deliveryFee || 0;
-            const total = data.total || 0;
-
-            // Actualizar lista de items
-            if (Array.isArray(currentCart) && currentCart.length > 0) {
-                cartItemsContainer.innerHTML = currentCart.map(item => {
-                    // Asegurar que la ruta de la imagen sea correcta
-                    const imagePath = item.imagen.startsWith('/') ? item.imagen : `/uploads/${item.imagen}`;
-                    
-                    return `
-                        <div class="cart-item" data-product-id="${item.productId}">
-                            <img src="${imagePath}" 
-                                 alt="${item.name || 'Producto'}" 
-                                 class="cart-item-image"
-                                 onerror="this.src='/images/no-image.png'">
-                            <div class="cart-item-details">
-                                <h4>${item.name || 'Producto'}</h4>
-                                <p class="cart-item-price">$${(item.price || 0).toFixed(2)}</p>
-                                <div class="cart-item-quantity">
-                                    <button onclick="updateCartItemQuantity(${item.productId}, -1)">-</button>
-                                    <span>${item.quantity || 0}</span>
-                                    <button onclick="updateCartItemQuantity(${item.productId}, 1)">+</button>
-                                </div>
-                            </div>
-                            <button class="remove-item" onclick="removeFromCart(${item.productId})">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    `;
-                }).join('');
-
-                cartSummary.innerHTML = `
-                    <div class="cart-summary-item">
-                        <span>Subtotal</span>
-                        <span>$${subtotal.toFixed(2)}</span>
-                    </div>
-                    <div class="cart-summary-item">
-                        <span>Envío</span>
-                        <span>$${deliveryFee.toFixed(2)}</span>
-                    </div>
-                    <div class="cart-summary-item total">
-                        <span>Total</span>
-                        <span>$${total.toFixed(2)}</span>
-                    </div>
-                    <a href="/orders/checkout" class="btn btn-primary w-100 mb-2">
-                        <i class="fas fa-credit-card me-2"></i>
-                        Proceder al Pago
-                    </a>
-                    <button onclick="clearCart()" class="btn btn-outline-danger w-100">
-                        <i class="fas fa-trash me-2"></i>
-                        Vaciar Carrito
-                    </button>
-                `;
-            } else {
-                cartItemsContainer.innerHTML = `
-                    <div class="text-center py-5">
-                        <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
-                        <h6>Tu carrito está vacío</h6>
-                        <p class="text-muted small">Agrega productos de tus restaurantes favoritos</p>
-                        <a href="/search" class="btn btn-primary btn-sm mt-2">
-                            <i class="fas fa-utensils me-2"></i>
-                            Ver Restaurantes
-                        </a>
-                    </div>
-                `;
-                cartSummary.innerHTML = '';
+    // Manejar vaciar carrito
+    if (clearCartBtn) {
+        clearCartBtn.addEventListener('click', async () => {
+            if (!confirm('¿Estás seguro de que quieres vaciar tu carrito?')) {
+                return;
             }
-            updateCartCount(currentCart.length); // Actualizar el contador del carrito
-        })
-        .catch(error => {
-            console.error('Error obteniendo datos del carrito:', error);
-            cartItemsContainer.innerHTML = `
-                <div class="text-center py-4 text-danger">
-                    <p>Error al cargar el carrito.</p>
-                </div>
-            `;
-            cartSummary.innerHTML = '';
+            try {
+                const response = await fetch('/cart/clear', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    updateCartUI({ cartCount: 0 }); // Forzar actualización a carrito vacío
+                    showNotification('Carrito vaciado exitosamente', 'success');
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error vaciando carrito:', error);
+                showNotification('Error de conexión al vaciar el carrito', 'error');
+            }
         });
-}
-
-// Función para actualizar el contador del carrito
-function updateCartCount(count) {
-    const cartBadge = document.querySelector('.cart-badge');
-    if (cartBadge) {
-        cartBadge.textContent = count;
-        cartBadge.style.display = count > 0 ? 'flex' : 'none';
-    }
-}
-
-// Cerrar el sidebar cuando se hace clic fuera de él
-/*
-document.addEventListener('click', (event) => {
-    const sidebar = document.getElementById('cartSidebar');
-    const cartButton = document.querySelector('.cart-button');
-    
-    // console.log('Click event target:', event.target);
-    // console.log('Is sidebar active?', sidebar.classList.contains('active'));
-
-    if (sidebar && cartButton) {
-        // Si el clic no es dentro del sidebar y no es el botón del carrito
-        if (!sidebar.contains(event.target) && !cartButton.contains(event.target) && sidebar.classList.contains('active')) {
-            closeCartSidebar();
-        }
     }
 });
-*/

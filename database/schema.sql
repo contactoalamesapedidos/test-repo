@@ -3,7 +3,7 @@ CREATE DATABASE IF NOT EXISTS a_la_mesa CHARACTER SET utf8mb4 COLLATE utf8mb4_un
 USE a_la_mesa;
 
 -- Tabla de usuarios (clientes, restaurantes, administradores, repartidores)
-CREATE TABLE usuarios (
+CREATE TABLE IF NOT EXISTS usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     apellido VARCHAR(100) NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE usuarios (
 );
 
 -- Tabla de direcciones
-CREATE TABLE direcciones (
+CREATE TABLE IF NOT EXISTS direcciones (
     id INT AUTO_INCREMENT PRIMARY KEY,
     usuario_id INT NOT NULL,
     nombre VARCHAR(100) NOT NULL COMMENT 'Casa, Trabajo, etc.',
@@ -39,7 +39,7 @@ CREATE TABLE direcciones (
 );
 
 -- Tabla de categorías de restaurantes
-CREATE TABLE categorias_restaurantes (
+CREATE TABLE IF NOT EXISTS categorias_restaurantes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     descripcion TEXT,
@@ -49,7 +49,7 @@ CREATE TABLE categorias_restaurantes (
 );
 
 -- Tabla de restaurantes
-CREATE TABLE restaurantes (
+CREATE TABLE IF NOT EXISTS restaurantes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     usuario_id INT NOT NULL,
     nombre VARCHAR(150) NOT NULL,
@@ -64,7 +64,7 @@ CREATE TABLE restaurantes (
     longitud DECIMAL(11, 8),
     horario_apertura TIME,
     horario_cierre TIME,
-    dias_operacion JSON COMMENT 'Array de días: [1,2,3,4,5,6,7] donde 1=Lunes',
+        dias_operacion TEXT,
     tiempo_entrega_min INT DEFAULT 30 COMMENT 'Tiempo mínimo en minutos',
     tiempo_entrega_max INT DEFAULT 60 COMMENT 'Tiempo máximo en minutos',
     costo_delivery DECIMAL(8,2) DEFAULT 0.00,
@@ -74,6 +74,9 @@ CREATE TABLE restaurantes (
     activo BOOLEAN DEFAULT TRUE,
     verificado BOOLEAN DEFAULT FALSE,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    mp_access_token VARCHAR(255) NULL,
+    mp_refresh_token VARCHAR(255) NULL,
+    mp_user_id VARCHAR(100) NULL,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     INDEX idx_usuario (usuario_id),
     INDEX idx_ciudad (ciudad),
@@ -82,7 +85,7 @@ CREATE TABLE restaurantes (
 );
 
 -- Tabla de relación restaurante-categoría
-CREATE TABLE restaurante_categorias (
+CREATE TABLE IF NOT EXISTS restaurante_categorias (
     id INT AUTO_INCREMENT PRIMARY KEY,
     restaurante_id INT NOT NULL,
     categoria_id INT NOT NULL,
@@ -92,7 +95,7 @@ CREATE TABLE restaurante_categorias (
 );
 
 -- Tabla de categorías de productos
-CREATE TABLE categorias_productos (
+CREATE TABLE IF NOT EXISTS categorias_productos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     restaurante_id INT NOT NULL,
     nombre VARCHAR(100) NOT NULL,
@@ -104,7 +107,7 @@ CREATE TABLE categorias_productos (
 );
 
 -- Tabla de productos
-CREATE TABLE productos (
+CREATE TABLE IF NOT EXISTS productos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     restaurante_id INT NOT NULL,
     categoria_id INT NOT NULL,
@@ -119,7 +122,7 @@ CREATE TABLE productos (
     destacado BOOLEAN DEFAULT FALSE,
     descuento_porcentaje DECIMAL(5,2) DEFAULT 0.00,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        fecha_actualizacion DATETIME DEFAULT NULL,
     FOREIGN KEY (restaurante_id) REFERENCES restaurantes(id) ON DELETE CASCADE,
     FOREIGN KEY (categoria_id) REFERENCES categorias_productos(id) ON DELETE CASCADE,
     INDEX idx_restaurante (restaurante_id),
@@ -129,7 +132,7 @@ CREATE TABLE productos (
 );
 
 -- Tabla de opciones de productos (ej: tamaño, extras)
-CREATE TABLE opciones_productos (
+CREATE TABLE IF NOT EXISTS opciones_productos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     producto_id INT NOT NULL,
     nombre VARCHAR(100) NOT NULL COMMENT 'Tamaño, Extras, etc.',
@@ -141,7 +144,7 @@ CREATE TABLE opciones_productos (
 );
 
 -- Tabla de valores de opciones
-CREATE TABLE valores_opciones (
+CREATE TABLE IF NOT EXISTS valores_opciones (
     id INT AUTO_INCREMENT PRIMARY KEY,
     opcion_id INT NOT NULL,
     nombre VARCHAR(100) NOT NULL,
@@ -153,7 +156,7 @@ CREATE TABLE valores_opciones (
 );
 
 -- Tabla de pedidos
-CREATE TABLE pedidos (
+CREATE TABLE IF NOT EXISTS pedidos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     numero_pedido VARCHAR(20) UNIQUE NOT NULL,
     cliente_id INT NOT NULL,
@@ -167,8 +170,8 @@ CREATE TABLE pedidos (
     impuestos DECIMAL(8,2) DEFAULT 0.00,
     descuento DECIMAL(8,2) DEFAULT 0.00,
     total DECIMAL(8,2) NOT NULL,
-    estado ENUM('pendiente', 'confirmado', 'preparando', 'listo', 'en_camino', 'entregado', 'cancelado') DEFAULT 'pendiente',
-    metodo_pago ENUM('efectivo', 'tarjeta', 'transferencia') NOT NULL,
+    estado ENUM('pendiente', 'pagado', 'pendiente_pago', 'confirmado', 'preparando', 'listo', 'en_camino', 'entregado', 'cancelado') DEFAULT 'pendiente',
+    metodo_pago ENUM('efectivo', 'tarjeta', 'transferencia', 'mercadopago') NOT NULL,
     notas_especiales TEXT,
     tiempo_estimado INT COMMENT 'Tiempo estimado en minutos',
     fecha_pedido TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -187,7 +190,7 @@ CREATE TABLE pedidos (
 );
 
 -- Tabla de items del pedido
-CREATE TABLE items_pedido (
+CREATE TABLE IF NOT EXISTS items_pedido (
     id INT AUTO_INCREMENT PRIMARY KEY,
     pedido_id INT NOT NULL,
     producto_id INT NOT NULL,
@@ -202,7 +205,7 @@ CREATE TABLE items_pedido (
 );
 
 -- Tabla de opciones seleccionadas en items
-CREATE TABLE item_opciones_seleccionadas (
+CREATE TABLE IF NOT EXISTS item_opciones_seleccionadas (
     id INT AUTO_INCREMENT PRIMARY KEY,
     item_pedido_id INT NOT NULL,
     valor_opcion_id INT NOT NULL,
@@ -213,7 +216,7 @@ CREATE TABLE item_opciones_seleccionadas (
 );
 
 -- Tabla de calificaciones y reseñas
-CREATE TABLE calificaciones (
+CREATE TABLE IF NOT EXISTS calificaciones (
     id INT AUTO_INCREMENT PRIMARY KEY,
     pedido_id INT NOT NULL,
     cliente_id INT NOT NULL,
@@ -234,14 +237,14 @@ CREATE TABLE calificaciones (
 );
 
 -- Tabla de carrito de compras
-CREATE TABLE carrito (
+CREATE TABLE IF NOT EXISTS carrito (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cliente_id INT NOT NULL,
     producto_id INT NOT NULL,
     cantidad INT NOT NULL DEFAULT 1,
     notas_especiales TEXT,
     fecha_agregado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        fecha_actualizacion DATETIME DEFAULT NULL,
     FOREIGN KEY (cliente_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE,
     UNIQUE KEY unique_cliente_producto (cliente_id, producto_id),
@@ -249,7 +252,7 @@ CREATE TABLE carrito (
 );
 
 -- Tabla de opciones seleccionadas en carrito
-CREATE TABLE carrito_opciones (
+CREATE TABLE IF NOT EXISTS carrito_opciones (
     id INT AUTO_INCREMENT PRIMARY KEY,
     carrito_id INT NOT NULL,
     valor_opcion_id INT NOT NULL,
@@ -260,7 +263,7 @@ CREATE TABLE carrito_opciones (
 );
 
 -- Tabla de cupones de descuento
-CREATE TABLE cupones (
+CREATE TABLE IF NOT EXISTS cupones (
     id INT AUTO_INCREMENT PRIMARY KEY,
     codigo VARCHAR(50) UNIQUE NOT NULL,
     descripcion TEXT,
@@ -281,7 +284,7 @@ CREATE TABLE cupones (
 );
 
 -- Tabla de uso de cupones
-CREATE TABLE uso_cupones (
+CREATE TABLE IF NOT EXISTS uso_cupones (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cupon_id INT NOT NULL,
     pedido_id INT NOT NULL,
@@ -296,7 +299,7 @@ CREATE TABLE uso_cupones (
 );
 
 -- Tabla de favoritos
-CREATE TABLE favoritos (
+CREATE TABLE IF NOT EXISTS favoritos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cliente_id INT NOT NULL,
     restaurante_id INT NOT NULL,
@@ -308,7 +311,7 @@ CREATE TABLE favoritos (
 );
 
 -- Tabla de configuraciones del sistema
-CREATE TABLE configuraciones (
+CREATE TABLE IF NOT EXISTS configuraciones (
     id INT AUTO_INCREMENT PRIMARY KEY,
     clave VARCHAR(100) UNIQUE NOT NULL,
     valor TEXT,
@@ -318,7 +321,7 @@ CREATE TABLE configuraciones (
 );
 
 -- Tabla de cobros semanales (10% de ventas brutas)
-CREATE TABLE cobros_semanales (
+CREATE TABLE IF NOT EXISTS cobros_semanales (
     id INT AUTO_INCREMENT PRIMARY KEY,
     restaurante_id INT NOT NULL,
     semana_inicio DATE NOT NULL,
@@ -330,7 +333,7 @@ CREATE TABLE cobros_semanales (
     fecha_vencimiento DATE NOT NULL,
     fecha_pago TIMESTAMP NULL,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        fecha_actualizacion DATETIME DEFAULT NULL,
     notas TEXT,
     FOREIGN KEY (restaurante_id) REFERENCES restaurantes(id) ON DELETE CASCADE,
     UNIQUE KEY unique_restaurante_semana (restaurante_id, semana_inicio),
@@ -340,7 +343,7 @@ CREATE TABLE cobros_semanales (
 );
 
 -- Tabla de comprobantes de pago
-CREATE TABLE comprobantes_pago (
+CREATE TABLE IF NOT EXISTS comprobantes_pago (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cobro_semanal_id INT NOT NULL,
     restaurante_id INT NOT NULL,
@@ -364,7 +367,7 @@ CREATE TABLE comprobantes_pago (
 );
 
 -- Tabla de ventas diarias (para calcular comisiones)
-CREATE TABLE ventas_diarias (
+CREATE TABLE IF NOT EXISTS ventas_diarias (
     id INT AUTO_INCREMENT PRIMARY KEY,
     restaurante_id INT NOT NULL,
     fecha DATE NOT NULL,
@@ -379,7 +382,7 @@ CREATE TABLE ventas_diarias (
 );
 
 -- Tabla de actividad de administradores
-CREATE TABLE actividad_admin (
+CREATE TABLE IF NOT EXISTS actividad_admin (
     id INT AUTO_INCREMENT PRIMARY KEY,
     admin_id INT NOT NULL,
     accion ENUM('crear_restaurante', 'eliminar_restaurante', 'editar_restaurante', 
@@ -388,8 +391,8 @@ CREATE TABLE actividad_admin (
     descripcion TEXT NOT NULL,
     entidad_tipo ENUM('restaurante', 'producto', 'cobro', 'comprobante', 'usuario') NULL,
     entidad_id INT NULL,
-    datos_anteriores JSON NULL,
-    datos_nuevos JSON NULL,
+        datos_anteriores TEXT NULL,
+        datos_nuevos TEXT NULL,
     fecha_accion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ip_address VARCHAR(45),
     FOREIGN KEY (admin_id) REFERENCES usuarios(id),
@@ -399,7 +402,7 @@ CREATE TABLE actividad_admin (
 );
 
 -- Tabla de notificaciones del sistema
-CREATE TABLE notificaciones_sistema (
+CREATE TABLE IF NOT EXISTS notificaciones_sistema (
     id INT AUTO_INCREMENT PRIMARY KEY,
     usuario_id INT NOT NULL,
     tipo ENUM('cobro_pendiente', 'pago_aprobado', 'pago_rechazado', 'vencimiento_proximo', 

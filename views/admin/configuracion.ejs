@@ -1,10 +1,100 @@
-<%- include('partials/header') %>
-<%- include('partials/sidebar') %>
+<!-- Botón para abrir/cerrar el menú -->
+<button id="menu-btn" class="menu-btn">
+    <i class="fas fa-bars"></i>
+</button>
 
-<div class="main-content">
-    <h1>Configuración del Sistema</h1>
-    <p>Aquí se gestionarán las configuraciones generales de la aplicación.</p>
-    <!-- Contenido específico de configuración -->
+<div class="admin-layout">
+  <%- include('partials/sidebar', { activePage: 'configuracion' }) %>
+  <div class="admin-content" style="background-color: #f8f9fa; min-height: 100vh;">
+    <div class="container-fluid">
+        <h1 class="page-title">Configuración del Sistema</h1>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Configuración General</h5>
+                        <form id="configForm" class="p-3 bg-white rounded shadow-sm">
+                            <div class="form-group">
+                                <label for="sitioWeb">URL del Sitio Web</label>
+                                <input type="text" class="form-control" id="sitioWeb" name="sitioWeb" value="http://192.168.0.102:3000">
+                            </div>
+                            <div class="form-group">
+                                <label for="comision">Comisión por Pedido (%)</label>
+                                <input type="number" class="form-control" id="comision" name="comision" value="10">
+                            </div>
+                            <div class="form-group">
+                                <label for="tiempoPreparacion">Tiempo Estándar de Preparación (minutos)</label>
+                                <input type="number" class="form-control" id="tiempoPreparacion" name="tiempoPreparacion" value="30">
+                            </div>
+                            <div class="form-group">
+                                <label for="mercadopago_url">Link de Pago Mercado Pago</label>
+                                <input type="text" class="form-control" id="mercadopago_url" name="mercadopago_url" value="<%= mercadopago_url || '' %>">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Guardar Configuraciones</button>
+                        </form>
+
+                        <hr>
+
+                        <h5 class="card-title mt-4">Integración con Mercado Pago</h5>
+                        <% if (user.mp_access_token) { %>
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle"></i> Tu cuenta de Mercado Pago está vinculada.
+                            </div>
+                            <p><strong>ID de Vendedor de MP:</strong> <%= user.mp_user_id %></p>
+                            <a href="/admin/mercadopago/auth" class="btn btn-info">Re-vincular cuenta de Mercado Pago</a>
+                        <% } else { %>
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> Tu cuenta de Mercado Pago no está vinculada.
+                            </div>
+                            <p>Para poder procesar pagos automáticos y gestionar cobros, necesitas vincular tu cuenta de Mercado Pago.</p>
+                            <a href="/admin/mercadopago/auth" class="btn btn-primary">Vincular cuenta de Mercado Pago</a>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
 </div>
 
-<%- include('partials/footer') %>
+<% if (user && user.tipo_usuario === 'admin') { %>
+<nav class="admin-mobile-nav admin-mobile-nav-main d-md-none d-lg-none d-xl-none">
+  <a href="/admin" class="admin-mobile-nav-item <%= currentPath === '/admin' ? 'active' : '' %>"><i class="fas fa-chart-bar"></i><span>Dashboard</span></a>
+  <a href="/admin/restaurantes" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/restaurantes') ? 'active' : '' %>"><i class="fas fa-store"></i><span>Restaurantes</span></a>
+  <a href="/admin/cobros" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/cobros') ? 'active' : '' %>"><i class="fas fa-money-bill-wave"></i><span>Cobros</span></a>
+  <a href="/admin/productos" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/productos') ? 'active' : '' %>"><i class="fas fa-utensils"></i><span>Productos</span></a>
+</nav>
+<nav class="admin-mobile-nav admin-mobile-nav-secondary d-md-none d-lg-none d-xl-none">
+  <a href="/admin/comprobantes" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/comprobantes') ? 'active' : '' %>"><i class="fas fa-receipt"></i><span>Comprobantes</span></a>
+  <a href="/admin/usuarios" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/usuarios') ? 'active' : '' %>"><i class="fas fa-users"></i><span>Usuarios</span></a>
+  <a href="/admin/reportes" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/reportes') ? 'active' : '' %>"><i class="fas fa-chart-line"></i><span>Reportes</span></a>
+  <a href="/admin/configuracion" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/configuracion') ? 'active' : '' %>"><i class="fas fa-cog"></i><span>Config</span></a>
+</nav>
+<% } %>
+
+<!-- Scripts adicionales -->
+<script src="/js/admin/menu.js"></script>
+<script>
+$(document).ready(function() {
+    $('#configForm').submit(function(e) {
+        e.preventDefault();
+        const formData = {
+            sitioWeb: $('#sitioWeb').val(),
+            comision: $('#comision').val(),
+            tiempoPreparacion: $('#tiempoPreparacion').val(),
+            mercadopago_url: $('#mercadopago_url').val()
+        };
+        $.ajax({
+            url: '/admin/configuracion/save',
+            method: 'POST',
+            data: formData,
+            success: function(response) {
+                alert('Configuraciones guardadas exitosamente');
+            },
+            error: function() {
+                alert('Error al guardar las configuraciones');
+            }
+        });
+    });
+});
+</script>

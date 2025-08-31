@@ -1,0 +1,79 @@
+/* Oculta la barra de scroll horizontal en el carrusel de categorías en móviles */
+@media (max-width: 768px) {
+  .categories-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    height: 100%;
+    width: 1250px;
+  }
+  .categories-scroll::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
+}
+/* Oculta la barra de scroll horizontal pero permite el scroll táctil en móviles */
+@media (max-width: 768px) {
+  #restaurantPromoCarousel .carousel-inner {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+  #restaurantPromoCarousel .carousel-inner::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
+}
+/* Estilos modernos para el carrusel de inicio */
+#restaurantPromoCarousel {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  border-radius: 18px;
+  overflow: hidden;
+}
+#restaurantPromoCarousel .carousel-item img {
+  border-radius: 0;
+  transition: transform 0.5s cubic-bezier(.4,0,.2,1);
+}
+#restaurantPromoCarousel .carousel-item.active img {
+  transform: scale(1.04);
+}
+#restaurantPromoCarousel .carousel-caption {
+  background: rgba(30,30,30,0.7);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+}
+#restaurantPromoCarousel .carousel-caption h4 {
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+#restaurantPromoCarousel .carousel-caption p {
+  color: #f8f9fa;
+  font-size: 1.15rem;
+}
+#restaurantPromoCarousel .carousel-control-prev-icon,
+#restaurantPromoCarousel .carousel-control-next-icon {
+  background-color: #198754;
+  border-radius: 50%;
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+#restaurantPromoCarousel .carousel-indicators [data-bs-target] {
+  background-color: #198754;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin: 0 6px;
+}
+@media (max-width: 768px) {
+  #restaurantPromoCarousel .carousel-caption {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
+  #restaurantPromoCarousel .carousel-caption h4 {
+    font-size: 1.2rem;
+  }
+  #restaurantPromoCarousel .carousel-caption p {
+    font-size: 0.95rem;
+  }
+}

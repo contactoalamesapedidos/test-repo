@@ -1,127 +1,167 @@
 -- Datos de ejemplo para A la Mesa
 USE a_la_mesa;
 
+-- Deshabilitar la verificación de claves foráneas temporalmente
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- Limpiar tablas relacionadas con pedidos, productos, y categorías
+-- IMPORTANTE: Esto eliminará TODOS los datos de estas tablas. ¡Haz un respaldo si es necesario!
+DELETE FROM valores_opciones;
+DELETE FROM opciones_productos;
+DELETE FROM items_pedido;
+DELETE FROM calificaciones;
+DELETE FROM pedidos;
+DELETE FROM productos;
+DELETE FROM categorias_productos;
+DELETE FROM restaurante_categorias;
+DELETE FROM restaurantes;
+DELETE FROM cupones;
+DELETE FROM configuraciones;
+DELETE FROM ventas_diarias;
+DELETE FROM favoritos;
+DELETE FROM direcciones;
+DELETE FROM usuarios;
+
+-- Restablecer el AUTO_INCREMENT para las tablas
+ALTER TABLE usuarios AUTO_INCREMENT = 1;
+ALTER TABLE direcciones AUTO_INCREMENT = 1;
+ALTER TABLE categorias_restaurantes AUTO_INCREMENT = 1;
+ALTER TABLE restaurantes AUTO_INCREMENT = 1;
+ALTER TABLE categorias_productos AUTO_INCREMENT = 1;
+ALTER TABLE productos AUTO_INCREMENT = 1;
+ALTER TABLE opciones_productos AUTO_INCREMENT = 1;
+ALTER TABLE valores_opciones AUTO_INCREMENT = 1;
+ALTER TABLE cupones AUTO_INCREMENT = 1;
+ALTER TABLE configuraciones AUTO_INCREMENT = 1;
+ALTER TABLE pedidos AUTO_INCREMENT = 1;
+ALTER TABLE items_pedido AUTO_INCREMENT = 1;
+ALTER TABLE calificaciones AUTO_INCREMENT = 1;
+ALTER TABLE favoritos AUTO_INCREMENT = 1;
+ALTER TABLE ventas_diarias AUTO_INCREMENT = 1;
+
+
 -- Insertar usuarios de ejemplo (password para todos: "123456")
-INSERT INTO usuarios (nombre, apellido, email, password, telefono, tipo_usuario, imagen_perfil) VALUES
-('Administrador', 'Sistema', 'admin@alamesa.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567890', 'admin', 'admin.jpg'),
-('Juan', 'Pérez', 'demo@alamesa.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567891', 'cliente', 'user1.jpg'),
-('María', 'González', 'maria@email.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567892', 'cliente', 'user2.jpg'),
-('Restaurante', 'La Parrilla', 'restaurante@alamesa.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567893', 'restaurante', 'rest1.jpg'),
-('Pizzería', 'Roma', 'roma@email.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567894', 'restaurante', 'rest2.jpg'),
-('Comida', 'Asiática Express', 'asiatica@email.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567895', 'restaurante', 'rest3.jpg'),
-('Carlos', 'Repartidor', 'carlos.repartidor@email.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567896', 'repartidor', 'delivery1.jpg'),
-('Ana', 'Delivery', 'ana.delivery@email.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567897', 'repartidor', 'delivery2.jpg');
+INSERT INTO usuarios (nombre, apellido, email, password, telefono, tipo_usuario, imagen_perfil, ciudad) VALUES
+('Administrador', 'Sistema', 'admin@alamesa.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567890', 'admin', 'admin.jpg', 'Buenos Aires'),
+('Juan', 'Pérez', 'demo@alamesa.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567891', 'cliente', 'user1.jpg', 'Buenos Aires'),
+('María', 'González', 'maria@email.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567892', 'cliente', 'user2.jpg', 'Buenos Aires'),
+('Restaurante', 'La Empanada', 'restaurante1@alamesa.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567893', 'restaurante', 'rest1.jpg', 'Buenos Aires'),
+('Pizzería', 'Master', 'restaurante2@alamesa.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567894', 'restaurante', 'rest2.jpg', 'Buenos Aires'),
+('Sandwicheria', 'Express', 'restaurante3@alamesa.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567895', 'restaurante', 'rest3.jpg', 'Buenos Aires'),
+('La', 'Nonna', 'restaurante4@alamesa.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567896', 'restaurante', 'rest4.jpg', 'Buenos Aires'),
+('El', 'Rincon', 'restaurante5@alamesa.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567897', 'restaurante', 'rest5.jpg', 'Buenos Aires'),
+('Carlos', 'Repartidor', 'carlos.repartidor@email.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567898', 'repartidor', 'delivery1.jpg', 'Buenos Aires'),
+('Ana', 'Delivery', 'ana.delivery@email.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567899', 'repartidor', 'delivery2.jpg', 'Buenos Aires');
+
 
 -- Insertar direcciones de ejemplo
 INSERT INTO direcciones (usuario_id, nombre, direccion, ciudad, latitud, longitud, es_principal) VALUES
 (2, 'Casa', 'Av. Libertador 1234, Apartamento 5B', 'Buenos Aires', -34.603722, -58.381592, TRUE),
-(2, 'Trabajo', 'Av. Corrientes 5678', 'Buenos Aires', -34.603945, -58.381234, FALSE),
+(3, 'Trabajo', 'Av. Corrientes 5678', 'Buenos Aires', -34.603945, -58.381234, FALSE),
 (3, 'Casa', 'Calle Florida 9876', 'Buenos Aires', -34.604722, -58.382592, TRUE);
 
 -- Insertar categorías de restaurantes
 INSERT INTO categorias_restaurantes (nombre, descripcion, imagen, orden_display) VALUES
-('Comida Rápida', 'Hamburguesas, papas fritas y más', 'fast-food.jpg', 1),
-('Pizza', 'Las mejores pizzas de la ciudad', 'pizza.jpg', 2),
-('Parrilla', 'Carnes a la parrilla y asados', 'grill.jpg', 3),
-('Asiática', 'Sushi, comida china y tailandesa', 'asian.jpg', 4),
-('Italiana', 'Pastas, risottos y platos tradicionales', 'italian.jpg', 5),
-('Mexicana', 'Tacos, burritos y comida tex-mex', 'mexican.jpg', 6),
-('Saludable', 'Ensaladas, bowls y comida fit', 'healthy.jpg', 7),
-('Postres', 'Helados, pasteles y dulces', 'desserts.jpg', 8);
+('Empanadas', 'Las mejores empanadas de la ciudad', 'empanadas.jpg', 1),
+('Pizzas', 'Variedad de pizzas para todos los gustos', 'pizza.jpg', 2),
+('Sandwiches', 'Deliciosos sandwiches y wraps', 'sandwich.jpg', 3),
+('Pastas', 'Pastas frescas y salsas caseras', 'pastas.jpg', 4),
+('Otros', 'Todo tipo de comidas variadas', 'others.jpg', 5);
 
 -- Insertar restaurantes
 INSERT INTO restaurantes (usuario_id, nombre, descripcion, imagen_logo, imagen_banner, direccion, ciudad, telefono, email_contacto, latitud, longitud, horario_apertura, horario_cierre, dias_operacion, tiempo_entrega_min, tiempo_entrega_max, costo_delivery, pedido_minimo, calificacion_promedio, total_calificaciones, verificado) VALUES
-(4, 'La Parrilla Argentina', 'Las mejores carnes a la parrilla con tradición familiar desde 1980', 'parrilla-logo.jpg', 'parrilla-banner.jpg', 'Av. Santa Fe 2456', 'Buenos Aires', '+5411-4567-8901', 'contacto@laparrilla.com', -34.603722, -58.381592, '11:00:00', '23:30:00', '[1,2,3,4,5,6,7]', 35, 50, 4.50, 15.00, 4.7, 156, TRUE),
-(5, 'Pizzería Roma', 'Auténtica pizza italiana con ingredientes importados directamente de Italia', 'roma-logo.jpg', 'roma-banner.jpg', 'Av. Corrientes 3789', 'Buenos Aires', '+5411-4567-8902', 'pedidos@pizzeriaroma.com', -34.604945, -58.382234, '18:00:00', '01:00:00', '[1,2,3,4,5,6,7]', 25, 40, 3.00, 12.00, 4.5, 203, TRUE),
-(6, 'Asiática Express', 'Fusión asiática moderna: sushi, wok y platos tradicionales', 'asiatica-logo.jpg', 'asiatica-banner.jpg', 'Av. Las Heras 1567', 'Buenos Aires', '+5411-4567-8903', 'info@asiaticaexpress.com', -34.605722, -58.383592, '12:00:00', '22:00:00', '[2,3,4,5,6,7]', 30, 45, 5.00, 18.00, 4.3, 89, TRUE);
+(4, 'La Casa de la Empanada', 'Las empanadas más ricas y variadas', 'empanada-logo.jpg', 'empanada-banner.jpg', 'Calle Falsa 123', 'Buenos Aires', '+5411-1234-5678', 'contacto@empanadas.com', -34.603722, -58.381592, '11:00:00', '23:00:00', '[1,2,3,4,5,6,7]', 30, 45, 3.00, 10.00, 4.8, 100, TRUE),
+(5, 'Pizza Master', 'Pizzas artesanales con el mejor sabor', 'pizzamaster-logo.jpg', 'pizzamaster-banner.jpg', 'Av. Siempre Viva 742', 'Buenos Aires', '+5411-8765-4321', 'info@pizzamaster.com', -34.604945, -58.382234, '18:00:00', '00:00:00', '[1,2,3,4,5,6,7]', 20, 35, 2.50, 15.00, 4.6, 120, TRUE),
+(6, 'Sandwicheria Express', 'Los sandwiches más rápidos y deliciosos', 'sandwich-logo.jpg', 'sandwich-banner.jpg', 'Rivadavia 456', 'Buenos Aires', '+5411-9876-5432', 'contacto@sandwichexpress.com', -34.605722, -58.383592, '10:00:00', '20:00:00', '[2,3,4,5,6]', 25, 40, 2.00, 8.00, 4.5, 90, TRUE),
+(7, 'La Nonna Trattoria', 'Auténtica cocina italiana con pastas caseras', 'lanonna-logo.jpg', 'lanonna-banner.jpg', 'Av. Italia 100', 'Buenos Aires', '+5411-1111-2222', 'contacto@lanonna.com', -34.600000, -58.390000, '12:00:00', '23:00:00', '[1,2,3,4,5,6,7]', 30, 45, 4.00, 20.00, 4.7, 75, TRUE),
+(8, 'El Rincón del Sabor', 'Variedad de platos caseros e internacionales', 'elrincon-logo.jpg', 'elrincon-banner.jpg', 'Calle Principal 500', 'Buenos Aires', '+5411-3333-4444', 'contacto@elrincon.com', -34.610000, -58.400000, '09:00:00', '21:00:00', '[1,2,3,4,5,6,7]', 35, 50, 5.00, 12.00, 4.4, 60, TRUE);
+
 
 -- Insertar relación restaurante-categorías
 INSERT INTO restaurante_categorias (restaurante_id, categoria_id) VALUES
-(1, 3), -- La Parrilla -> Parrilla
-(2, 2), -- Roma -> Pizza
-(2, 5), -- Roma -> Italiana
-(3, 4); -- Asiática Express -> Asiática
+(1, 1), -- La Casa de la Empanada -> Empanadas
+(2, 2), -- Pizza Master -> Pizzas
+(3, 3), -- Sandwicheria Express -> Sandwiches
+(4, 4), -- La Nonna Trattoria -> Pastas
+(5, 5); -- El Rincón del Sabor -> Otros
 
--- Insertar categorías de productos
-INSERT INTO categorias_productos (restaurante_id, nombre, descripcion, orden_display) VALUES
--- La Parrilla
-(1, 'Parrilladas', 'Selección de carnes a la parrilla', 1),
-(1, 'Empanadas', 'Empanadas caseras horneadas', 2),
-(1, 'Ensaladas', 'Ensaladas frescas y acompañamientos', 3),
-(1, 'Postres', 'Dulces tradicionales argentinos', 4),
--- Pizzería Roma
-(2, 'Pizzas Clásicas', 'Nuestras pizzas tradicionales más populares', 1),
-(2, 'Pizzas Gourmet', 'Creaciones especiales del chef', 2),
-(2, 'Pastas', 'Pastas frescas hechas en casa', 3),
-(2, 'Entradas', 'Para comenzar tu experiencia italiana', 4),
--- Asiática Express
-(3, 'Sushi & Rolls', 'Piezas frescas preparadas al momento', 1),
-(3, 'Wok', 'Salteados al wok con vegetales frescos', 2),
-(3, 'Sopas', 'Caldos tradicionales asiáticos', 3),
-(3, 'Postres Asiáticos', 'Dulces tradicionales de Asia', 4);
+INSERT INTO categorias_productos (restaurante_id, nombre, descripcion, orden_display, activa)
+SELECT NULL, 'Pizzas', 'Variedad de pizzas para todos los gustos', 10, 1 FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM categorias_productos WHERE nombre = 'Pizzas' AND restaurante_id IS NULL);
+
+INSERT INTO categorias_productos (restaurante_id, nombre, descripcion, orden_display, activa)
+SELECT NULL, 'Empanadas', 'Las mejores empanadas de la ciudad', 20, 1 FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM categorias_productos WHERE nombre = 'Empanadas' AND restaurante_id IS NULL);
+
+INSERT INTO categorias_productos (restaurante_id, nombre, descripcion, orden_display, activa)
+SELECT NULL, 'Sandwiches', 'Deliciosos sandwiches y wraps', 30, 1 FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM categorias_productos WHERE nombre = 'Sandwiches' AND restaurante_id IS NULL);
+
+INSERT INTO categorias_productos (restaurante_id, nombre, descripcion, orden_display, activa)
+SELECT NULL, 'Otros', 'Todo tipo de comidas variadas', 40, 1 FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM categorias_productos WHERE nombre = 'Otros' AND restaurante_id IS NULL);
 
 -- Insertar productos
 INSERT INTO productos (restaurante_id, categoria_id, nombre, descripcion, precio, imagen, ingredientes, calorias, tiempo_preparacion, destacado, descuento_porcentaje) VALUES
--- La Parrilla
-(1, 1, 'Parrillada para 2', 'Asado de tira, chorizo, morcilla, pollo y ensalada mixta', 35.90, 'parrillada-2.jpg', 'Asado de tira, chorizo, morcilla, pollo, lechuga, tomate, cebolla', 1200, 25, TRUE, 0),
-(1, 1, 'Bife de Chorizo', 'Corte premium de 300g con papas fritas', 22.50, 'bife-chorizo.jpg', 'Bife de chorizo, papas, sal parrillera', 800, 20, TRUE, 0),
-(1, 2, 'Empanadas de Carne (6 unidades)', 'Empanadas caseras horneadas rellenas de carne', 8.90, 'empanadas-carne.jpg', 'Carne picada, cebolla, huevo duro, aceitunas, masa casera', 450, 15, FALSE, 10),
-(1, 2, 'Empanadas de Pollo (6 unidades)', 'Empanadas horneadas con pollo y verduras', 8.90, 'empanadas-pollo.jpg', 'Pollo desmenuzado, verduras, masa casera', 400, 15, FALSE, 0),
-(1, 3, 'Ensalada Caesar', 'Lechuga, crutones, parmesano y aderezo caesar', 12.50, 'caesar-salad.jpg', 'Lechuga romana, crutones, queso parmesano, aderezo caesar', 320, 10, FALSE, 0),
+-- La Casa de la Empanada (Restaurante ID 1)
+(1, 1, 'Empanada de Carne Frita', 'Empanada tradicional de carne frita', 2.50, '/uploads/productos/empanada-carne-frita.jpg', 'Carne, cebolla, huevo, aceitunas', 300, 15, TRUE, 0),
+(1, 1, 'Empanada de Carne Horno', 'Empanada tradicional de carne al horno', 2.50, '/uploads/productos/empanada-carne-horno.jpg', 'Carne, cebolla, huevo, aceitunas', 250, 20, FALSE, 0),
+(1, 2, 'Empanada de Jamón y Queso', 'Clásica empanada de jamón y queso', 2.30, '/uploads/productos/empanada-jamon-queso.jpg', 'Jamón, queso mozzarella', 280, 15, TRUE, 0),
+(1, 3, 'Empanada de Verdura', 'Empanada de acelga y salsa blanca', 2.30, '/uploads/productos/empanada-verdura.jpg', 'Acelga, salsa blanca, queso', 200, 15, FALSE, 0),
+-- Pizza Master (Restaurante ID 2)
+(2, 4, 'Pizza Muzzarella', 'Clásica pizza con salsa de tomate y mozzarella', 15.00, '/uploads/productos/pizza-muzzarella.jpg', 'Muzzarella, salsa de tomate, orégano', 800, 20, TRUE, 0),
+(2, 4, 'Pizza Napolitana', 'Muzzarella, tomate en rodajas y ajo', 16.50, '/uploads/productos/pizza-napolitana.jpg', 'Muzzarella, tomate, ajo, perejil', 850, 20, FALSE, 0),
+(2, 5, 'Pizza Cuatro Quesos', 'Combinación de cuatro quesos especiales', 18.00, '/uploads/productos/pizza-4-quesos.jpg', 'Muzzarella, provolone, roquefort, parmesano', 950, 25, TRUE, 0),
+-- Sandwicheria Express (Restaurante ID 3)
+(3, 6, 'Sandwich de Jamón y Queso', 'Clásico sandwich de jamón y queso con lechuga y tomate', 8.00, '/uploads/productos/sandwich-jamon-queso.jpg', 'Jamón, queso, lechuga, tomate, pan de molde', 400, 10, TRUE, 0),
+(3, 7, 'Sandwich de Lomito', 'Lomito, lechuga, tomate, huevo y queso', 12.00, '/uploads/productos/sandwich-lomito.jpg', 'Lomito, lechuga, tomate, huevo, queso, pan francés', 600, 15, TRUE, 0),
+-- La Nonna Trattoria (Restaurante ID 4)
+(4, 8, 'Spaghetti a la Bolognesa', 'Pasta casera con nuestra salsa de carne lenta', 18.00, '/uploads/productos/spaghetti-bolognesa.jpg', 'Spaghetti, carne picada, tomate, cebolla, zanahoria', 700, 20, TRUE, 0),
+(4, 8, 'Lasagna de Verduras', 'Capas de pasta, verduras y bechamel', 20.00, '/uploads/productos/lasagna-verduras.jpg', 'Pasta, espinaca, acelga, ricota, bechamel', 850, 25, FALSE, 0),
+(4, 9, 'Salsa Pesto Genovese', 'Salsa fresca de albahaca, piñones y parmesano', 5.00, '/uploads/productos/salsa-pesto.jpg', 'Albahaca, piñones, parmesano, ajo, aceite de oliva', 300, 5, FALSE, 0),
+(4, 10, 'Tiramisú Casero', 'El clásico postre italiano con café y mascarpone', 9.00, '/uploads/productos/tiramisu.jpg', 'Vainillas, café, mascarpone, huevos, cacao', 450, 10, TRUE, 0),
+-- El Rincón del Sabor (Restaurante ID 5)
+(5, 11, 'Milanesa con Papas Fritas', 'Clásica milanesa de ternera con guarnición', 14.00, '/uploads/productos/milanesa-fritas.jpg', 'Milanesa de ternera, papas, huevo, pan rallado', 900, 20, TRUE, 0),
+(5, 11, 'Ensalada Caesar con Pollo', 'Ensalada fresca con pollo a la parrilla', 12.00, '/uploads/productos/ensalada-caesar-pollo.jpg', 'Lechuga, pollo, crutones, parmesano, aderezo Caesar', 400, 15, FALSE, 0),
+(5, 12, 'Porción de Papas Fritas', 'Crujientes papas fritas', 4.00, '/uploads/productos/papas-fritas.jpg', 'Papas, aceite, sal', 350, 10, FALSE, 0),
+(5, 13, 'Gaseosa Regular', 'Variedad de sabores (Coca-Cola, Sprite, etc.)', 3.00, '/uploads/productos/gaseosa.jpg', 'Agua carbonatada, azúcar, saborizantes', 150, 2, FALSE, 0);
 
--- Pizzería Roma
-(2, 5, 'Pizza Margherita', 'Salsa de tomate, mozzarella, albahaca fresca', 18.90, 'pizza-margherita.jpg', 'Masa artesanal, salsa de tomate, mozzarella, albahaca', 650, 18, TRUE, 0),
-(2, 5, 'Pizza Pepperoni', 'Salsa de tomate, mozzarella, pepperoni italiano', 21.90, 'pizza-pepperoni.jpg', 'Masa artesanal, salsa de tomate, mozzarella, pepperoni', 720, 18, TRUE, 0),
-(2, 6, 'Pizza Quattro Stagioni', 'Tomate, mozzarella, jamón, champiñones, alcachofas, aceitunas', 25.90, 'pizza-quattro.jpg', 'Masa artesanal, tomate, mozzarella, jamón, champiñones, alcachofas, aceitunas', 780, 20, TRUE, 5),
-(2, 7, 'Spaghetti Carbonara', 'Pasta fresca con panceta, huevo y parmesano', 19.50, 'carbonara.jpg', 'Spaghetti fresco, panceta, huevo, queso parmesano, pimienta', 680, 15, FALSE, 0),
-(2, 8, 'Bruschetta Clásica', 'Pan tostado con tomate, albahaca y aceite de oliva', 9.90, 'bruschetta.jpg', 'Pan artesanal, tomate, albahaca, aceite de oliva extra virgen', 280, 8, FALSE, 0),
-
--- Asiática Express
-(3, 9, 'Combo Sushi (20 piezas)', 'Salmón, atún, palta y philadelphia rolls', 28.90, 'combo-sushi.jpg', 'Arroz sushi, salmón, atún, palta, queso philadelphia, nori', 520, 25, TRUE, 0),
-(3, 9, 'California Roll (8 piezas)', 'Palta, pepino, surimi y sésamo', 15.90, 'california-roll.jpg', 'Arroz sushi, palta, pepino, surimi, sésamo, nori', 320, 15, FALSE, 0),
-(3, 10, 'Wok de Pollo Teriyaki', 'Pollo salteado con vegetales y salsa teriyaki', 16.90, 'wok-pollo.jpg', 'Pollo, brócoli, zanahoria, pimiento, salsa teriyaki, arroz', 580, 12, TRUE, 0),
-(3, 10, 'Pad Thai de Camarones', 'Fideos de arroz salteados con camarones y vegetales', 19.90, 'pad-thai.jpg', 'Fideos de arroz, camarones, brotes de soja, huevo, salsa pad thai', 620, 15, FALSE, 0),
-(3, 11, 'Ramen de Cerdo', 'Caldo tradicional con cerdo, huevo y vegetales', 17.50, 'ramen-cerdo.jpg', 'Fideos ramen, caldo de cerdo, huevo, cebollín, brotes de bambú', 480, 20, FALSE, 0);
 
 -- Insertar opciones de productos
 INSERT INTO opciones_productos (producto_id, nombre, tipo, requerido, orden_display) VALUES
--- Pizza Margherita - Tamaño
+-- Pizza Muzzarella - Tamaño (Producto ID 5)
+(5, 'Tamaño', 'radio', TRUE, 1),
+-- Pizza Napolitana - Tamaño (Producto ID 6)
 (6, 'Tamaño', 'radio', TRUE, 1),
--- Pizza Pepperoni - Tamaño
+-- Pizza Cuatro Quesos - Tamaño (Producto ID 7)
 (7, 'Tamaño', 'radio', TRUE, 1),
--- Pizza Quattro Stagioni - Tamaño  
-(8, 'Tamaño', 'radio', TRUE, 1),
--- Bife de Chorizo - Cocción
-(2, 'Punto de Cocción', 'radio', TRUE, 1),
--- Bife de Chorizo - Acompañamientos
-(2, 'Acompañamientos Extra', 'checkbox', FALSE, 2);
+-- Spaghetti a la Bolognesa - Tipo de Pasta (Producto ID 8)
+(8, 'Tipo de Pasta', 'radio', TRUE, 1);
+
 
 -- Insertar valores de opciones
 INSERT INTO valores_opciones (opcion_id, nombre, precio_adicional, orden_display) VALUES
--- Tamaños de pizza (opciones 1, 2, 3)
-(1, 'Personal (25cm)', 0.00, 1),
+-- Tamaños de pizza (opciones 1, 2, 3 - corresponden a productos 5, 6, 7)
+(1, 'Individual (20cm)', 0.00, 1),
 (1, 'Mediana (30cm)', 5.00, 2),
-(1, 'Familiar (35cm)', 10.00, 3),
-(2, 'Personal (25cm)', 0.00, 1),
+(1, 'Grande (40cm)', 10.00, 3),
+(2, 'Individual (20cm)', 0.00, 1),
 (2, 'Mediana (30cm)', 5.00, 2),
-(2, 'Familiar (35cm)', 10.00, 3),
-(3, 'Personal (25cm)', 0.00, 1),
+(2, 'Grande (40cm)', 10.00, 3),
+(3, 'Individual (20cm)', 0.00, 1),
 (3, 'Mediana (30cm)', 5.00, 2),
-(3, 'Familiar (35cm)', 10.00, 3),
--- Punto de cocción bife (opción 4)
-(4, 'Jugoso', 0.00, 1),
-(4, 'A punto', 0.00, 2),
-(4, 'Bien cocido', 0.00, 3),
--- Acompañamientos extra (opción 5)
-(5, 'Ensalada mixta', 3.50, 1),
-(5, 'Papas al horno', 2.50, 2),
-(5, 'Verduras grilladas', 4.00, 3);
+(3, 'Grande (40cm)', 10.00, 3),
+-- Tipo de Pasta para Spaghetti a la Bolognesa (Opción ID 4 - corresponde a producto 8)
+(4, 'Spaghetti', 0.00, 1),
+(4, 'Fideos', 0.00, 2),
+(4, 'Tallarines', 0.00, 3);
 
 -- Insertar cupones de ejemplo
 INSERT INTO cupones (codigo, descripcion, tipo, valor, pedido_minimo, limite_uso, fecha_inicio, fecha_fin, aplicable_a) VALUES
 ('BIENVENIDO20', 'Descuento de bienvenida del 20%', 'porcentaje', 20.00, 15.00, 100, '2024-01-01', '2024-12-31', 'todos'),
 ('DELIVERY5', 'Descuento fijo de $5 en delivery', 'monto_fijo', 5.00, 20.00, NULL, '2024-01-01', '2024-12-31', 'todos'),
-('PIZZA15', 'Descuento del 15% en Pizzería Roma', 'porcentaje', 15.00, 12.00, 50, '2024-01-01', '2024-06-30', 'restaurante_especifico');
+('PASTA10', 'Descuento del 10% en La Nonna Trattoria', 'porcentaje', 10.00, 25.00, 50, '2024-01-01', '2024-12-31', 'restaurante_especifico');
+
 
 -- Insertar configuraciones del sistema
 INSERT INTO configuraciones (clave, valor, descripcion, tipo) VALUES
@@ -133,124 +173,7 @@ INSERT INTO configuraciones (clave, valor, descripcion, tipo) VALUES
 ('max_delivery_time', '90', 'Tiempo máximo de delivery en minutos', 'number'),
 ('support_phone', '+5411-0800-MESA', 'Teléfono de soporte', 'string'),
 ('support_email', 'soporte@alamesa.com', 'Email de soporte', 'string'),
-('app_version', '1.0.0', 'Versión actual de la aplicación', 'string');
-
--- Crear algunos pedidos de ejemplo
-INSERT INTO pedidos (numero_pedido, cliente_id, restaurante_id, repartidor_id, direccion_entrega, latitud_entrega, longitud_entrega, subtotal, costo_delivery, total, estado, metodo_pago, tiempo_estimado) VALUES
-('ALM-2024-001', 2, 1, 7, 'Av. Libertador 1234, Apartamento 5B', -34.603722, -58.381592, 35.90, 4.50, 40.40, 'entregado', 'tarjeta', 45),
-('ALM-2024-002', 3, 2, 8, 'Calle Florida 9876', -34.604722, -58.382592, 21.90, 3.00, 24.90, 'en_camino', 'efectivo', 25),
-('ALM-2024-003', 2, 3, 7, 'Av. Libertador 1234, Apartamento 5B', -34.603722, -58.381592, 28.90, 5.00, 33.90, 'preparando', 'tarjeta', 30);
-
--- Insertar items de pedidos
-INSERT INTO items_pedido (pedido_id, producto_id, cantidad, precio_unitario, subtotal) VALUES
-(1, 1, 1, 35.90, 35.90),
-(2, 7, 1, 21.90, 21.90),
-(3, 11, 1, 28.90, 28.90);
-
--- Insertar algunas calificaciones
-INSERT INTO calificaciones (pedido_id, cliente_id, restaurante_id, repartidor_id, calificacion_restaurante, calificacion_repartidor, comentario_restaurante, comentario_repartidor) VALUES
-(1, 2, 1, 7, 5, 5, 'Excelente calidad de la carne, llegó caliente y en perfecto estado', 'Muy puntual y amable');
-
--- Insertar algunos favoritos
-INSERT INTO favoritos (cliente_id, restaurante_id) VALUES
-(2, 1),
-(2, 2),
-(3, 2),
-(3, 3);
-
--- ========== DATOS DEL SISTEMA DE COBROS ==========
-
--- Insertar ventas diarias para el cálculo de comisiones
-INSERT INTO ventas_diarias (restaurante_id, fecha, cantidad_pedidos, monto_ventas, monto_comisiones) VALUES
--- La Parrilla (últimas 2 semanas)
-(1, '2024-01-01', 12, 1250.00, 125.00),
-(1, '2024-01-02', 15, 1680.50, 168.05),
-(1, '2024-01-03', 18, 2100.75, 210.08),
-(1, '2024-01-04', 22, 2450.00, 245.00),
-(1, '2024-01-05', 25, 2890.25, 289.03),
-(1, '2024-01-06', 20, 2200.00, 220.00),
-(1, '2024-01-07', 16, 1850.50, 185.05),
-(1, '2024-01-08', 14, 1520.00, 152.00),
-(1, '2024-01-09', 19, 2150.75, 215.08),
-(1, '2024-01-10', 21, 2380.00, 238.00),
-(1, '2024-01-11', 23, 2560.50, 256.05),
-(1, '2024-01-12', 18, 2020.25, 202.03),
-(1, '2024-01-13', 17, 1890.00, 189.00),
-(1, '2024-01-14', 13, 1450.75, 145.08),
-
--- Pizzería Roma (últimas 2 semanas)
-(2, '2024-01-01', 18, 1890.00, 189.00),
-(2, '2024-01-02', 22, 2340.50, 234.05),
-(2, '2024-01-03', 25, 2650.75, 265.08),
-(2, '2024-01-04', 28, 2980.00, 298.00),
-(2, '2024-01-05', 30, 3200.25, 320.03),
-(2, '2024-01-06', 26, 2780.00, 278.00),
-(2, '2024-01-07', 24, 2560.50, 256.05),
-(2, '2024-01-08', 20, 2120.00, 212.00),
-(2, '2024-01-09', 27, 2890.75, 289.08),
-(2, '2024-01-10', 29, 3100.00, 310.00),
-(2, '2024-01-11', 31, 3320.50, 332.05),
-(2, '2024-01-12', 25, 2680.25, 268.03),
-(2, '2024-01-13', 23, 2450.00, 245.00),
-(2, '2024-01-14', 19, 2030.75, 203.08),
-
--- Asiática Express (últimas 2 semanas)
-(3, '2024-01-01', 10, 1150.00, 115.00),
-(3, '2024-01-02', 14, 1580.50, 158.05),
-(3, '2024-01-03', 16, 1820.75, 182.08),
-(3, '2024-01-04', 19, 2150.00, 215.00),
-(3, '2024-01-05', 21, 2390.25, 239.03),
-(3, '2024-01-06', 17, 1930.00, 193.00),
-(3, '2024-01-07', 15, 1710.50, 171.05),
-(3, '2024-01-08', 12, 1380.00, 138.00),
-(3, '2024-01-09', 18, 2050.75, 205.08),
-(3, '2024-01-10', 20, 2280.00, 228.00),
-(3, '2024-01-11', 22, 2510.50, 251.05),
-(3, '2024-01-12', 16, 1820.25, 182.03),
-(3, '2024-01-13', 14, 1590.00, 159.00),
-(3, '2024-01-14', 11, 1250.75, 125.08);
-
--- Insertar cobros semanales
-INSERT INTO cobros_semanales (restaurante_id, semana_inicio, semana_fin, ventas_brutas, porcentaje_comision, monto_comision, estado, fecha_vencimiento, notas) VALUES
--- Semana 1 (1-7 enero 2024)
-(1, '2024-01-01', '2024-01-07', 14371.00, 10.00, 1437.10, 'pagado', '2024-01-14', 'Pagado a tiempo'),
-(2, '2024-01-01', '2024-01-07', 17401.75, 10.00, 1740.18, 'pagado', '2024-01-14', 'Pagado a tiempo'),
-(3, '2024-01-01', '2024-01-07', 12730.50, 10.00, 1273.05, 'pendiente', '2024-01-14', NULL),
-
--- Semana 2 (8-14 enero 2024)
-(1, '2024-01-08', '2024-01-14', 13872.25, 10.00, 1387.23, 'pendiente', '2024-01-21', NULL),
-(2, '2024-01-08', '2024-01-14', 17592.25, 10.00, 1759.23, 'pendiente', '2024-01-21', NULL),
-(3, '2024-01-08', '2024-01-14', 12882.50, 10.00, 1288.25, 'vencido', '2024-01-21', 'Pago vencido');
-
--- Insertar comprobantes de pago
-INSERT INTO comprobantes_pago (cobro_semanal_id, restaurante_id, archivo_comprobante, metodo_pago, referencia_pago, monto_pagado, fecha_pago_declarada, estado, fecha_subida, fecha_revision, admin_revisor_id, comentarios_admin, comentarios_restaurante) VALUES
--- Comprobantes para La Parrilla (cobro pagado)
-(1, 1, 'comprobante-1705123456789.jpg', 'transferencia', 'TRANS001234567', 1437.10, '2024-01-13', 'aprobado', '2024-01-13 10:30:00', '2024-01-13 14:20:00', 1, 'Comprobante válido, pago confirmado', 'Transferencia realizada desde cuenta empresarial'),
-
--- Comprobantes para Pizzería Roma (cobro pagado)
-(2, 2, 'comprobante-1705223456789.pdf', 'mercadopago', 'MP-240113-987654321', 1740.18, '2024-01-12', 'aprobado', '2024-01-12 16:45:00', '2024-01-13 09:15:00', 1, 'Pago de MercadoPago verificado correctamente', 'Pago realizado a través de la app de MercadoPago'),
-
--- Comprobante pendiente para Asiática Express
-(6, 3, 'comprobante-1705323456789.jpg', 'deposito', 'DEP-789123456', 1288.25, '2024-01-22', 'pendiente', '2024-01-22 11:20:00', NULL, NULL, NULL, 'Depósito realizado en sucursal Banco Nación');
-
--- Insertar actividad de administradores
-INSERT INTO actividad_admin (admin_id, accion, descripcion, entidad_tipo, entidad_id, datos_anteriores, datos_nuevos, fecha_accion, ip_address) VALUES
-(1, 'aprobar_pago', 'Comprobante aprobado para La Parrilla', 'comprobante', 1, NULL, '{"estado": "aprobado", "monto": 1437.10}', '2024-01-13 14:20:00', '192.168.1.100'),
-(1, 'aprobar_pago', 'Comprobante aprobado para Pizzería Roma', 'comprobante', 2, NULL, '{"estado": "aprobado", "monto": 1740.18}', '2024-01-13 09:15:00', '192.168.1.100'),
-(1, 'generar_cobro', 'Generados cobros para semana 01-07 enero 2024', 'cobro', NULL, NULL, '{"cobros_generados": 3, "periodo": "2024-01-01_2024-01-07"}', '2024-01-08 08:00:00', '192.168.1.100'),
-(1, 'generar_cobro', 'Generados cobros para semana 08-14 enero 2024', 'cobro', NULL, NULL, '{"cobros_generados": 3, "periodo": "2024-01-08_2024-01-14"}', '2024-01-15 08:00:00', '192.168.1.100');
-
--- Insertar algunas notificaciones del sistema
-INSERT INTO notificaciones_sistema (usuario_id, tipo, titulo, mensaje, leida, url_accion, fecha_creacion) VALUES
--- Notificaciones para restaurantes
-(4, 'nuevo_cobro', 'Nuevo cobro generado', 'Se ha generado un nuevo cobro por $1387.23 correspondiente a la semana del 08-14 enero. Vencimiento: 21 enero 2024.', FALSE, '/dashboard/cobros', '2024-01-15 08:30:00'),
-(5, 'nuevo_cobro', 'Nuevo cobro generado', 'Se ha generado un nuevo cobro por $1759.23 correspondiente a la semana del 08-14 enero. Vencimiento: 21 enero 2024.', FALSE, '/dashboard/cobros', '2024-01-15 08:30:00'),
-(6, 'vencimiento_proximo', 'Cobro próximo a vencer', 'Tienes un cobro por $1288.25 que vence mañana. Por favor, realiza el pago y sube tu comprobante.', FALSE, '/dashboard/cobros', '2024-01-20 09:00:00'),
-(4, 'pago_aprobado', 'Pago aprobado', 'Tu comprobante de pago por $1437.10 ha sido aprobado. El cobro se marca como pagado.', TRUE, '/dashboard/cobros', '2024-01-13 14:25:00'),
-(5, 'pago_aprobado', 'Pago aprobado', 'Tu comprobante de pago por $1740.18 ha sido aprobado. El cobro se marca como pagado.', TRUE, '/dashboard/cobros', '2024-01-13 09:20:00');
-
--- Insertar configuraciones del sistema
-INSERT INTO configuraciones (clave, valor, descripcion, tipo) VALUES
+('app_version', '1.0.0', 'Versión actual de la aplicación', 'string'),
 ('comision_porcentaje', '10.00', 'Porcentaje de comisión sobre ventas brutas', 'number'),
 ('dias_vencimiento_cobro', '7', 'Días para vencimiento de cobros desde fin de semana', 'number'),
 ('metodos_pago_permitidos', '["transferencia","deposito","mercadopago","efectivo","otro"]', 'Métodos de pago permitidos para restaurantes', 'json'),
@@ -258,3 +181,83 @@ INSERT INTO configuraciones (clave, valor, descripcion, tipo) VALUES
 ('email_admin_notificaciones', 'admin@alamesa.com', 'Email para notificaciones administrativas', 'string'),
 ('generar_cobros_automatico', 'true', 'Generar cobros automáticamente cada lunes', 'boolean'),
 ('tamaño_maximo_comprobante', '10485760', 'Tamaño máximo de comprobante en bytes (10MB)', 'number');
+
+
+-- Crear algunos pedidos de ejemplo
+INSERT INTO pedidos (numero_pedido, cliente_id, restaurante_id, repartidor_id, direccion_entrega, latitud_entrega, longitud_entrega, subtotal, costo_delivery, total, estado, metodo_pago, tiempo_estimado) VALUES
+('ALM-2024-001', 2, 1, 9, 'Av. Libertador 1234, Apartamento 5B', -34.603722, -58.381592, 35.90, 4.50, 40.40, 'entregado', 'tarjeta', 45),
+('ALM-2024-002', 3, 2, 10, 'Calle Florida 9876', -34.604722, -58.382592, 21.90, 3.00, 24.90, 'en_camino', 'efectivo', 25),
+('ALM-2024-003', 2, 3, 9, 'Av. Libertador 1234, Apartamento 5B', -34.603722, -58.381592, 28.90, 5.00, 33.90, 'preparando', 'tarjeta', 30),
+('ALM-2024-004', 3, 4, 10, 'Av. Corrientes 5678', -34.603945, -58.381234, 40.00, 4.00, 44.00, 'preparando', 'mercadopago', 35),
+('ALM-2024-005', 2, 5, 9, 'Calle Florida 9876', -34.604722, -58.382592, 25.00, 5.00, 30.00, 'pendiente', 'transferencia', 40);
+
+-- Insertar items de pedidos
+INSERT INTO items_pedido (pedido_id, producto_id, cantidad, precio_unitario, subtotal) VALUES
+(1, 1, 1, 2.50, 2.50), -- Empanada de Carne Frita
+(1, 3, 1, 2.30, 2.30), -- Empanada de Jamón y Queso
+(2, 5, 1, 15.00, 15.00), -- Pizza Muzzarella
+(3, 7, 1, 12.00, 12.00), -- Sandwich de Lomito
+(4, 8, 1, 18.00, 18.00), -- Spaghetti a la Bolognesa
+(4, 10, 1, 9.00, 9.00), -- Tiramisú Casero
+(5, 11, 1, 14.00, 14.00), -- Milanesa con Papas Fritas
+(5, 13, 2, 3.00, 6.00); -- Gaseosa Regular
+
+-- Insertar algunas calificaciones
+INSERT INTO calificaciones (pedido_id, cliente_id, restaurante_id, repartidor_id, calificacion_restaurante, calificacion_repartidor, comentario_restaurante, comentario_repartidor) VALUES
+(1, 2, 1, 9, 5, 5, 'Excelente calidad de la carne, llegó caliente y en perfecto estado', 'Muy puntual y amable'),
+(2, 3, 2, 10, 4, 4, 'Buena pizza, llegó a tiempo', 'Amable y rápido'),
+(3, 2, 3, 9, 4, 5, 'El lomito estaba muy rico', 'Excelente servicio');
+
+-- Insertar algunos favoritos
+INSERT INTO favoritos (cliente_id, restaurante_id) VALUES
+(2, 1),
+(2, 2),
+(3, 2),
+(3, 3),
+(2, 4), -- Favorito para La Nonna
+(3, 5); -- Favorito para El Rincón
+
+-- ========== DATOS DEL SISTEMA DE COBROS ==========
+
+-- Insertar ventas diarias para el cálculo de comisiones
+INSERT INTO ventas_diarias (restaurante_id, fecha, cantidad_pedidos, monto_ventas, monto_comisiones) VALUES
+-- La Casa de la Empanada (Restaurante ID 1)
+(1, '2024-01-01', 12, 1250.00, 125.00),
+(1, '2024-01-02', 15, 1680.50, 168.05),
+(1, '2024-01-03', 18, 2100.75, 210.08),
+-- Pizza Master (Restaurante ID 2)
+(2, '2024-01-01', 18, 1890.00, 189.00),
+(2, '2024-01-02', 22, 2340.50, 234.05),
+(2, '2024-01-03', 25, 2650.75, 265.08),
+-- Sandwicheria Express (Restaurante ID 3)
+(3, '2024-01-01', 10, 1150.00, 115.00),
+(3, '2024-01-02', 14, 1580.50, 158.05),
+(3, '2024-01-03', 16, 1820.75, 182.08),
+-- La Nonna Trattoria (Restaurante ID 4)
+(4, '2024-01-01', 8, 900.00, 90.00),
+(4, '2024-01-02', 10, 1100.00, 110.00),
+-- El Rincón del Sabor (Restaurante ID 5)
+(5, '2024-01-01', 7, 750.00, 75.00),
+(5, '2024-01-02', 9, 950.00, 95.00);
+
+INSERT IGNORE INTO cobros_semanales (restaurante_id, semana_inicio, semana_fin, ventas_brutas, porcentaje_comision, monto_comision, estado, fecha_vencimiento, notas) VALUES
+(1, '2024-01-01', '2024-01-07', 14371.00, 10.00, 1437.10, 'pagado', '2024-01-14', 'Pagado a tiempo'),
+(2, '2024-01-01', '2024-01-07', 17401.75, 10.00, 1740.18, 'pagado', '2024-01-14', 'Pagado a tiempo'),
+(3, '2024-01-01', '2024-01-07', 12730.50, 10.00, 1273.05, 'pendiente', '2024-01-14', NULL),
+(4, '2024-01-01', '2024-01-07', 2000.00, 10.00, 200.00, 'pendiente', '2024-01-14', NULL),
+(5, '2024-01-01', '2024-01-07', 1700.00, 10.00, 170.00, 'pendiente', '2024-01-14', NULL);
+
+-- Insertar comprobantes de pago
+INSERT INTO comprobantes_pago (cobro_semanal_id, restaurante_id, archivo_comprobante, metodo_pago, referencia_pago, monto_pagado, fecha_pago_declarada, estado, fecha_subida, fecha_revision, admin_revisor_id, comentarios_admin, comentarios_restaurante) VALUES
+(1, 1, 'comprobante-1705123456789.jpg', 'transferencia', 'TRANS001234567', 1437.10, '2024-01-13', 'aprobado', '2024-01-13 10:30:00', '2024-01-13 14:20:00', 1, 'Comprobante válido, pago confirmado', 'Transferencia realizada desde cuenta empresarial');
+
+-- Insertar actividad de administradores
+INSERT INTO actividad_admin (admin_id, accion, descripcion, entidad_tipo, entidad_id, datos_anteriores, datos_nuevos, fecha_accion, ip_address) VALUES
+(1, 'aprobar_pago', 'Comprobante aprobado para La Parrilla', 'comprobante', 1, NULL, '{"estado": "aprobado", "monto": 1437.10}', '2024-01-13 14:20:00', '192.168.1.100');
+
+-- Insertar algunas notificaciones del sistema
+INSERT INTO notificaciones_sistema (usuario_id, tipo, titulo, mensaje, leida, url_accion, fecha_creacion) VALUES
+(4, 'nuevo_cobro', 'Nuevo cobro generado', 'Se ha generado un nuevo cobro por $1387.23 correspondiente a la semana del 08-14 enero. Vencimiento: 21 enero 2024.', FALSE, '/dashboard/cobros', '2024-01-15 08:30:00');
+
+-- Habilitar la verificación de claves foráneas
+SET FOREIGN_KEY_CHECKS = 1;

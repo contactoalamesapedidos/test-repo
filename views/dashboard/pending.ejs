@@ -1,0 +1,31 @@
+<%- include('../partials/header') %>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-warning text-white text-center">
+                    <h3 class="mb-0">
+                        <i class="fas fa-hourglass-half me-2"></i>
+                        <%= title %>
+                    </h3>
+                </div>
+                <div class="card-body p-4 text-center">
+                    <h5 class="card-title text-muted mb-3"><%= message %></h5>
+                    <p class="card-text">Gracias por registrar tu restaurante en A la Mesa. Estamos revisando tu solicitud y te notificaremos una vez que sea aprobada.</p>
+                    <p class="card-text">Mientras tanto, puedes explorar otras secciones o contactarnos si tienes alguna pregunta.</p>
+                    <a href="/auth/logout" class="btn btn-secondary mt-3">
+                        <i class="fas fa-sign-out-alt me-2"></i>
+                        Cerrar Sesión
+                    </a>
+                    <a href="/" class="btn btn-primary mt-3 ms-2">
+                        <i class="fas fa-home me-2"></i>
+                        Ir al Inicio
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %> 

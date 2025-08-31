@@ -1,28 +1,119 @@
-// A la Mesa - Main JavaScript
-
-// Global variables
-const alamesa = {
-  socket: null,
-  cart: {
-    items: [],
-    total: 0,
-    count: 0
+// Confirma antes de cancelar/rechazar pedido desde cualquier parte del dashboard
+window.confirmCancelOrder = function(orderId, fromTable) {
+  if (confirm('¿Estás seguro de que deseas cancelar este pedido? Esta acción no se puede deshacer.')) {
+    if (fromTable) {
+      window.updateOrderStatusFromTable(orderId, 'cancelado');
+    } else {
+      window.updateOrderStatus(orderId, 'cancelado');
+    }
   }
 };
 
+// Aplica background-image usando el atributo data-bg
+function applyDataBgBackgrounds() {
+  try {
+    const elements = document.querySelectorAll('[data-bg]');
+    elements.forEach(el => {
+      const bg = el.getAttribute('data-bg');
+      if (bg) {
+        // Si no es una url absoluta ni ya incluye url("...")
+        const isAbsolute = bg.startsWith('http://') || bg.startsWith('https://');
+        const url = isAbsolute || bg.startsWith('/') ? bg : ('/uploads/' + bg);
+        el.style.backgroundImage = `url("${url}")`;
+        el.style.backgroundSize = el.style.backgroundSize || 'cover';
+        el.style.backgroundPosition = el.style.backgroundPosition || 'center';
+      }
+    });
+  } catch (e) {
+    console.error('Error aplicando data-bg:', e);
+  }
+}
+
+// A la Mesa - Main JavaScript (Optimizado)
+
+// Global variables
+window.cart = {
+  items: [],
+  count: 0,
+  subtotal: 0,
+  deliveryFee: 0,
+  total: 0
+};
+
 // Initialize app
-document.addEventListener('DOMContentLoaded', function() {
-  initializeApp();
-  loadCartData();
+window.currentUser = null; // Global variable for user data
+
+document.addEventListener('DOMContentLoaded', async function() {
+  window.currentUser = getUserData(); // Get user data early
+  await loadCartData();
+  await initializeApp();
   initializeSocket();
+  initializeAllCartEventListeners();
+  initializeQuantityControls();
+  // Forzar actualización del contador del carrito tras 500ms
+  setTimeout(() => {
+    updateCartUI();
+  }, 500);
 });
 
+// Inicializar controles de cantidad
+function initializeQuantityControls() {
+  // Asegurarse de que las funciones existan antes de usarlas
+  window.increaseQuantity = increaseQuantity;
+  window.decreaseQuantity = decreaseQuantity;
+  window.updateCartData = updateCartData;
+  window.showToast = showToast;
+
+  // Agregar eventos a los botones usando event delegation
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('minus-btn')) {
+      e.preventDefault();
+      const productId = e.target.closest('.cart-item')?.dataset.productoId || e.target.getAttribute('data-product-id');
+      if (productId) decreaseQuantity(productId);
+    }
+    
+    if (e.target.classList.contains('plus-btn')) {
+      e.preventDefault();
+      const productId = e.target.closest('.cart-item')?.dataset.productoId || e.target.getAttribute('data-product-id');
+      if (productId) increaseQuantity(productId);
+    }
+  });
+}
+
 // Initialize main app functionality
-function initializeApp() {
+async function initializeApp() {
+  // Renderizar el sidebar del carrito después de cargar los datos
+  await renderCartSidebarWithEjs();
+
+  // Asegurarse de que el sidebar no se muestre al cargar la página
+  const cartSidebar = document.getElementById('cartSidebar');
+  const cartOverlay = document.getElementById('cartOverlay');
+  
+  if (cartSidebar) cartSidebar.classList.remove('show');
+  if (cartOverlay) cartOverlay.classList.remove('show');
+  document.body.style.overflow = '';
+  document.body.classList.remove('cart-open');
+
+  // Asegurarse de que el sidebar de usuario no se muestre al cargar la página
+  const userMenuSidebar = document.getElementById('userMenuSidebar');
+  const userMenuOverlay = document.getElementById('userMenuOverlay');
+  if (userMenuSidebar) userMenuSidebar.classList.remove('show');
+  if (userMenuOverlay) userMenuOverlay.classList.remove('show');
+
+  // Añadir un retraso para asegurarse de que cualquier script que intente mostrar el sidebar sea anulado
+  setTimeout(() => {
+    if (cartSidebar) cartSidebar.classList.remove('show');
+    if (cartOverlay) cartOverlay.classList.remove('show');
+    document.body.style.overflow = '';
+    document.body.classList.remove('cart-open');
+    if (userMenuSidebar) userMenuSidebar.classList.remove('show');
+    if (userMenuOverlay) userMenuOverlay.classList.remove('show');
+  }, 500);
+
   // Initialize tooltips
-  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
+  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  tooltipTriggerList.forEach(tooltipTriggerEl => {
+    new bootstrap.Tooltip(tooltipTriggerEl);
   });
 
   // Initialize popovers
@@ -55,13 +146,17 @@ function initializeApp() {
       if (href && href !== '#') {
         const target = document.querySelector(href);
         if (target) {
-        target.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
-        });
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
       }
     });
   });
+
+  // Aplicar backgrounds desde data-bg (banner, etc.)
+  applyDataBgBackgrounds();
 
   // Handle navbar collapse on mobile
   const navbarToggler = document.querySelector('.navbar-toggler');
@@ -76,47 +171,37 @@ function initializeApp() {
       }
     });
   }
-
-  // Handle cart button click
-  const cartButton = document.querySelector('.cart-button');
-  if (cartButton) {
-    cartButton.addEventListener('click', function(event) {
-      console.log('Cart button clicked in app.js');
-      toggleCartSidebar(event);
-    });
-  }
 }
 
 // Socket.IO initialization
 function initializeSocket() {
   if (typeof io !== 'undefined') {
-    alamesa.socket = io();
+    window.socket = io();
     
-    alamesa.socket.on('connect', function() {
+    window.socket.on('connect', function() {
       console.log('Conectado al servidor');
       
       // Join user room if logged in
-      const user = getUserData();
-      if (user) {
-        alamesa.socket.emit('join-user', user.id);
+      if (window.currentUser) {
+        window.socket.emit('join-user', window.currentUser.id);
         
-        if (user.tipo_usuario === 'restaurante') {
-          alamesa.socket.emit('join-restaurant', user.restaurante_id);
+        if (window.currentUser.tipo_usuario === 'restaurante') {
+          window.socket.emit('join-restaurant', window.currentUser.restaurante_id);
         }
       }
     });
 
-    alamesa.socket.on('new-order-notification', function(data) {
+    window.socket.on('new-order-notification', function(data) {
       showNotification('Nuevo pedido recibido', 'info');
       playNotificationSound();
     });
 
-    alamesa.socket.on('order-status-changed', function(data) {
+    window.socket.on('order-status-changed', function(data) {
       showNotification(`Tu pedido está ${getStatusText(data.status)}`, 'success');
       updateOrderStatus(data.orderId, data.status);
     });
 
-    alamesa.socket.on('disconnect', function() {
+    window.socket.on('disconnect', function() {
       console.log('Desconectado del servidor');
     });
   }
@@ -124,54 +209,791 @@ function initializeSocket() {
 
 // Cart management
 function loadCartData() {
-  fetch('/cart/data')
-    .then(response => response.json())
-    .then(data => {
-      alamesa.cart = data;
-      updateCartUI();
-    })
-    .catch(error => {
-      console.error('Error loading cart:', error);
-    });
+  return new Promise((resolve, reject) => {
+    fetch('/cart/data')
+      .then(response => response.json())
+      .then(data => {
+        // Mapear correctamente los datos recibidos
+        window.cart.items = data.cart || [];
+        window.cart.count = data.cartCount || 0;
+        window.cart.cartCount = data.cartCount || 0;
+        window.cart.subtotal = parseFloat(data.subtotal) || 0;
+        window.cart.deliveryFee = parseFloat(data.deliveryFee) || 0;
+        window.cart.total = parseFloat(data.total) || 0;
+        
+        // Actualizar UI inmediatamente
+        updateCartUI();
+        
+        // Luego actualizar el DOM de manera más detallada
+        setTimeout(() => {
+          updateCartDOM();
+        }, 100);
+        
+        resolve();
+      })
+      .catch(error => {
+        console.error('Error loading cart:', error);
+        reject(error);
+      });
+  });
 }
 
+// --- CLIENT-SIDE EJS RENDERING FOR CART SIDEBAR ---
+
+// Cargar EJS por CDN si no está presente
+defineEjsIfNeeded();
+
+function defineEjsIfNeeded() {
+  if (!window.ejs) {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/ejs@3.1.9/ejs.min.js';
+    script.onload = () => { console.log('EJS cargado en el cliente'); };
+    document.head.appendChild(script);
+  }
+}
+
+// Espera a que EJS esté disponible en window.ejs
+async function waitForEjs() {
+  let tries = 0;
+  while (!window.ejs && tries < 20) {
+    await new Promise(res => setTimeout(res, 100));
+    tries++;
+  }
+  if (!window.ejs) throw new Error('EJS no está disponible en el cliente');
+}
+
+window.updateCartDOM = renderCartSidebarWithEjs;
+
+// Reinicializar eventos del carrito después de actualizar el DOM
+function reinitializeCartEvents() {
+  console.log('🔄 Reinicializando eventos del carrito...');
+  
+  // Botones de cerrar carrito (múltiples selectores para mayor compatibilidad)
+  const closeButtons = document.querySelectorAll('.cart-close-btn, .btn-close, #cartSidebarClose');
+  closeButtons.forEach(btn => {
+    // Remover listeners previos para evitar duplicados
+    btn.removeEventListener('click', closeCartSidebar);
+    btn.addEventListener('click', closeCartSidebar);
+  });
+
+  // Botones de cantidad
+  const qtyButtons = document.querySelectorAll('.cart-qty-btn');
+  qtyButtons.forEach(btn => {
+    // Verificar si ya tiene el listener para evitar duplicados
+    if (!btn.dataset.hasQuantityListener) {
+      btn.dataset.hasQuantityListener = 'true';
+      btn.addEventListener('click', handleQuantityClick);
+    }
+  });
+  
+  // Función para manejar clics en botones de cantidad
+  function handleQuantityClick() {
+    const action = this.getAttribute('data-action');
+    const productId = this.getAttribute('data-producto-id');
+    if (action && productId) {
+      updateCartItemQuantity(productId, action === 'increment' ? 1 : -1, this);
+    }
+  }
+
+  // Botones de eliminar producto
+  const removeButtons = document.querySelectorAll('.remove-item-btn');
+  removeButtons.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const productId = this.getAttribute('data-producto-id');
+      if (productId) {
+        removeFromCart(productId);
+      }
+    });
+  });
+
+  // Botón de vaciar carrito
+  const clearCartButtons = document.querySelectorAll('.clear-cart-btn');
+  clearCartButtons.forEach(btn => {
+    btn.addEventListener('click', clearCart);
+  });
+  
+  // Reinicializar el overlay del carrito
+  const overlay = document.getElementById('cartOverlay');
+  if (overlay) {
+    overlay.removeEventListener('click', function(e) {
+      if (e.target === overlay) {
+        closeCartSidebar();
+      }
+    });
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) {
+        closeCartSidebar();
+      }
+    });
+  }
+}
+
+// Renderizar el sidebar del carrito usando HTML directo
+async function renderCartSidebarWithEjs() {
+  try {
+    let cartSidebar = document.getElementById('cartSidebar');
+    if (!cartSidebar) {
+      console.error('No se encontró el sidebar del carrito en el DOM');
+      return;
+    }
+
+    // Obtener datos del carrito
+    const dataRes = await fetch('/cart/data');
+    if (!dataRes.ok) throw new Error('No se pudo obtener los datos del carrito');
+    const cartData = await dataRes.json();
+    const cart = cartData.cart || [];
+    const subtotal = cartData.subtotal || 0;
+    const deliveryFee = cartData.deliveryFee || 0;
+    const total = cartData.total || 0;
+    const cartCount = cartData.cartCount || 0;
+
+    let cartItemsHtml = '';
+    if (cart.length === 0) {
+      cartItemsHtml = `
+        <div class="text-center py-5">
+          <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+          <h5>Tu carrito está vacío</h5>
+          <p class="text-muted">Agrega productos de tus restaurantes favoritos</p>
+          <a href="/restaurants" class="btn btn-orange mt-3">
+            <i class="fas fa-utensils me-2"></i>
+            Ver Restaurantes
+          </a>
+        </div>
+      `;
+    } else {
+      cartItemsHtml = `
+        <div class="cart-items">
+          ${cart.map(item => {
+            const nombre = item.nombre || item.name || 'Producto';
+            const imagen = item.imagen || item.image || '/images/defaults/product.jpeg';
+            const precio = typeof item.precio !== 'undefined' ? item.precio : (typeof item.price !== 'undefined' ? item.price : 0);
+            const cantidad = item.cantidad || item.quantity || 0;
+            return `
+              <div class="cart-item-row">
+                <div class="cart-item-img-container d-flex align-items-center justify-content-center" style="width:48px; height:48px; min-width:48px; min-height:48px; max-width:48px; max-height:48px;">
+                  <img src="${imagen.startsWith('/uploads/') ? imagen : imagen.startsWith('/') ? imagen : '/uploads/' + imagen}"
+                       alt="${nombre}" class="cart-item-image" style="width:44px; height:44px; object-fit:cover; border-radius:8px; display:block;"
+                       onerror="this.onerror=null;this.src='/images/defaults/product.jpeg';">
+                </div>
+                <div class="cart-item-main">
+                  <div class="cart-item-title-row d-flex align-items-center">
+                    <div class="cart-item-name">${nombre}</div>
+                  </div>
+                  <div class="cart-item-controls-row d-flex justify-content-between align-items-center mt-2">
+                    <div class="quantity-controls d-flex align-items-center">
+                      <button class="cart-qty-btn" data-action="decrement" data-producto-id="${item.producto_id}">
+                        <i class="fas fa-minus"></i>
+                      </button>
+                      <span class="btn-quantity-text">${cantidad}</span>
+                      <button class="cart-qty-btn" data-action="increment" data-producto-id="${item.producto_id}">
+                        <i class="fas fa-plus"></i>
+                      </button>
+                      <button class="remove-item-btn" data-producto-id="${item.producto_id}">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                    <div class="d-flex flex-column align-items-end">
+                      <div class="cart-item-price">$${(precio * cantidad).toFixed(2)}</div>
+                      <div class="cart-item-unit small text-muted">$${precio.toFixed(2)} c/u</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    const cartHtml = `
+      <div class="cart-sidebar-header">
+        <h3>
+          <i class="fas fa-shopping-cart me-2"></i>
+          Tu Carrito (${cartCount})
+        </h3>
+        <button type="button" class="btn-close cart-close-btn" onclick="closeCartSidebar()"></button>
+      </div>
+      <div class="cart-sidebar-body">
+        ${cartItemsHtml}
+        ${cart.length > 0 ? `
+          <div class="cart-summary">
+            <div class="cart-summary-item">
+              <span>Subtotal:</span>
+              <span>${subtotal.toFixed(2)}</span>
+            </div>
+            <div class="cart-summary-item">
+              <span>Envío:</span>
+              <span>${deliveryFee.toFixed(2)}</span>
+            </div>
+            <div class="cart-summary-item total">
+              <span>Total:</span>
+              <span>${total.toFixed(2)}</span>
+            </div>
+          </div>
+          <div class="cart-actions">
+            <button id="checkoutButton" class="btn btn-pagar w-100" onclick="window.location.href='/orders/checkout'">
+              <i class="fas fa-credit-card me-2"></i>
+              Proceder al Pago
+            </button>
+            <button id="clearCartButton" class="btn btn-vaciar w-100" onclick="clearCart()">
+              <i class="fas fa-trash me-2"></i>
+              Vaciar Carrito
+            </button>
+            ${cart.length > 0 && cart[0].restaurante_id ? `
+              <a href="/restaurants/${cart[0].restaurante_id}" class="btn btn-outline-secondary w-100 mt-2">
+                <i class="fas fa-store me-2"></i>Ver más productos de este restaurante
+              </a>
+            ` : ''}
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    cartSidebar.innerHTML = cartHtml;
+    updateCartUI();
+    reinitializeCartEvents();
+  } catch (error) {
+    console.error('Error renderizando el carrito:', error);
+    let cartSidebar = document.getElementById('cartSidebar');
+    if (cartSidebar) {
+      cartSidebar.innerHTML = `
+        <div class="cart-sidebar-header">
+          <h5 class="mb-0">
+            <i class="fas fa-shopping-cart me-2"></i>
+            Tu Carrito
+            <button type="button" class="btn-close float-end cart-close-btn" onclick="closeCartSidebar()"></button>
+          </h5>
+        </div>
+        <div class="cart-sidebar-body">
+          <div class="text-center py-5">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <h5>Error cargando el carrito</h5>
+            <p class="text-muted">Hubo un problema al cargar los datos del carrito</p>
+            <button class="btn btn-orange mt-3" onclick="location.reload()">
+              <i class="fas fa-refresh me-2"></i>
+              Recargar Página
+            </button>
+          </div>
+        </div>
+      `;
+      reinitializeCartEvents();
+    }
+    showToast('Error actualizando el carrito', 'error');
+  }
+}
+
+// Add to cart without page reload
 function addToCart(productId, quantity = 1, specialInstructions = '') {
+  // Preparar datos para el carrito sin obtener datos previos del producto
   const data = {
     productId: productId,
     quantity: quantity,
     specialInstructions: specialInstructions
   };
 
-  fetch('/cart/add', {
+  // Variable para controlar si ya se mostró un toast para esta acción
+  const currentTime = Date.now();
+  if (!window.lastToastTime || currentTime - window.lastToastTime > 1000) {
+    fetch('/cart/add', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showToast(data.message, 'success');
+        window.lastToastTime = currentTime;
+        // Actualizar los datos del carrito y renderizar el sidebar
+        loadCartData().then(() => {
+          console.log('Datos del carrito actualizados:', window.cart);
+          renderCartSidebarWithEjs().then(() => {
+            // NO mostrar automáticamente el carrito al agregar productos
+            // Solo actualizar los datos para que estén disponibles cuando el usuario abra el carrito
+            console.log('Carrito actualizado, pero no se muestra automáticamente');
+          });
+        });
+      } else {
+        if (data.needsClearCart) {
+          showClearCartConfirmation(data.newRestaurant, productId, quantity, specialInstructions);
+        } else {
+          showToast(data.message, 'error');
+          window.lastToastTime = currentTime;
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error adding to cart:', error);
+      showToast('Error agregando al carrito', 'error');
+    });
+  } else {
+    console.log('Toast ya mostrado recientemente, ignorando addToCart para producto:', productId);
+  }
+}
+
+// Remove from cart with page reload
+function removeFromCart(productId) {
+  fetch('/cart/remove', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(data)
+    body: JSON.stringify({ productId: productId })
   })
   .then(response => response.json())
   .then(data => {
     if (data.success) {
-      showNotification(data.message, 'success');
-      loadCartData();
+      showToast('Producto eliminado del carrito', 'success');
+      // Actualizar el carrito en tiempo real sin recargar la página
+      renderCartSidebarWithEjs();
     } else {
-      if (data.needsClearCart) {
-        showClearCartConfirmation(data.newRestaurant, productId, quantity, specialInstructions);
-      } else {
-        showNotification(data.message, 'error');
-      }
+      showToast('Error eliminando el producto', 'error');
     }
   })
   .catch(error => {
-    console.error('Error adding to cart:', error);
-    showNotification('Error agregando al carrito', 'error');
+    console.error('Error removing from cart:', error);
+    showToast('Error eliminando el producto', 'error');
   });
 }
 
-function updateCartItem(productId, quantity) {
+// Clear cart with updated UI
+function clearCart() {
+  fetch('/cart/clear', {
+    method: 'POST'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      showToast('Carrito vaciado', 'success');
+      window.cart.items = [];
+      window.cart.count = 0;
+      window.cart.subtotal = 0;
+      window.cart.deliveryFee = 0;
+      window.cart.total = 0;
+      updateCartUI();
+      updateCartDOM();
+    } else {
+      showToast('Error vaciando el carrito', 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error clearing cart:', error);
+    showToast('Error vaciando el carrito', 'error');
+  });
+}
+
+function updateCartUI() {
+  // Usar el valor de cartCount del backend si está disponible
+  const cartCount = window.cart.cartCount !== undefined ? window.cart.cartCount : window.cart.count;
+  const cartCountElements = document.querySelectorAll('[data-cart-count]');
+  console.log('Cart count elements encontrados:', cartCountElements.length);
+  cartCountElements.forEach(element => {
+    element.textContent = cartCount;
+    console.log('Actualizando badge:', element, 'con valor:', cartCount);
+    if (cartCount > 0) {
+      element.classList.remove('d-none');
+      element.style.display = 'flex';
+    } else {
+      element.classList.add('d-none');
+      element.style.display = 'none';
+    }
+  });
+
+  // Update cart totals
+  const subtotalElements = document.querySelectorAll('[data-cart-subtotal]');
+  subtotalElements.forEach(element => {
+    element.textContent = formatPrice(window.cart.subtotal);
+  });
+
+  // Update delivery fee
+  const deliveryFeeElements = document.querySelectorAll('[data-cart-delivery-fee]');
+  deliveryFeeElements.forEach(element => {
+    element.textContent = formatPrice(window.cart.deliveryFee);
+  });
+
+  const totalElements = document.querySelectorAll('[data-cart-total]');
+  totalElements.forEach(element => {
+    element.textContent = formatPrice(window.cart.total);
+  });
+
+  // Update cart dropdown
+  updateCartDropdown();
+}
+
+function updateCartDropdown() {
+  const cartDropdown = document.getElementById('cart-dropdown');
+  if (!cartDropdown) return;
+
+  if (!window.cart.items || window.cart.items.length === 0) {
+    cartDropdown.innerHTML = `
+      <div class="p-3 text-center text-muted">
+        <i class="fas fa-shopping-cart fs-1 mb-2"></i>
+        <p>Tu carrito está vacío</p>
+      </div>
+    `;
+  } else {
+    let html = '';
+    window.cart.items.forEach(item => {
+      const itemPrice = item.price || item.precio || 0;
+      const itemQuantity = item.quantity || item.cantidad || 0;
+      html += `
+        <div class="cart-item d-flex align-items-center p-2">
+          <img src="${item.imagen.startsWith('/uploads/') ? item.imagen : '/uploads/' + (item.imagen || 'no-image.png')}" 
+               alt="${item.name}" class="rounded me-2" width="40" height="40">
+          <div class="flex-grow-1">
+            <h6 class="mb-0 small">${item.name}</h6>
+            <small class="text-muted">$${itemPrice.toFixed(2)} x ${itemQuantity}</small>
+          </div>
+          <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${item.producto_id})">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `;
+    });
+    
+    html += `
+      <div class="p-2 border-top">
+        <div class="d-flex justify-content-between mb-2">
+          <div>
+            <strong>Subtotal:</strong>
+            <br>
+            <span class="text-muted">$${(window.cart.subtotal || 0).toFixed(2)}</span>
+          </div>
+          <small class="text-muted ms-2">(ver total en carrito)</small>
+        </div>
+        <div class="d-grid gap-2">
+          <a href="/cart" class="btn btn-primary">Ver Carrito</a>
+          <button class="btn btn-danger btn-delete-cart" onclick="clearCart()">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `;
+    
+    cartDropdown.innerHTML = html;
+  }
+}
+
+// Notifications
+function showToast(message, type = 'success') {
+  // Remove any existing toasts
+  const existingToast = document.querySelector('.custom-toast-container');
+  if (existingToast) {
+    existingToast.remove();
+  }
+
+  const toastContainer = document.createElement('div');
+  toastContainer.className = 'custom-toast-container';
+
+  const toast = document.createElement('div');
+  toast.className = `toast align-items-center text-white bg-${type} border-0`;
+  toast.setAttribute('role', 'alert');
+  toast.setAttribute('aria-live', 'assertive');
+  toast.setAttribute('aria-atomic', 'true');
+
+  const toastBody = document.createElement('div');
+  toastBody.className = 'd-flex';
+
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'toast-body';
+  messageDiv.textContent = message;
+
+  const closeButton = document.createElement('button');
+  closeButton.type = 'button';
+  closeButton.className = 'btn-close btn-close-white me-2 m-auto';
+  closeButton.setAttribute('data-bs-dismiss', 'toast');
+  closeButton.setAttribute('aria-label', 'Close');
+
+  toastBody.appendChild(messageDiv);
+  toastBody.appendChild(closeButton);
+  toast.appendChild(toastBody);
+  toastContainer.appendChild(toast);
+  document.body.appendChild(toastContainer);
+
+  const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+  bsToast.show();
+
+  setTimeout(() => {
+    bsToast.hide();
+  }, 3000);
+
+  closeButton.addEventListener('click', () => {
+    bsToast.hide();
+  });
+
+  toast.addEventListener('hidden.bs.toast', () => {
+    toastContainer.remove();
+  });
+}
+
+// Función para mostrar notificaciones (alias de showToast para compatibilidad)
+function showNotification(message, type = 'success') {
+  showToast(message, type);
+}
+
+// Funciones para manejar cantidad
+function increaseQuantity(productId) {
+  console.log('Aumentando cantidad para producto:', productId);
+  updateCartItemQuantity(productId, 1);
+}
+
+function decreaseQuantity(productId) {
+  console.log('Disminuyendo cantidad para producto:', productId);
+  updateCartItemQuantity(productId, -1);
+}
+
+// --- FUNCIONES DE SIDEBAR Y CANTIDAD DEL CARRITO UNIFICADAS ---
+
+// Flag para evitar múltiples ejecuciones simultáneas
+let isCartToggleInProgress = false;
+
+// Alternar la visibilidad del sidebar del carrito
+async function toggleCartSidebar(event) {
+  if (event) {
+    event.preventDefault();
+  }
+  
+  // Evitar múltiples ejecuciones simultáneas
+  if (isCartToggleInProgress) {
+    console.log('Cart toggle already in progress, ignoring');
+    return;
+  }
+  
+  isCartToggleInProgress = true;
+  
+  console.log('toggleCartSidebar called');
+  
+  const overlay = document.getElementById('cartOverlay');
+  const sidebar = document.getElementById('cartSidebar');
+  
+  if (!overlay) {
+    console.error('No se encontró el overlay del carrito');
+    isCartToggleInProgress = false;
+    return;
+  }
+
+  try {
+    // Si el sidebar está abierto, cerrarlo
+    if (sidebar && sidebar.classList.contains('show')) {
+      console.log('Cerrando carrito');
+      closeCartSidebar();
+    } else {
+      // Si el sidebar está cerrado, abrirlo
+      console.log('Abriendo carrito');
+      if (sidebar) {
+        await renderCartSidebarWithEjs();
+        sidebar.classList.add('show');
+        overlay.classList.add('show');
+        document.body.style.overflow = 'hidden';
+        document.body.classList.add('cart-open');
+      } else {
+        // Si no existe el sidebar, renderizarlo y mostrarlo
+        await renderCartSidebarWithEjs();
+        const newSidebar = document.getElementById('cartSidebar');
+        if (newSidebar) {
+          newSidebar.classList.add('show');
+          overlay.classList.add('show');
+          document.body.style.overflow = 'hidden';
+          document.body.classList.add('cart-open');
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error in toggleCartSidebar:', error);
+  } finally {
+    // Resetear el flag después de un pequeño delay
+    setTimeout(() => {
+      isCartToggleInProgress = false;
+    }, 100);
+  }
+}
+
+// Cerrar el sidebar del carrito
+function closeCartSidebar() {
+  console.log('closeCartSidebar called');
+  
+  const sidebar = document.getElementById('cartSidebar');
+  const overlay = document.getElementById('cartOverlay');
+  
+  if (sidebar) {
+    sidebar.classList.remove('show');
+  }
+  
+  if (overlay) {
+    overlay.classList.remove('show');
+  }
+  
+  document.body.style.overflow = '';
+  document.body.classList.remove('cart-open');
+}
+
+// Cambiar la cantidad de un producto en el carrito (usado por los botones +/-)
+async function updateCartItemQuantity(productId, change, btnElem) {
+  try {
+    if (btnElem) {
+      btnElem.disabled = true;
+      btnElem.classList.add('pulse-anim');
+    }
+    
+    const response = await fetch('/cart/update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ productId, change })
+    });
+    
+    const data = await response.json();
+    
+    if (btnElem) {
+      btnElem.disabled = false;
+      btnElem.classList.remove('pulse-anim');
+      btnElem.closest('.cart-item, .row, .d-flex')?.classList.add('added-flash');
+      setTimeout(() => {
+        btnElem.closest('.cart-item, .row, .d-flex')?.classList.remove('added-flash');
+      }, 700);
+    }
+    
+    if (data.success) {
+      console.log('✅ Respuesta exitosa del servidor:', data);
+      showToast('Cantidad actualizada', 'success');
+      // Actualizar el carrito en tiempo real sin recargar la página
+      await renderCartSidebarWithEjs();
+    } else {
+      showToast(data.message || 'Error actualizando el carrito', 'error');
+    }
+  } catch (error) {
+    if (btnElem) {
+      btnElem.disabled = false;
+      btnElem.classList.remove('pulse-anim');
+    }
+    console.error('Error en updateCartItemQuantity:', error);
+    showToast('Error actualizando el carrito', 'error');
+  }
+}
+
+// Función para actualizar la interfaz de un item específico del carrito
+function updateCartItemUI(productId, newQuantity, newPrice) {
+  console.log('🔄 Actualizando UI del item:', { productId, newQuantity, newPrice });
+  
+  // Buscar el elemento del carrito en la página actual
+  const cartItems = document.querySelectorAll('.cart-item');
+  let cartItem = null;
+  
+  for (const item of cartItems) {
+    const button = item.querySelector(`[data-producto-id="${productId}"]`);
+    if (button) {
+      cartItem = item;
+      break;
+    }
+  }
+  
+  if (!cartItem) {
+    console.log('❌ No se encontró el cart-item para productId:', productId);
+    return;
+  }
+  
+  // Actualizar la cantidad
+  const quantitySpan = cartItem.querySelector('.mx-2');
+  if (quantitySpan) {
+    console.log('✅ Actualizando cantidad de', quantitySpan.textContent, 'a', newQuantity);
+    quantitySpan.textContent = newQuantity;
+  } else {
+    console.log('❌ No se encontró el span de cantidad');
+  }
+  
+  // Actualizar el precio total del item
+  const priceElement = cartItem.querySelector('.price strong');
+  if (priceElement) {
+    console.log('✅ Actualizando precio de', priceElement.textContent, 'a', `$${newPrice.toFixed(2)}`);
+    priceElement.textContent = `$${newPrice.toFixed(2)}`;
+  } else {
+    console.log('❌ No se encontró el elemento de precio');
+  }
+  
+  // Si la cantidad es 0, remover el item visualmente
+  if (newQuantity <= 0) {
+    console.log('🗑️ Eliminando item con cantidad 0');
+    cartItem.style.opacity = '0.5';
+    setTimeout(() => {
+      cartItem.remove();
+      // Si no quedan items, recargar la página
+      const remainingItems = document.querySelectorAll('.cart-item');
+      if (remainingItems.length === 0) {
+        location.reload();
+      }
+    }, 300);
+  }
+}
+
+// Función para actualizar los totales del carrito
+function updateCartTotals(subtotal, deliveryFee, total) {
+  // Actualizar subtotal
+  const subtotalElement = document.querySelector('.d-flex.justify-content-between.mb-2:first-child strong');
+  if (subtotalElement) {
+    subtotalElement.textContent = `$${subtotal.toFixed(2)}`;
+  }
+  
+  // Actualizar total
+  const totalElement = document.querySelector('.d-flex.justify-content-between.mb-3 strong');
+  if (totalElement) {
+    totalElement.textContent = `$${total.toFixed(2)}`;
+  }
+}
+
+// Hacer globales las funciones para acceso desde HTML (asegurar que esté antes de cualquier uso en HTML)
+window.toggleCartSidebar = toggleCartSidebar;
+window.closeCartSidebar = closeCartSidebar;
+window.updateCartItemQuantity = updateCartItemQuantity;
+window.increaseQuantity = increaseQuantity;
+window.decreaseQuantity = decreaseQuantity;
+window.removeFromCart = removeFromCart;
+window.clearCart = clearCart;
+window.addToCart = addToCart;
+window.showToast = showToast;
+window.showNotification = showNotification;
+window.toggleUserMenu = toggleUserMenu;
+window.closeUserMenu = closeUserMenu;
+
+// Listeners para cerrar el sidebar con overlay o Escape
+function initializeCartSidebarEvents() {
+  // Event listener para el overlay del carrito
+  const overlay = document.getElementById('cartOverlay');
+  if (overlay) {
+    overlay.addEventListener('click', function(e) {
+      // Solo cerrar si se hace clic directamente en el overlay, no en el sidebar
+      if (e.target === overlay) {
+        closeCartSidebar();
+      }
+    });
+  }
+  
+  // Event listener para cerrar con Escape
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+      closeCartSidebar();
+    }
+  });
+  
+  // Event listener para el botón de cerrar del sidebar
+  const closeBtn = document.getElementById('cartSidebarClose');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeCartSidebar);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await initializeApp();
+  initializeAllCartEventListeners();
+});
+
+// Función para actualizar los datos del carrito
+function updateCartData() {
+  console.log('Actualizando carrito con datos:', window.cart.items);
   const data = {
-    productId: productId,
-    quantity: quantity
+    items: window.cart.items
   };
 
   fetch('/cart/update', {
@@ -183,161 +1005,21 @@ function updateCartItem(productId, quantity) {
   })
   .then(response => response.json())
   .then(data => {
+    console.log('Respuesta del servidor:', data);
     if (data.success) {
       loadCartData();
     } else {
-      showNotification(data.message, 'error');
+      console.error('Error en respuesta del servidor:', data);
+      showToast('Error actualizando el carrito', 'error');
     }
   })
   .catch(error => {
-    console.error('Error updating cart:', error);
-    showNotification('Error actualizando el carrito', 'error');
+    console.error('Error:', error);
+    showToast('Error actualizando el carrito', 'error');
   });
 }
 
-function removeFromCart(productId) {
-  const data = {
-    productId: productId
-  };
-
-  fetch('/cart/remove', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data)
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      showNotification(data.message, 'success');
-      loadCartData();
-    } else {
-      showNotification(data.message, 'error');
-    }
-  })
-  .catch(error => {
-    console.error('Error removing from cart:', error);
-    showNotification('Error eliminando del carrito', 'error');
-  });
-}
-
-function clearCart() {
-  fetch('/cart/clear', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      showNotification(data.message, 'success');
-      loadCartData();
-    } else {
-      showNotification('Error limpiando el carrito', 'error');
-    }
-  })
-  .catch(error => {
-    console.error('Error clearing cart:', error);
-    showNotification('Error limpiando el carrito', 'error');
-  });
-}
-
-function updateCartUI() {
-  // Update cart badge
-  const cartBadges = document.querySelectorAll('.cart-badge');
-  cartBadges.forEach(badge => {
-    if (alamesa.cart.count > 0) {
-      badge.textContent = alamesa.cart.count;
-      badge.style.display = 'flex';
-    } else {
-      badge.style.display = 'none';
-    }
-  });
-
-  // Update cart dropdown if exists
-  const cartDropdown = document.getElementById('cart-dropdown');
-  if (cartDropdown) {
-    updateCartDropdown();
-  }
-}
-
-function updateCartDropdown() {
-  const cartDropdown = document.getElementById('cart-dropdown');
-  if (!cartDropdown) return;
-
-  if (alamesa.cart.items.length === 0) {
-    cartDropdown.innerHTML = `
-      <div class="p-3 text-center text-muted">
-        <i class="fas fa-shopping-cart fs-1 mb-2"></i>
-        <p>Tu carrito está vacío</p>
-      </div>
-    `;
-  } else {
-    let html = '';
-    alamesa.cart.items.forEach(item => {
-      html += `
-        <div class="cart-item d-flex align-items-center p-2">
-          <img src="${item.imagen || '/images/no-image.png'}" 
-               alt="${item.name}" class="rounded me-2" width="40" height="40">
-          <div class="flex-grow-1">
-            <h6 class="mb-0 small">${item.name}</h6>
-            <small class="text-muted">$${item.price} x ${item.quantity}</small>
-          </div>
-          <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${item.productId})">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-      `;
-    });
-    
-    html += `
-      <div class="p-2 border-top">
-        <div class="d-flex justify-content-between mb-2">
-          <strong>Total: $${alamesa.cart.total.toFixed(2)}</strong>
-        </div>
-        <a href="/cart" class="btn btn-primary w-100">Ver Carrito</a>
-      </div>
-    `;
-    
-    cartDropdown.innerHTML = html;
-  }
-}
-
-// Notifications
-function showNotification(message, type = 'info') {
-  const toast = document.getElementById('liveToast');
-  if (!toast) return;
-
-  const toastBody = toast.querySelector('.toast-body');
-  const toastHeader = toast.querySelector('.toast-header');
-  
-  // Update content
-  toastBody.textContent = message;
-  
-  // Update style based on type
-  toast.className = 'toast';
-  toastHeader.className = 'toast-header';
-  
-  switch (type) {
-    case 'success':
-      toast.classList.add('text-bg-success');
-      break;
-    case 'error':
-      toast.classList.add('text-bg-danger');
-      break;
-    case 'warning':
-      toast.classList.add('text-bg-warning');
-      break;
-    default:
-      toast.classList.add('text-bg-info');
-  }
-
-  const bsToast = new bootstrap.Toast(toast);
-  bsToast.show();
-}
-
+// Función para mostrar confirmación de limpiar carrito
 function showClearCartConfirmation(newRestaurant, productId, quantity, specialInstructions) {
   const confirmed = confirm(
     `Tu carrito contiene productos de otro restaurante. ¿Quieres limpiarlo y agregar productos de ${newRestaurant}?`
@@ -371,14 +1053,18 @@ function formatDate(dateString) {
 }
 
 function getUserData() {
-  const userScript = document.querySelector('script[data-user]');
+  const userScript = document.getElementById('user-data-script');
   if (userScript) {
     try {
-      return JSON.parse(userScript.dataset.user);
+      const userData = JSON.parse(userScript.textContent); // <-- usar textContent, no dataset.user
+      console.log('DEBUG: getUserData - User data from script tag:', userData);
+      return userData;
     } catch (e) {
+      console.error('Error parsing user data from script tag:', e);
       return null;
     }
   }
+  console.log('DEBUG: getUserData - No script with id user-data-script found.');
   return null;
 }
 
@@ -389,8 +1075,8 @@ function getStatusText(status) {
     'preparing': 'en preparación',
     'ready': 'listo para entregar',
     'en_camino': 'en camino',
-    'delivered': 'entregado',
-    'cancelled': 'cancelado'
+    'entregado': 'entregado',
+    'cancelado': 'cancelado'
   };
   return statusTexts[status] || status;
 }
@@ -401,7 +1087,7 @@ function updateOrderStatus(orderId, status) {
     const statusBadge = orderElement.querySelector('.order-status');
     if (statusBadge) {
       statusBadge.textContent = getStatusText(status);
-      statusBadge.className = `badge status-${status}`;
+      statusBadge.className = `badge order-status status-${status}`;
     }
   }
 }
@@ -639,228 +1325,322 @@ function reverseGeocode(latitude, longitude) {
               if (city) {
                 address += `, ${city}`;
               }
-            } else {
-              address = data.display_name;
             }
-          } else {
-            address = data.display_name;
           }
-          
-          resolve(address);
-        } else {
-          reject('No address found');
         }
+        resolve(address);
       })
-      .catch(reject);
+      .catch(error => {
+        reject(error);
+      });
   });
 }
 
 function updateLocationDisplay(address) {
   const locationDisplay = document.getElementById('currentLocation');
   if (locationDisplay) {
-    locationDisplay.innerHTML = `
-      <i class="fas fa-map-marker-alt text-primary me-2"></i>
-      <span>${address}</span>
-    `;
-    locationDisplay.style.display = 'block';
+    locationDisplay.textContent = address;
   }
 }
 
-function saveLocation(address, latitude = null, longitude = null) {
-  const locationData = {
-    address: address,
-    latitude: latitude,
-    longitude: longitude,
-    timestamp: Date.now()
-  };
-  
-  localStorage.setItem('alamesa_location', JSON.stringify(locationData));
+function saveLocation(address, latitude, longitude) {
+  // Implementa la lógica para guardar la ubicación en el servidor o en localStorage
 }
 
 function loadSavedLocation() {
-  const saved = localStorage.getItem('alamesa_location');
-  if (!saved) return;
+  // Implementa la lógica para cargar la ubicación guardada desde localStorage
+}
+
+// Alternar la visibilidad del menú de usuario móvil
+function toggleUserMenu(event) {
+  console.log('toggleUserMenu ejecutado');
   
-  try {
-    const locationData = JSON.parse(saved);
-    const locationInput = document.getElementById('userLocation');
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  
+  const overlay = document.getElementById('userMenuOverlay');
+  const sidebar = document.getElementById('userMenuSidebar');
+  const container = document.querySelector('.user-menu-container');
+  
+  if (!overlay || !sidebar || !container) {
+    console.error('No se encontró el menú de usuario (overlay, sidebar o container)');
+    return;
+  }
+
+  console.log('Estado inicial: container.classList.contains(\'show\')', container.classList.contains('show'));
+  console.log('Estado inicial: overlay.classList.contains(\'show\')', overlay.classList.contains('show'));
+  console.log('Estado inicial: sidebar.classList.contains(\'show\')', sidebar.classList.contains('show'));
+
+  // Si ya está abierto, ciérralo
+  if (container.classList.contains('show')) {
+    console.log('Cerrando menú de usuario desde toggleUserMenu');
+    closeUserMenu();
+    return;
+  }
+
+  console.log('Abriendo menú de usuario');
+  
+  // Renderizar el contenido antes de mostrar
+  renderUserMenuSidebar();
+  
+  // Mostrar overlay, sidebar y container
+  container.classList.add('show');
+  overlay.classList.add('show');
+  sidebar.classList.add('show');
+  document.body.style.overflow = 'hidden';
+
+  // Asegurarse de que el user-menu-body también se muestre
+  const userMenuBody = document.querySelector('.user-menu-body');
+  if (userMenuBody) {
+    userMenuBody.classList.add('show');
+  }
+  
+  console.log('Estado final: container.classList.contains(\'show\')', container.classList.contains('show'));
+  console.log('Estado final: overlay.classList.contains(\'show\')', overlay.classList.contains('show'));
+  console.log('Estado final: sidebar.classList.contains(\'show\')', sidebar.classList.contains('show'));
+  console.log('Menú de usuario abierto');
+}
+
+// Cerrar el menú de usuario móvil
+function closeUserMenu() {
+  console.log('closeUserMenu ejecutado');
+  
+  const sidebar = document.getElementById('userMenuSidebar');
+  const overlay = document.getElementById('userMenuOverlay');
+  const container = document.querySelector('.user-menu-container');
+  
+  if (sidebar && overlay && container) {
+    console.log('Cerrando menú de usuario');
     
-    // Check if location is not too old (24 hours)
-    const isOld = Date.now() - locationData.timestamp > 24 * 60 * 60 * 1000;
-    
-    if (locationInput && !locationInput.value.trim() && !isOld) {
-      locationInput.value = locationData.address;
-      updateLocationDisplay(locationData.address);
+    // Remover clases de show
+    sidebar.classList.remove('show');
+    overlay.classList.remove('show');
+    container.classList.remove('show');
+
+    // Asegurarse de que el user-menu-body también se oculte
+    const userMenuBody = document.querySelector('.user-menu-body');
+    if (userMenuBody) {
+      userMenuBody.classList.remove('show');
     }
-  } catch (error) {
-    console.error('Error loading saved location:', error);
-  }
-}
-
-function clearSavedLocation() {
-  localStorage.removeItem('alamesa_location');
-  const locationInput = document.getElementById('userLocation');
-  const locationDisplay = document.getElementById('currentLocation');
-  
-  if (locationInput) {
-    locationInput.value = '';
-  }
-  
-  if (locationDisplay) {
-    locationDisplay.style.display = 'none';
-  }
-}
-
-// Address autocomplete functionality
-function initializeAddressAutocomplete() {
-  const addressInputs = document.querySelectorAll('.address-autocomplete');
-  
-  addressInputs.forEach(input => {
-    let timeout;
     
-    input.addEventListener('input', function() {
-      clearTimeout(timeout);
-      
-      timeout = setTimeout(() => {
-        const query = this.value.trim();
-        if (query.length > 3) {
-          searchAddresses(query, this);
-        }
-      }, 300);
-    });
-  });
-}
+    // Restaurar overflow del body
+    document.body.style.overflow = '';
+    
+    console.log('Estado final: container.classList.contains(\'show\')', container.classList.contains('show'));
+    console.log('Estado final: overlay.classList.contains(\'show\')', overlay.classList.contains('show'));
+    console.log('Estado final: sidebar.classList.contains(\'show\')', sidebar.classList.contains('show'));
 
-function searchAddresses(query, inputElement) {
-  // Using OpenStreetMap Nominatim for address search
-  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=ar&q=${encodeURIComponent(query)}`;
-  
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      showAddressSuggestions(data, inputElement);
-    })
-    .catch(error => {
-      console.error('Error searching addresses:', error);
-    });
-}
-
-function showAddressSuggestions(addresses, inputElement) {
-  // Remove existing suggestions
-  const existingSuggestions = document.querySelector('.address-suggestions');
-  if (existingSuggestions) {
-    existingSuggestions.remove();
+    // Limpiar estilos inline después de la animación
+    setTimeout(() => {
+      if (sidebar && !sidebar.classList.contains('show')) {
+        sidebar.style = '';
+        console.log('Menú de usuario cerrado completamente');
+      }
+    }, 350);
   }
+}
+
+// Renderizar el contenido del menú de usuario
+function renderUserMenuSidebar() {
+  const sidebar = document.getElementById('userMenuSidebar');
+  if (!sidebar) return;
+
+  // Obtener datos del usuario desde el script data-user
+  const userScript = document.getElementById('user-data-script');
+  let user = null;
+  let isAuthenticated = false;
   
-  if (!addresses || addresses.length === 0) return;
+  if (userScript) {
+    try {
+      user = JSON.parse(userScript.textContent); // <-- usar textContent, no dataset.user
+      isAuthenticated = user && user.id;
+    } catch (e) {
+      console.error('Error parsing user data:', e);
+    }
+  }
+
+  let menuContent = '';
   
-  const suggestions = document.createElement('div');
-  suggestions.className = 'address-suggestions list-group position-absolute w-100';
-  suggestions.style.zIndex = '1000';
-  suggestions.style.maxHeight = '200px';
-  suggestions.style.overflowY = 'auto';
-  
-  addresses.forEach(address => {
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.className = 'list-group-item list-group-item-action';
-    item.innerHTML = `
-      <div class="d-flex align-items-center">
-        <i class="fas fa-map-marker-alt text-muted me-2"></i>
-        <span>${address.display_name}</span>
+  if (isAuthenticated && user) {
+    // Usuario autenticado
+    menuContent = `
+      <div class="user-menu-header">
+        <button class="user-menu-close" onclick="closeUserMenu()">
+          <i class="fas fa-times"></i>
+        </button>
+        <h5><i class="fas fa-user me-2"></i>${user.nombre || 'Usuario'}</h5>
+        <p>${user.email || ''}</p>
+      </div>
+      <div class="user-menu-body">
+        ${user.tipo_usuario === 'admin' ? `
+          <a href="/admin/dashboard" class="user-menu-item">
+            <i class="fas fa-tools"></i>
+            Panel Admin
+          </a>
+        ` : ''}
+        ${user.tipo_usuario === 'restaurante' ? `
+          <a href="/dashboard" class="user-menu-item">
+            <i class="fas fa-store"></i>
+            Mi Restaurante
+          </a>
+        ` : ''}
+        <a href="/auth/profile" class="user-menu-item">
+          <i class="fas fa-user"></i>
+          Mi Perfil
+        </a>
+        <a href="/orders/history" class="user-menu-item">
+          <i class="fas fa-list"></i>
+          Mis Pedidos
+        </a>
+        <div class="user-menu-divider"></div>
+        <form action="/auth/logout" method="GET" class="d-inline">
+          <button type="submit" class="user-menu-item danger w-100 text-start border-0 bg-transparent">
+            <i class="fas fa-sign-out-alt"></i>
+            Cerrar Sesión
+          </button>
+        </form>
       </div>
     `;
-    
-    item.addEventListener('click', () => {
-      inputElement.value = address.display_name;
-      suggestions.remove();
-      
-      // Save coordinates if available
-      if (address.lat && address.lon) {
-        saveLocation(address.display_name, parseFloat(address.lat), parseFloat(address.lon));
+  } else {
+    // Usuario no autenticado
+    menuContent = `
+      <div class="user-menu-header">
+        <button class="user-menu-close" onclick="closeUserMenu()">
+          <i class="fas fa-times"></i>
+        </button>
+        <h5><i class="fas fa-user me-2"></i>Mi Cuenta</h5>
+        <p>Inicia sesión o regístrate</p>
+      </div>
+      <div class="user-menu-body">
+        <a href="/auth/login" class="user-menu-item">
+          <i class="fas fa-sign-in-alt"></i>
+          Ingresar
+        </a>
+        <a href="/auth/register" class="user-menu-item">
+          <i class="fas fa-user-plus"></i>
+          Registrarse
+        </a>
+      </div>
+    `;
+  }
+  
+  sidebar.innerHTML = menuContent;
+}
+
+// Función centralizada para inicializar todos los event listeners del carrito
+function initializeAllCartEventListeners() {
+  console.log('Initializing all cart event listeners');
+  
+  // Remover todos los event listeners previos para evitar duplicados
+  const allCartElements = document.querySelectorAll('.cart-icon-container, #cartSidebarToggle, a[href="/cart"]');
+  allCartElements.forEach(element => {
+    // Clonar el elemento para remover todos los event listeners
+    const newElement = element.cloneNode(true);
+    element.parentNode.replaceChild(newElement, element);
+  });
+  
+  // Asignar event listeners al carrito del header (si existe)
+  const cartSidebarToggle = document.getElementById('cartSidebarToggle');
+  if (cartSidebarToggle) {
+    cartSidebarToggle.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('Header cart clicked');
+      toggleCartSidebar(e);
+    });
+  }
+  
+  // Asignar event listeners a todos los iconos del carrito (incluyendo móvil)
+  const cartIconContainers = document.querySelectorAll('.cart-icon-container');
+  cartIconContainers.forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('Cart icon clicked');
+      toggleCartSidebar(e);
+    });
+  });
+  
+  // Asignar event listeners a enlaces del carrito
+  const cartLinks = document.querySelectorAll('a[href="/cart"]');
+  cartLinks.forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('Cart link clicked');
+      toggleCartSidebar(e);
+    });
+  });
+  
+  // Inicializar eventos del sidebar
+  initializeCartSidebarEvents();
+}
+
+// Dashboard Mobile Overlay Menu functions
+function setupDashboardMobileOverlay() {
+  const moreBtn = document.getElementById('dashboardMoreBtn');
+  const overlayMenu = document.getElementById('dashboardMobileOverlayMenu');
+  const closeBtn = document.getElementById('closeDashboardOverlayBtn');
+
+  if (moreBtn && overlayMenu && closeBtn) {
+    moreBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      overlayMenu.classList.add('show');
+      document.body.classList.add('overlay-open');
+    });
+
+    closeBtn.addEventListener('click', () => {
+      overlayMenu.classList.remove('show');
+      document.body.classList.remove('overlay-open');
+    });
+
+    // Close when clicking outside (on the overlay itself)
+    overlayMenu.addEventListener('click', (e) => {
+      if (e.target === overlayMenu) {
+        overlayMenu.classList.remove('show');
+        document.body.classList.remove('overlay-open');
       }
     });
-    
-    suggestions.appendChild(item);
-  });
-  
-  // Position suggestions
-  const inputRect = inputElement.getBoundingClientRect();
-  const parent = inputElement.parentElement;
-  parent.style.position = 'relative';
-  parent.appendChild(suggestions);
-  
-  // Close suggestions when clicking outside
-  document.addEventListener('click', function closeSuggestions(e) {
-    if (!suggestions.contains(e.target) && e.target !== inputElement) {
-      suggestions.remove();
-      document.removeEventListener('click', closeSuggestions);
-    }
-  });
+  }
 }
+document.addEventListener('DOMContentLoaded', setupDashboardMobileOverlay);
 
-// Initialize address autocomplete on DOM ready
-document.addEventListener('DOMContentLoaded', function() {
-  initializeAddressAutocomplete();
-});
+// Sidebar móvil admin (funciona en /admin* y /dashboard*)
+function setupAdminSidebarMobile() {
+    const triggers = document.querySelectorAll('.admin-sidebar-mobile-trigger');
+    const sidebar = document.getElementById('adminSidebarMobile');
+    const overlay = document.getElementById('adminSidebarMobileOverlay');
+    const closeBtn = document.querySelector('.close-admin-sidebar-mobile');
 
-// Función para manejar imágenes por defecto
-function handleDefaultImage(imgElement, type = 'restaurant') {
-    const defaultImages = {
-        restaurant: '/images/no-image.png',
-        product: '/images/no-image.png',
-        category: '/images/no-image.png',
-        user: '/images/no-image.png'
-    };
-
-    // Si la imagen no existe o falla, usar el placeholder
-    imgElement.onerror = function() {
-        console.log(`Error cargando imagen: ${this.src}`);
-        this.onerror = null; // Prevenir loop infinito
-        this.src = defaultImages[type];
-    };
-
-    // Solo validar si la imagen es null o undefined
-    if (!imgElement.src || 
-        imgElement.src.endsWith('null') || 
-        imgElement.src.endsWith('undefined')) {
-        console.log(`Imagen inválida: ${imgElement.src}`);
-        imgElement.src = defaultImages[type];
+    triggers.forEach(trigger => {
+        if (trigger && sidebar && overlay) {
+            trigger.addEventListener('click', function(e) {
+                e.preventDefault();
+                sidebar.classList.add('open');
+                overlay.classList.add('open');
+                sidebar.style.display = 'block';
+                overlay.style.display = 'block';
+            });
+        }
+    });
+    if (closeBtn && sidebar && overlay) {
+        closeBtn.addEventListener('click', function() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            setTimeout(() => {
+                sidebar.style.display = 'none';
+                overlay.style.display = 'none';
+            }, 300);
+        });
+    }
+    if (overlay && sidebar) {
+        overlay.addEventListener('click', function() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            setTimeout(() => {
+                sidebar.style.display = 'none';
+                overlay.style.display = 'none';
+            }, 300);
+        });
     }
 }
-
-// Inicializar manejo de imágenes por defecto
-document.addEventListener('DOMContentLoaded', function() {
-    // Manejar imágenes de restaurantes
-    document.querySelectorAll('.restaurant-image, .restaurant-logo, .restaurant-banner').forEach(img => {
-        handleDefaultImage(img, 'restaurant');
-    });
-
-    // Manejar imágenes de productos
-    document.querySelectorAll('.product-image').forEach(img => {
-        handleDefaultImage(img, 'product');
-    });
-
-    // Manejar imágenes de categorías
-    document.querySelectorAll('.category-image').forEach(img => {
-        handleDefaultImage(img, 'category');
-    });
-
-    // Manejar imágenes de usuarios
-    document.querySelectorAll('.user-image, .profile-image').forEach(img => {
-        handleDefaultImage(img, 'user');
-    });
-});
-
-// Export global functions
-window.alamesa = alamesa;
-window.addToCart = addToCart;
-window.updateCartItem = updateCartItem;
-window.removeFromCart = removeFromCart;
-window.clearCart = clearCart;
-window.showNotification = showNotification;
-window.formatPrice = formatPrice;
-window.formatDate = formatDate;
-window.performSearch = performSearch;
-window.getCurrentLocation = getCurrentLocation;
-window.clearSavedLocation = clearSavedLocation;
+document.addEventListener('DOMContentLoaded', setupAdminSidebarMobile);

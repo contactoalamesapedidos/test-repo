@@ -1,300 +1,720 @@
+<link rel="stylesheet" href="/css/carousel-home.css">
 <%- contentFor('body') %>
 
-
-
-<!-- Categories Section -->
-<section class="py-5">
-    <div class="container">
-        <div class="row mb-5">
-            <div class="col-12 text-center">
-                <h2 class="fw-bold mb-3">Explora por Categorías</h2>
-                <p class="text-muted">Encuentra exactamente lo que buscas</p>
-            </div>
-        </div>
-        
-        <div class="row g-4">
-            <% categories.forEach(category => { %>
-                <div class="col-6 col-md-4 col-lg-3">
-                    <a href="/search?category=<%= encodeURIComponent(category.nombre) %>" 
-                       class="text-decoration-none">
-                        <div class="card h-100 shadow-sm border-0 card-hover">
-                            <div class="card-body text-center p-4">
-                                <div class="category-icon mb-3">
-                                    <% if (category.nombre.toLowerCase().includes('pizza')) { %>
-                                        <img src="https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=200&h=200&q=80" 
-                                             alt="<%= category.nombre %>" 
-                                             class="rounded-circle" 
-                                             width="60" 
-                                             height="60">
-                                    <% } else if (category.nombre.toLowerCase().includes('asiática')) { %>
-                                        <img src="https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=200&h=200&q=80" 
-                                             alt="<%= category.nombre %>" 
-                                             class="rounded-circle" 
-                                             width="60" 
-                                             height="60">
-                                    <% } else if (category.nombre.toLowerCase().includes('italiana')) { %>
-                                        <img src="https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=200&h=200&q=80" 
-                                             alt="<%= category.nombre %>" 
-                                             class="rounded-circle" 
-                                             width="60" 
-                                             height="60">
-                                    <% } else if (category.nombre.toLowerCase().includes('mexicana')) { %>
-                                        <img src="https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=200&h=200&q=80" 
-                                             alt="<%= category.nombre %>" 
-                                             class="rounded-circle" 
-                                             width="60" 
-                                             height="60">
-                                    <% } else if (category.nombre.toLowerCase().includes('saludable')) { %>
-                                        <img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=200&h=200&q=80" 
-                                             alt="<%= category.nombre %>" 
-                                             class="rounded-circle" 
-                                             width="60" 
-                                             height="60">
-                                    <% } else if (category.nombre.toLowerCase().includes('postres')) { %>
-                                        <img src="https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=200&h=200&q=80" 
-                                             alt="<%= category.nombre %>" 
-                                             class="rounded-circle" 
-                                             width="60" 
-                                             height="60">
-                                    <% } else if (category.nombre.toLowerCase().includes('rápida')) { %>
-                                        <img src="https://images.unsplash.com/photo-1551782450-a2132b4ba21d?auto=format&fit=crop&w=200&h=200&q=80" 
-                                             alt="<%= category.nombre %>" 
-                                             class="rounded-circle" 
-                                             width="60" 
-                                             height="60">
-                                    <% } else if (category.nombre.toLowerCase().includes('parrilla')) { %>
-                                        <img src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=200&h=200&q=80" 
-                                             alt="<%= category.nombre %>" 
-                                             class="rounded-circle" 
-                                             width="60" 
-                                             height="60">
-                                    <% } else { %>
-                                        <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=200&h=200&q=80" 
-                                             alt="<%= category.nombre %>" 
-                                             class="rounded-circle" 
-                                             width="60" 
-                                             height="60">
-                                    <% } %>
-                                </div>
-                                <h6 class="fw-semibold text-dark"><%= category.nombre %></h6>
-                                <% if (category.descripcion) { %>
-                                    <small class="text-muted"><%= category.descripcion %></small>
-                                <% } %>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            <% }); %>
-        </div>
+<!-- Slider Promocional Restaurante -->
+<div id="restaurantPromoCarousel" class="carousel slide mb-5" data-bs-ride="carousel">
+  <!-- Indicadores -->
+  <div class="carousel-indicators">
+    <button type="button" data-bs-target="#restaurantPromoCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+    <button type="button" data-bs-target="#restaurantPromoCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
+    <button type="button" data-bs-target="#restaurantPromoCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
+    <button type="button" data-bs-target="#restaurantPromoCarousel" data-bs-slide-to="3" aria-label="Slide 4"></button>
+  </div>
+  
+  <div class="carousel-inner">
+    <div class="carousel-item active">
+      <img src="/images/slider1.jpeg" class="d-block w-100" alt="Slider 1" style="max-height:350px;object-fit:cover;">
+      <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded p-3">
+        <h4 class="fw-bold">¡Bienvenido a A la Mesa!</h4>
+        <p>Descubre los mejores restaurantes y platos de tu ciudad.</p>
+      </div>
     </div>
-</section>
+    <div class="carousel-item">
+      <img src="/images/slider2.jpeg" class="d-block w-100" alt="Slider 2" style="max-height:350px;object-fit:cover;">
+      <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded p-3">
+        <h4 class="fw-bold">Variedad para todos los gustos</h4>
+        <p>Pizzas, empanadas, hamburguesas, postres y mucho más.</p>
+      </div>
+    </div>
+    <div class="carousel-item">
+      <img src="/images/slider3.jpg" class="d-block w-100" alt="Slider 3" style="max-height:350px;object-fit:cover;">
+      <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded p-3">
+        <h4 class="fw-bold">Delivery rápido y seguro</h4>
+        <p>Recibe tu pedido en minutos, con la mejor atención.</p>
+      </div>
+    </div>
+    <div class="carousel-item">
+      <img src="/images/slider4.jpg" class="d-block w-100" alt="Slider 4" style="max-height:350px;object-fit:cover;">
+      <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded p-3">
+        <h4 class="fw-bold">¿Tienes un restaurante?</h4>
+        <p>Únete a nuestra plataforma y haz crecer tu negocio.</p>
+      </div>
+    </div>
+  </div>
+  <button class="carousel-control-prev" type="button" data-bs-target="#restaurantPromoCarousel" data-bs-slide="prev">
+    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+    <span class="visually-hidden">Anterior</span>
+  </button>
+  <button class="carousel-control-next" type="button" data-bs-target="#restaurantPromoCarousel" data-bs-slide="next">
+    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+    <span class="visually-hidden">Siguiente</span>
+  </button>
+</div>
 
-<!-- Featured Restaurants -->
-<section class="py-5 bg-light">
+<!-- Banner de invitación a notificaciones push -->
+<!-- ELIMINADO: Banner y botones de invitación a notificaciones push -->
+
+<!-- Categorías Section -->
+<section class="categories-section py-5">
     <div class="container">
-        <div class="row mb-5">
-            <div class="col-12 text-center">
-                <h2 class="fw-bold mb-3">Restaurantes Destacados</h2>
-                <p class="text-muted">Los mejores restaurantes con las mejores calificaciones</p>
+        <div class="row align-items-center mb-4">
+            <div class="col">
+                <h2 class="text-center mb-0 fw-bold text-dark">
+                    <i class="fas fa-th-large me-2 text-primary"></i>
+                    Explora por Categorías
+                </h2>
+                <p class="text-center text-muted mt-2 mb-0">Descubre los mejores platos organizados por tipo</p>
             </div>
         </div>
         
-        <div class="row g-4">
-            <% restaurants.forEach(restaurant => { %>
-                <div class="col-md-6 col-lg-4">
-                    <div class="card h-100 shadow-sm border-0 restaurant-card">
-                        <!-- Restaurant image -->
-                        <div class="position-relative">
-                            <img src="/uploads/<%= restaurant.imagen_banner || 'no-image.png' %>" 
-                                 class="restaurant-banner card-img-top restaurant-image" 
-                                 alt="<%= restaurant.nombre %>"
-                                 onerror="this.src='/images/no-image.png'">
-                            
-                            <!-- Rating badge -->
-                            <div class="position-absolute top-0 end-0 m-2">
-                                <span class="badge bg-warning text-dark">
-                                    <i class="fas fa-star"></i> <%= restaurant.calificacion_promedio || '0.0' %>
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <div class="card-body">
-                            <div class="d-flex align-items-start justify-content-between mb-2">
-                                <h6 class="fw-bold mb-0"><%= restaurant.nombre %></h6>
-                                <% if (restaurant.categorias) { %>
-                                    <small class="badge bg-light text-muted">
-                                        <% if (restaurant.categorias.split(',').length > 1) { %>
-                                            <%= restaurant.categorias.split(',').join(' • ') %>
-                                        <% } else { %>
-                                            <%= restaurant.categorias %>
-                                        <% } %>
-                                    </small>
-                                <% } %>
-                            </div>
-                            
-                            <p class="text-muted small mb-3"><%= restaurant.descripcion %></p>
-                            
-                            <div class="d-flex align-items-center justify-content-between text-small">
-                                <span class="text-muted">
-                                    <i class="fas fa-clock me-1"></i>
-                                    <%= restaurant.tiempo_entrega_min %>-<%= restaurant.tiempo_entrega_max %> min
-                                </span>
-                                <span class="text-muted">
-                                    <i class="fas fa-truck me-1"></i>
-                                    $<%= restaurant.costo_delivery || '0' %>
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <div class="card-footer bg-transparent border-0 pt-0">
-                            <a href="/restaurants/<%= restaurant.id %>" class="btn btn-primary w-100">
-                                Ver Menú
+        <!-- Contenedor del carrusel deslizable -->
+        <div class="categories-carousel-container position-relative">
+            <!-- Carrusel de categorías con scroll horizontal -->
+            <div class="categories-scroll" id="categoriesScroll">
+                <% if (categories && categories.length > 0) { %>
+                    <% 
+                    // Reordenar categorías: 'hamburguesas' antes de 'pastas' y 'otros' al final
+                    const desiredOrder = ['pizzas','empanadas','sandwiches','hamburguesas','pastas'];
+                    const normalize = s => (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+                    const priority = (name) => {
+                        const n = normalize(name);
+                        if (n === 'otros' || n === 'otro') return 9999; // enviar al final
+                        const idx = desiredOrder.indexOf(n);
+                        return idx === -1 ? 5000 : idx; // desconocidas al medio
+                    };
+                    const orderedCategories = categories.slice().sort((a,b) => {
+                        const pa = priority(a.nombre);
+                        const pb = priority(b.nombre);
+                        if (pa !== pb) return pa - pb;
+                        return normalize(a.nombre).localeCompare(normalize(b.nombre));
+                    });
+                    %>
+                    <% orderedCategories.forEach(category => { %>
+                        <div class="category-item">
+                            <a href="/search?category=<%= encodeURIComponent(category.nombre) %>" class="category-link">
+                                <div class="category-card">
+                                    <div class="category-icon-wrapper">
+                                        <img src="<%= locals.CategoryIcons.getCategoryImagePath(category.nombre) %>" alt="<%= category.nombre %> icon" class="category-icon-img">
+                                        <div class="category-name text-center mt-2 fw-bold" style="font-size: 1.1rem; color: #333;"> <%= category.nombre %> </div>
+                                    </div>
+                                </div>
                             </a>
                         </div>
+                    <% }); %>
+                <% } else { %>
+                    <div class="col-12 text-center">
+                        <p class="text-muted">No hay categorías disponibles en este momento.</p>
                     </div>
-                </div>
-            <% }); %>
+                <% } %>
+            </div>
         </div>
         
-        <div class="text-center mt-5">
-            <a href="/search" class="btn btn-outline-primary btn-lg">
-                Ver Todos los Restaurantes
-            </a>
-        </div>
+
     </div>
 </section>
 
-<!-- Features Section -->
-<section class="py-5">
+<!-- Restaurantes Section -->
+<section id="restaurants" class="py-5">
     <div class="container">
-        <div class="row mb-5">
-            <div class="col-12 text-center">
-                <h2 class="fw-bold mb-3">¿Por qué elegir A la Mesa?</h2>
-                <p class="text-muted">La mejor experiencia de delivery</p>
-            </div>
-        </div>
-        
-        <div class="row g-4">
-            <div class="col-md-4 text-center">
-                <div class="feature-icon mb-3">
-                    <i class="fas fa-shipping-fast fs-1 text-primary"></i>
-                </div>
-                <h5 class="fw-semibold">Entrega Rápida</h5>
-                <p class="text-muted">Recibe tu pedido en 30-45 minutos en promedio</p>
-            </div>
-            
-            <div class="col-md-4 text-center">
-                <div class="feature-icon mb-3">
-                    <i class="fas fa-shield-alt fs-1 text-success"></i>
-                </div>
-                <h5 class="fw-semibold">Pago Seguro</h5>
-                <p class="text-muted">Múltiples métodos de pago seguros y confiables</p>
-            </div>
-            
-            <div class="col-md-4 text-center">
-                <div class="feature-icon mb-3">
-                    <i class="fas fa-star fs-1 text-warning"></i>
-                </div>
-                <h5 class="fw-semibold">Calidad Garantizada</h5>
-                <p class="text-muted">Solo trabajamos con los mejores restaurantes</p>
-            </div>
-        </div>
+        <h2 class="text-center mb-4">Restaurantes Destacados</h2>
+        <% if (topRatedRestaurants && topRatedRestaurants.length > 0) { %>
+    <div class="row">
+        <% let includeStyles = true; %>
+        <% topRatedRestaurants.forEach(restaurant => { %>
+            <%- include('partials/restaurant-card', { restaurant: restaurant, includeStyles: includeStyles }) %>
+            <% includeStyles = false; %>
+        <% }) %>
+    </div>
+<% } %>
+
     </div>
 </section>
 
-<%- include('partials/footer') %>
 
-<style>
-.hero-section {
-    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-    min-height: 50vh;
-}
 
-.hero-bg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    opacity: 0.1;
-    background-image: url('/images/hero-pattern.png');
-    background-size: cover;
-    background-position: center;
-}
-
-.min-vh-75 {
-    min-height: 50vh;
-}
-
-.hero-image {
-    max-height: 250px;
-    width: auto;
-    object-fit: contain;
-    filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3));
-}
-
-.card-hover {
-    transition: all 0.3s ease;
-}
-
-.card-hover:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
-}
-
-.restaurant-image {
-    height: 200px;
-    object-fit: cover;
-}
-
-.restaurant-card {
-    transition: all 0.3s ease;
-}
-
-.restaurant-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
-}
-
-.category-icon {
-    transition: transform 0.3s ease;
-}
-
-.card-hover:hover .category-icon {
-    transform: scale(1.1);
-}
-
-.feature-icon {
-    transition: transform 0.3s ease;
-}
-
-.feature-icon:hover {
-    transform: scale(1.1);
-}
-
-.address-suggestions {
-    top: 100%;
-    left: 0;
-    right: 0;
-    border-radius: 0.375rem;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-/* Ajuste para dispositivos móviles */
-@media (max-width: 768px) {
-    .hero-image {
-        max-height: 180px;
+    <style>
+    .hero-text .btn-primary:hover {
+        background-color: #e65c00; /* Naranja un poco más oscuro */
+        border-color: #e65c00;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }
-    
+
+    .categories-carousel-container {
+        position: relative;
+        padding: 0 20px;
+        max-width: 100%;
+        margin: 0 auto;
+        overflow-x: hidden;
+        overflow-y: hidden;
+    }
+
+    .categories-scroll-container {
+        overflow-x: auto;
+        overflow-y: hidden;
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        scrollbar-width: thin; /* Firefox */
+        -ms-overflow-style: auto; /* IE and Edge */
+        position: relative;
+        margin-bottom: 10px;
+    }
+    .categories-scroll-container::-webkit-scrollbar {
+        height: 8px;
+        background: #eee;
+        border-radius: 8px;
+    }
+    .categories-scroll-container::-webkit-scrollbar-thumb {
+        background: #ff6b35;
+        border-radius: 8px;
+    }
+    .categories-scroll {
+        gap: 0;
+        padding: 30px 30px;
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        min-width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: stretch;
+        overscroll-behavior-x: contain;
+        touch-action: pan-x;
+    }
+    @media (max-width: 1200px) {
+        .categories-scroll {
+            min-width: 900px;
+        }
+    }
+    @media (max-width: 768px) {
+        .categories-scroll {
+            min-width: 700px;
+            padding: 20px 10px;
+            gap: 0;
+        }
+        .category-item {
+            min-width: 180px;
+            max-width: 220px;
+            width: 200px;
+            padding: 0 10px;
+        }
+    }
+    @media (max-width: 576px) {
+        .categories-scroll {
+            min-width: 500px;
+            padding: 15px 5px;
+            gap: 0;
+        }
+        .category-item {
+            min-width: 150px;
+            max-width: 180px;
+            width: 160px;
+            padding: 0 7.5px;
+        }
+    }
+
+    .category-item {
+        flex: 0 0 auto;
+        min-width: 200px;
+        max-width: 250px;
+        width: 220px;
+    }
+
+    .category-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        height: 100%;
+    }
+
+    .category-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border: 2px solid transparent;
+        border-radius: 20px;
+        padding: 30px 25px;
+        text-align: center;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .category-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        opacity: 0;
+        transition: opacity 0.4s ease;
+        z-index: 1;
+    }
+
+    .category-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        border-color: #ff6b35;
+        box-shadow: 0 12px 40px rgba(255, 107, 53, 0.2);
+    }
+
+    .category-card:hover::before {
+        opacity: 0.05;
+    }
+
+    .category-icon-img {
+        width: 120px;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 50%;
+        margin: 0 auto 15px;
+        display: block;
+        transition: all 0.4s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .category-card:hover .category-icon-img {
+        transform: scale(1.1);
+        box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+    }
+
+    .category-icon-wrapper {
+        position: relative;
+        z-index: 2;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    .category-icon {
+        font-size: 2.5rem;
+        color: #ff6b35;
+        transition: all 0.4s ease;
+        display: block;
+    }
+
+    .category-card:hover .category-icon {
+        color: #e55a2b;
+        transform: scale(1.1) rotate(5deg);
+    }
+
+    .category-name {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #343a40;
+        margin-bottom: 10px;
+        position: relative;
+        z-index: 2;
+        transition: color 0.4s ease;
+    }
+
+    .category-card:hover .category-name {
+        color: #2c3135;
+    }
+
+    .category-stats {
+        position: relative;
+        z-index: 2;
+        margin-bottom: 10px;
+    }
+
+    .category-count {
+        font-size: 0.75rem;
+        color: #6c757d;
+        font-weight: 500;
+        transition: color 0.4s ease;
+    }
+
+    .category-card:hover .category-count {
+        color: #495057;
+    }
+
+    .count-number {
+        font-weight: 600;
+        color: #ff6b35;
+    }
+
+    /* Indicadores de scroll visual */
+    .categories-scroll-container::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 30px;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8));
+        pointer-events: none;
+        z-index: 5;
+    }
+
+    .categories-scroll-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 30px;
+        height: 100%;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent);
+        pointer-events: none;
+        z-index: 5;
+    }
+
+    /* Estados de scroll */
+    .categories-scroll-container:not(.scrolled-left)::before {
+        opacity: 0;
+    }
+
+    .categories-scroll-container:not(.scrolled-right)::after {
+        opacity: 0;
+    }
+
+    /* Animaciones adicionales */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .category-item {
+        animation: fadeInUp 0.6s ease forwards;
+    }
+
+    .category-item:nth-child(1) { animation-delay: 0.1s; }
+    .category-item:nth-child(2) { animation-delay: 0.2s; }
+    .category-item:nth-child(3) { animation-delay: 0.3s; }
+    .category-item:nth-child(4) { animation-delay: 0.4s; }
+    .category-item:nth-child(5) { animation-delay: 0.5s; }
+    .category-item:nth-child(6) { animation-delay: 0.6s; }
+    .category-item:nth-child(7) { animation-delay: 0.7s; }
+    .category-item:nth-child(8) { animation-delay: 0.8s; }
+
+    /* Efectos de hover mejorados */
+    .category-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        transition: left 0.6s ease;
+    }
+
+    .category-card:hover::after {
+        left: 100%;
+    }
+
+    /* Mejoras para el scroll */
+    .categories-scroll {
+        cursor: grab;
+    }
+
+    .categories-scroll:active {
+        cursor: grabbing;
+    }
+
+    /* Indicador de scroll suave */
+    .categories-scroll-container {
+        position: relative;
+    }
+
+    .categories-scroll-container::before,
+    .categories-scroll-container::after {
+        transition: opacity 0.3s ease;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .categories-carousel-container {
+            padding: 0 15px;
+            overflow-x: scroll; /* Prevents content from overflowing */
+            overflow-y: hidden;
+            height: 200px;
+        }
+        
+        .category-item {
+            min-width: 180px;
+            max-width: 200px;
+            width: 190px;
+        }
+        
+        .category-card {
+            padding: 25px 20px;
+            height: 180px;
+            width: 150px;
+        }
+        
+        .category-icon {
+            font-size: 2.2rem;
+        }
+        
+        .category-name {
+            font-size: 0.95rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .categories-carousel-container {
+            padding: 0 10px;
+            overflow-x: scroll;
+            overflow-y: hidden;
+        }
+        
+        .category-item {
+            min-width: 160px;
+            max-width: 180px;
+            width: 170px;
+        }
+        
+        .category-card {
+            padding: 20px 15px;
+            height: 160px;
+        }
+        
+        .category-icon {
+            font-size: 2rem;
+        }
+        
+        .category-name {
+            font-size: 0.9rem;
+        }
+        
+        .category-count {
+            font-size: 0.75rem;
+        }
+    }
+
+    /* Efectos de carga y estados */
+    .category-card.loading {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .category-card.loading::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+        animation: loading 1.5s infinite;
+    }
+
+    @keyframes loading {
+        0% { left: -100%; }
+        100% { left: 100%; }
+    }
+
+    /* Mejoras para accesibilidad */
+    .category-link:focus {
+        outline: 2px solid #ff6b35;
+        outline-offset: 2px;
+        border-radius: 20px;
+    }
+
+    .category-link:focus .category-card {
+        transform: scale(1.02);
+    }
+
+    /* Efectos de partículas en hover */
+    .category-card:hover {
+        position: relative;
+    }
+
+    .category-card:hover::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: linear-gradient(45deg, #ff6b35, #f7931e, #ff6b35);
+        border-radius: 22px;
+        z-index: -1;
+        animation: borderGlow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes borderGlow {
+        0% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+
+    /* Estilos generales */
     .hero-section {
-        min-height: 40vh;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        min-height: 50vh;
     }
-    
+
+    .hero-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        opacity: 0.1;
+        background-image: url('/images/hero-pattern.png');
+        background-size: cover;
+        background-position: center;
+    }
+
     .min-vh-75 {
-        min-height: 40vh;
+        min-height: 50vh;
     }
-}
-</style>
+
+    .hero-image {
+        max-height: 250px;
+        width: auto;
+        object-fit: contain;
+        filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3));
+    }
+
+    .card-hover {
+        transition: all 0.3s ease;
+    }
+
+    .card-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+    }
+
+    .restaurant-image {
+        height: 200px;
+        object-fit: cover;
+    }
+
+    .restaurant-card {
+        transition: all 0.3s ease;
+    }
+
+    .restaurant-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+    }
+
+    .category-icon {
+        transition: transform 0.3s ease;
+    }
+
+    .card-hover:hover .category-icon {
+        transform: scale(1.1);
+    }
+
+    .feature-icon {
+        transition: transform 0.3s ease;
+    }
+
+    .feature-icon:hover {
+        transform: scale(1.1);
+    }
+
+    .address-suggestions {
+        top: 100%;
+        left: 0;
+        right: 0;
+        border-radius: 0.375rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+    /* Ajuste para dispositivos móviles */
+    @media (max-width: 768px) {
+        .hero-image {
+            max-height: 180px;
+        }
+        
+        .hero-section {
+            min-height: 40vh;
+        }
+        
+        .min-vh-75 {
+            min-height: 40vh;
+        }
+    }
+
+    /* Nav móvil fijo abajo y body con padding para no tapar contenido */
+    @media (max-width: 768px) {
+      .mobile-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100vw;
+        z-index: 1050;
+        background: #fff;
+        border-top: 1px solid #eee;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+      }
+      body {
+        padding-bottom: 70px !important;
+      }
+    }
+
+    .categories-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 10;
+        background: rgba(255,255,255,0.9);
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        cursor: pointer;
+        transition: background 0.2s, box-shadow 0.2s;
+        font-size: 1.3rem;
+        color: #ff6b35;
+        opacity: 0.85;
+    }
+    .categories-arrow.left {
+        left: 0;
+    }
+    .categories-arrow.right {
+        right: 0;
+    }
+    .categories-arrow:hover {
+        background: #ff6b35;
+        color: #fff;
+        box-shadow: 0 4px 16px rgba(255,107,53,0.18);
+        opacity: 1;
+    }
+    @media (max-width: 991px) {
+        .categories-arrow {
+            display: none !important;
+        }
+    }
+
+    /* Estilos para el botón Ver Menú en la sección hero */
+    .hero-text .btn-primary {
+      background-color: #ff6600; /* Color naranja */
+      border-color: #ff6600;
+      border-radius: 25px; /* Bordes redondeados */
+      padding: 10px 25px;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+
+    .hero-text .btn-primary:hover {
+      background-color: #e65c00; /* Naranja un poco más oscuro */
+      border-color: #e65c00;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    </style>
+
 
 <script>
 // Sync location with search form
@@ -335,5 +755,227 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+});
+
+// Función para mejorar la experiencia de scroll
+function enhanceScrollExperience() {
+    const scroll = document.getElementById('categoriesScroll');
+    if (!scroll) return;
+    
+    // Agregar indicador visual de scroll
+    scroll.addEventListener('scroll', () => {
+        const scrollLeft = scroll.scrollLeft;
+        const maxScroll = scroll.scrollWidth - scroll.clientWidth;
+        
+        // Mostrar/ocultar indicadores de borde según la posición
+        const container = scroll.parentElement;
+        if (scrollLeft > 0) {
+            container.classList.add('scrolled-left');
+        } else {
+            container.classList.remove('scrolled-left');
+        }
+        
+        if (scrollLeft < maxScroll) {
+            container.classList.add('scrolled-right');
+        } else {
+            container.classList.remove('scrolled-right');
+        }
+    });
+}
+
+// Inicializar carrusel de categorías cuando se carga la página
+document.addEventListener('DOMContentLoaded', function() {
+    const scroll = document.getElementById('categoriesScroll');
+    if (scroll) {
+        // Mejorar experiencia de scroll
+        enhanceScrollExperience();
+        
+        // Scroll horizontal con mouse/touch
+        const categoriesScroll = document.getElementById('categoriesScroll');
+        
+        // --- DRAG & TOUCH SCROLL (REMOVED) ---
+        
+        // Cargar estadísticas de categorías
+        loadCategoryStats();
+    }
+    
+    // Inicializar event listeners del carrito móvil
+    initializeMobileCartEvents();
+    
+    // Inicializar event listeners del menú de usuario móvil
+    initializeMobileUserMenuEvents();
+});
+
+// Función para cargar estadísticas de categorías
+function loadCategoryStats() {
+    const categoryItems = document.querySelectorAll('.category-item');
+    
+    categoryItems.forEach((item, index) => {
+        const categoryName = item.querySelector('.category-name').textContent;
+        const countElement = item.querySelector('.count-number');
+        
+        // Simular carga de datos (en una implementación real, esto sería una llamada a la API)
+        setTimeout(() => {
+            const randomCount = Math.floor(Math.random() * 15) + 3; // 3-17 restaurantes
+            countElement.textContent = randomCount;
+            
+            // Animación de contador
+            animateCounter(countElement, 0, randomCount, 1000);
+        }, 500 + (index * 200));
+    });
+}
+
+// Función para animar contadores
+function animateCounter(element, start, end, duration) {
+    const startTime = performance.now();
+    
+    function updateCounter(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const current = Math.floor(start + (end - start) * progress);
+        element.textContent = current;
+        
+        if (progress < 1) {
+            requestAnimationFrame(updateCounter);
+        }
+    }
+    
+    requestAnimationFrame(updateCounter);
+}
+
+// Función para inicializar eventos del carrito móvil
+function initializeMobileCartEvents() {
+    // Event listener para el carrito móvil
+    const mobileCartIcon = document.getElementById('cartIconContainerMobile');
+    if (mobileCartIcon) {
+        mobileCartIcon.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (typeof window.toggleCartSidebar === 'function') {
+                window.toggleCartSidebar(e);
+            }
+        });
+    }
+    
+    // Event listener para el overlay del carrito
+    const cartOverlay = document.getElementById('cartOverlay');
+    if (cartOverlay) {
+        cartOverlay.addEventListener('click', function(e) {
+            if (e.target === cartOverlay) {
+                if (typeof window.closeCartSidebar === 'function') {
+                    window.closeCartSidebar();
+                }
+            }
+        });
+    }
+}
+
+// Función para inicializar eventos del menú de usuario móvil
+function initializeMobileUserMenuEvents() {
+    // Event listener para el menú de usuario móvil
+    const mobileUserMenuButton = document.querySelector('.mobile-nav .user-menu-trigger');
+    if (mobileUserMenuButton) {
+        mobileUserMenuButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (typeof window.toggleUserMenu === 'function') {
+                window.toggleUserMenu(e);
+            }
+        });
+    }
+    
+    // Event listener para cerrar el menú de usuario con overlay
+    const userMenuOverlay = document.getElementById('userMenuOverlay');
+    if (userMenuOverlay) {
+        // Remover event listeners previos
+        const newOverlay = userMenuOverlay.cloneNode(true);
+        userMenuOverlay.parentNode.replaceChild(newOverlay, userMenuOverlay);
+        
+        newOverlay.addEventListener('click', function(e) {
+            if (e.target === newOverlay) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (typeof window.closeUserMenu === 'function') {
+                    window.closeUserMenu();
+                }
+            }
+        });
+    }
+    
+    // Event listener para cerrar menús con Escape (solo una vez)
+    document.removeEventListener('keydown', handleEscapeKey);
+    document.addEventListener('keydown', handleEscapeKey);
+    
+    // Prevenir que otros scripts interfieran con el menú
+    const userMenuSidebar = document.getElementById('userMenuSidebar');
+    if (userMenuSidebar) {
+        // Proteger el sidebar de modificaciones no deseadas
+        const originalClassList = userMenuSidebar.classList;
+        Object.defineProperty(userMenuSidebar, 'classList', {
+            get: function() {
+                return originalClassList;
+            },
+            set: function(value) {
+                // Solo permitir cambios específicos
+                if (typeof value === 'string' && (value.includes('show') || value.includes('hide'))) {
+                    originalClassList.value = value;
+                }
+            }
+        });
+    }
+}
+
+// Función separada para manejar la tecla Escape
+function handleEscapeKey(event) {
+    if (event.key === 'Escape') {
+        
+        if (typeof window.closeCartSidebar === 'function') {
+            window.closeCartSidebar();
+        }
+        if (typeof window.closeUserMenu === 'function') {
+            window.closeUserMenu();
+        }
+    }
+}
+</script>
+<script>
+window.addEventListener('DOMContentLoaded', async function() {
+  // Solo para clientes logueados
+  const userScript = document.querySelector('script[data-user]');
+  if (!userScript) return;
+  // Inicializar servicio
+  if (window.pushNotificationService) {
+    await window.pushNotificationService.initialize();
+    // Si ya está habilitado, no hacer nada
+    if (window.pushNotificationService.isEnabled()) return;
+    // Si no está habilitado y el permiso no es 'denied', solicitarlo automáticamente
+    if (Notification.permission !== 'denied') {
+      try {
+        await window.enablePushNotifications();
+        if (typeof window.showToast === 'function') {
+          window.showToast('¡Notificaciones activadas exitosamente!', 'success');
+        } else {
+          alert('¡Notificaciones activadas exitosamente!');
+        }
+      } catch (e) {
+        if (Notification.permission === 'denied') {
+          if (typeof window.showToast === 'function') {
+            window.showToast('Has denegado los permisos de notificaciones. Puedes activarlas desde la configuración del navegador.', 'error');
+          } else {
+            alert('Has denegado los permisos de notificaciones. Puedes activarlas desde la configuración del navegador.');
+          }
+        } else {
+          if (typeof window.showToast === 'function') {
+            window.showToast('No se pudieron activar las notificaciones.', 'error');
+          } else {
+            alert('No se pudieron activar las notificaciones.');
+          }
+        }
+      }
+    }
+  }
 });
 </script>

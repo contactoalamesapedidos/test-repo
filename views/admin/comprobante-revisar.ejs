@@ -1,0 +1,86 @@
+<%- include('../partials/header') %>
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="fas fa-file-alt me-2"></i>
+            Revisar Comprobante
+          </h5>
+          <a href="/admin/comprobantes" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Volver
+          </a>
+        </div>
+        <div class="card-body">
+          <h6>Restaurante:</h6>
+          <p><strong><%= comprobante.restaurante_nombre %></strong></p>
+          <h6>Período:</h6>
+          <p><%= new Date(comprobante.semana_inicio).toLocaleDateString('es-AR') %> - <%= new Date(comprobante.semana_fin).toLocaleDateString('es-AR') %></p>
+          <h6>Monto Comisión:</h6>
+          <p>$<%= parseFloat(comprobante.monto_comision).toLocaleString() %></p>
+          <h6>Archivo Comprobante:</h6>
+          <a href="/uploads/comprobantes/<%= comprobante.archivo_comprobante %>" target="_blank" class="btn btn-primary mb-3">
+            <i class="fas fa-eye"></i> Ver Archivo
+          </a>
+          <h6>Estado actual:</h6>
+          <p>
+            <% if (comprobante.estado === 'pendiente') { %>
+              <span class="badge bg-warning">Pendiente</span>
+            <% } else if (comprobante.estado === 'aprobado') { %>
+              <span class="badge bg-success">Aprobado</span>
+            <% } else if (comprobante.estado === 'rechazado') { %>
+              <span class="badge bg-danger">Rechazado</span>
+            <% } %>
+          </p>
+          <form id="revisarForm" class="mt-4">
+            <div class="mb-3">
+              <label for="comentarios_admin" class="form-label">Comentarios del Administrador (opcional)</label>
+              <textarea class="form-control" id="comentarios_admin" name="comentarios_admin" rows="2"><%= comprobante.comentarios_admin || '' %></textarea>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-success" onclick="revisarComprobante('aprobar')">
+                <i class="fas fa-check"></i> Aprobar
+              </button>
+              <button type="button" class="btn btn-danger" onclick="revisarComprobante('rechazar')">
+                <i class="fas fa-times"></i> Rechazar
+              </button>
+            </div>
+            <div id="revisarError" class="text-danger mt-2" style="display:none;"></div>
+            <div id="revisarSuccess" class="text-success mt-2" style="display:none;"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function revisarComprobante(accion) {
+  const comentarios = document.getElementById('comentarios_admin').value;
+  const errorDiv = document.getElementById('revisarError');
+  const successDiv = document.getElementById('revisarSuccess');
+  errorDiv.style.display = 'none';
+  successDiv.style.display = 'none';
+  fetch(window.location.pathname, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accion, comentarios_admin: comentarios })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      successDiv.textContent = data.message;
+      successDiv.style.display = 'block';
+      setTimeout(() => { window.location.href = '/admin/comprobantes'; }, 1200);
+    } else {
+      errorDiv.textContent = data.message || 'Error al procesar la acción';
+      errorDiv.style.display = 'block';
+    }
+  })
+  .catch(() => {
+    errorDiv.textContent = 'Error de conexión al procesar la acción';
+    errorDiv.style.display = 'block';
+  });
+}
+</script>
+<%- include('../partials/footer') %> 

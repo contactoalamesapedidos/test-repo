@@ -1,0 +1,368 @@
+<%- include('partials/sidebar') %>
+
+<!-- CSS específico para la tabla semanal -->
+<link rel="stylesheet" href="/css/admin-pagos-semanales.css">
+
+<div class="main-content">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-calendar-week me-2"></i>
+                Tabla Semanal de Pagos
+            </h1>
+            <p class="text-muted mb-0">Resumen anual de pagos y comisiones por restaurante</p>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <a href="/admin/cobros" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver a Cobros
+            </a>
+            <a href="/admin/pagos-semanales/export?year=<%= year %>" class="btn btn-success">
+                <i class="fas fa-download me-2"></i>Exportar
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" action="/admin/pagos-semanales" class="row g-3">
+                <div class="col-md-4">
+                    <label for="year" class="form-label">Año</label>
+                    <select class="form-select" id="year" name="year">
+                        <% for(let y = new Date().getFullYear(); y >= 2020; y--) { %>
+                            <option value="<%= y %>" <%= year == y ? 'selected' : '' %>><%= y %></option>
+                        <% } %>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="restaurante" class="form-label">Restaurante</label>
+                    <select class="form-select" id="restaurante" name="restaurante">
+                        <option value="">Todos los restaurantes</option>
+                        <% restaurantes.forEach(rest => { %>
+                            <option value="<%= rest.id %>" <%= filtros.restaurante == rest.id ? 'selected' : '' %>>
+                                <%= rest.nombre %>
+                            </option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-2"></i>Filtrar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resumen Anual -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-success mb-2">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1">$<%= resumen.total_pagado.toLocaleString() %></h4>
+                    <p class="text-muted mb-0">Total Pagado</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-warning mb-2">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1">$<%= resumen.total_pendiente.toLocaleString() %></h4>
+                    <p class="text-muted mb-0">Total Pendiente</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-info mb-2">
+                        <i class="fas fa-calculator fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1">$<%= resumen.total_comisiones.toLocaleString() %></h4>
+                    <p class="text-muted mb-0">Total Comisiones</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-primary mb-2">
+                        <i class="fas fa-store fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1"><%= resumen.total_restaurantes %></h4>
+                    <p class="text-muted mb-0">Restaurantes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla Semanal -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">
+                <i class="fas fa-table me-2"></i>
+                Resumen Semanal <%= year %>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center" style="min-width: 120px;">Semana</th>
+                            <th class="text-center" style="min-width: 100px;">Período</th>
+                            <% if (!filtros.restaurante) { %>
+                                <th style="min-width: 200px;">Restaurante</th>
+                            <% } %>
+                            <th class="text-center" style="min-width: 120px;">Ventas Brutas</th>
+                            <th class="text-center" style="min-width: 120px;">Comisión (10%)</th>
+                            <th class="text-center" style="min-width: 120px;">Monto Pagado</th>
+                            <th class="text-center" style="min-width: 100px;">Estado</th>
+                            <th class="text-center" style="min-width: 100px;">Vencimiento</th>
+                            <th class="text-center" style="min-width: 80px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (semanasData.length === 0) { %>
+                            <tr>
+                                <td colspan="<%= filtros.restaurante ? 8 : 9 %>" class="text-center py-4">
+                                    <div class="text-muted">
+                                        <i class="fas fa-inbox fa-2x mb-3"></i>
+                                        <p class="mb-0">No hay datos de pagos para el año <%= year %></p>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% } else { %>
+                            <% semanasData.forEach(cobro => { %>
+                                <tr class="<%= cobro.estado === 'vencido' ? 'table-danger' : 
+                                           cobro.estado === 'pagado' ? 'table-success' : 
+                                           cobro.estado === 'exonerado' ? 'table-info' : '' %>">
+                                    <td class="text-center">
+                                        <span class="badge bg-primary">Semana <%= Math.ceil((new Date(cobro.semana_inicio).getTime() - new Date(year, 0, 1).getTime()) / (1000 * 60 * 60 * 24 * 7)) %></span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="small">
+                                            <strong>Desde:</strong><br>
+                                            <%= new Date(cobro.semana_inicio).toLocaleDateString('es-AR') %><br>
+                                            <strong>Hasta:</strong><br>
+                                            <%= new Date(cobro.semana_fin).toLocaleDateString('es-AR') %>
+                                        </div>
+                                    </td>
+                                    <% if (!filtros.restaurante) { %>
+                                        <td>
+                                            <div class="fw-bold"><%= cobro.restaurante_nombre %></div>
+                                            <small class="text-muted">ID: <%= cobro.restaurante_id %></small>
+                                        </td>
+                                    <% } %>
+                                    <td class="text-center">
+                                        <div class="text-primary fw-bold">
+                                            $<%= cobro.ventas_brutas.toLocaleString() %>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="text-success fw-bold">
+                                            $<%= cobro.monto_comision.toLocaleString() %>
+                                        </div>
+                                        <small class="text-muted"><%= cobro.porcentaje_comision %>%</small>
+                                    </td>
+                                    <td class="text-center">
+                                        <% if (cobro.monto_pagado_aprobado > 0) { %>
+                                            <div class="text-success fw-bold">
+                                                $<%= cobro.monto_pagado_aprobado.toLocaleString() %>
+                                            </div>
+                                            <small class="text-muted">
+                                                <%= cobro.comprobantes_count %> comprobante(s)
+                                            </small>
+                                        <% } else { %>
+                                            <span class="text-muted">-</span>
+                                        <% } %>
+                                    </td>
+                                    <td class="text-center">
+                                        <% if (cobro.estado === 'pagado') { %>
+                                            <span class="badge bg-success">Pagado</span>
+                                        <% } else if (cobro.estado === 'pendiente' && new Date(cobro.fecha_vencimiento) < new Date()) { %>
+                                            <span class="badge bg-danger">Vencido</span>
+                                        <% } else if (cobro.estado === 'pendiente') { %>
+                                            <span class="badge bg-warning">Pendiente</span>
+                                        <% } else if (cobro.estado === 'exonerado') { %>
+                                            <span class="badge bg-info">Exonerado</span>
+                                        <% } else { %>
+                                            <span class="badge bg-secondary"><%= cobro.estado %></span>
+                                        <% } %>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="small">
+                                            <%= new Date(cobro.fecha_vencimiento).toLocaleDateString('es-AR') %>
+                                            <% if (cobro.estado === 'pendiente' && new Date(cobro.fecha_vencimiento) < new Date()) { %>
+                                                <br><small class="text-danger">
+                                                    <%= Math.ceil((new Date() - new Date(cobro.fecha_vencimiento)) / (1000 * 60 * 60 * 24)) %> días vencido
+                                                </small>
+                                            <% } %>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="/admin/cobros/<%= cobro.id %>" 
+                                               class="btn btn-outline-primary" 
+                                               title="Ver detalle">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <% if (cobro.estado === 'pendiente') { %>
+                                                <a href="/admin/comprobantes?cobro_id=<%= cobro.id %>" 
+                                                   class="btn btn-outline-warning" 
+                                                   title="Revisar comprobantes">
+                                                    <i class="fas fa-file-invoice"></i>
+                                                </a>
+                                            <% } %>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico de Resumen Semanal -->
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Evolución de Comisiones por Semana
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartComisiones" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Distribución por Estado
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartEstados" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts para gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Datos para el gráfico de comisiones por semana
+    const yearData = <%= year %>;
+    const semanas = <%= JSON.stringify(semanasData.map(c => ({
+        semana: Math.ceil((new Date(c.semana_inicio).getTime() - new Date(yearData, 0, 1).getTime()) / (1000 * 60 * 60 * 24 * 7)),
+        comision: c.monto_comision,
+        pagado: c.monto_pagado_aprobado,
+        pendiente: c.monto_comision - c.monto_pagado_aprobado
+    }))) %>;
+
+    // Gráfico de comisiones por semana
+    const ctxComisiones = document.getElementById('chartComisiones').getContext('2d');
+    new Chart(ctxComisiones, {
+        type: 'line',
+        data: {
+            labels: semanas.map(s => `Semana ${s.semana}`),
+            datasets: [{
+                label: 'Comisión Total',
+                data: semanas.map(s => s.comision),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }, {
+                label: 'Pagado',
+                data: semanas.map(s => s.pagado),
+                borderColor: 'rgb(54, 162, 235)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': $' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Gráfico de distribución por estado
+    const ctxEstados = document.getElementById('chartEstados').getContext('2d');
+    new Chart(ctxEstados, {
+        type: 'doughnut',
+        data: {
+            labels: ['Pagado', 'Pendiente', 'Vencido', 'Exonerado'],
+            datasets: [{
+                data: [
+                    <%= resumen.total_pagado %>,
+                    <%= resumen.total_pendiente %>,
+                    0, // Vencido se calcula dinámicamente
+                    <%= resumen.total_exonerado %>
+                ],
+                backgroundColor: [
+                    'rgb(75, 192, 192)',
+                    'rgb(255, 205, 86)',
+                    'rgb(255, 99, 132)',
+                    'rgb(54, 162, 235)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return context.label + ': $' + context.parsed.toLocaleString() + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>

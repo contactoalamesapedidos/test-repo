@@ -1,0 +1,1 @@
+ALTER TABLE usuarios ADD COLUMN recibir_notificaciones BOOLEAN DEFAULT TRUE;

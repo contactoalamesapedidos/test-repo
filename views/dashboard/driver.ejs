@@ -1,0 +1,63 @@
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="mb-4">Panel de Repartidor</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    Estado del Repartidor
+                </div>
+                <div class="card-body">
+                    <p><strong>Estado actual:</strong> <span id="driver-status" class="badge bg-secondary">Cargando...</span></p>
+                    <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                        <input type="radio" class="btn-check" name="driverStatus" id="statusAvailable" autocomplete="off" value="available">
+                        <label class="btn btn-outline-success" for="statusAvailable">Disponible</label>
+
+                        <input type="radio" class="btn-check" name="driverStatus" id="statusOnDelivery" autocomplete="off" value="on_delivery">
+                        <label class="btn btn-outline-warning" for="statusOnDelivery">En Entrega</label>
+
+                        <input type="radio" class="btn-check" name="driverStatus" id="statusOffline" autocomplete="off" value="offline">
+                        <label class="btn btn-outline-danger" for="statusOffline">Offline</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    Pedidos Asignados
+                </div>
+                <div class="card-body">
+                    <div id="assigned-orders-list">
+                        <p class="text-muted">No hay pedidos asignados.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    Mapa de Entregas
+                </div>
+                <div class="card-body">
+                    <div id="map" style="height: 500px; width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    window.OPENROUTE_API_KEY = "<%= process.env.OPENROUTE_API_KEY %>";
+</script>
+<script src="/js/dashboard/driver.js"></script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />

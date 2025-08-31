@@ -1,0 +1,166 @@
+<div class="container py-4">
+  <div class="row">
+    <div class="col-lg-8 mx-auto">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="fas fa-money-bill-wave me-2"></i>
+            Detalle de Pago
+          </h5>
+          <a href="/dashboard/pagos" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Volver
+          </a>
+          
+        </div>
+        <div class="card-body">
+          <h6>Período:</h6>
+          <p><strong><%= new Date(cobro.semana_inicio).toLocaleDateString('es-AR') %> - <%= new Date(cobro.semana_fin).toLocaleDateString('es-AR') %></strong></p>
+          <h6>Ventas del período:</h6>
+          <p>$<%= parseFloat(cobro.ventas_brutas).toLocaleString() %></p>
+          <h6>Comisión a pagar:</h6>
+          <p>$<%= parseFloat(cobro.monto_comision).toLocaleString() %></p>
+          <h6>Estado:</h6>
+          <p>
+            <% if (cobro.estado === 'pendiente') { %>
+              <span class="badge bg-warning">Pendiente</span>
+            <% } else if (cobro.estado === 'pagado') { %>
+              <span class="badge bg-success">Pagado</span>
+            <% } else if (cobro.estado === 'vencido') { %>
+              <span class="badge bg-danger">Vencido</span>
+            <% } else if (cobro.estado === 'exonerado') { %>
+              <span class="badge bg-info">Exonerado</span>
+            <% } %>
+          </p>
+
+          <h6>Comprobantes subidos:</h6>
+          <% if (comprobantes.length > 0) { %>
+            <ul class="list-group mb-3">
+              <% comprobantes.forEach(comp => { %>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <span>
+                    <i class="fas fa-file-alt me-2"></i>
+                    <%= comp.metodo_pago.replace('_', ' ') %> - <%= new Date(comp.fecha_subida).toLocaleDateString('es-AR') %>
+                  </span>
+                  <a href="/uploads/comprobantes/<%= comp.archivo_comprobante %>" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-upload me-1"></i> Subir Comprobante
+                  </a>
+                </li>
+              <% }) %>
+            </ul>
+          <% } else { %>
+            <div class="alert alert-info">No has subido comprobantes para este cobro.</div>
+          <% } %>
+
+          <% if (cobro.estado === 'pendiente' && comprobantes.length === 0) { %>
+            <form id="comprobanteForm" enctype="multipart/form-data" class="mb-3">
+              <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                  <label for="comprobante" class="form-label">Archivo Comprobante</label>
+                  <input type="file" class="form-control" id="comprobante" name="comprobante" accept="image/*,application/pdf" required>
+                </div>
+                <div class="col-md-4">
+                  <label for="metodo_pago" class="form-label">Método de Pago</label>
+                  <select class="form-select" id="metodo_pago" name="metodo_pago" required>
+                    <option value="mercadopago" selected>Mercado Pago</option>
+                    <option value="transferencia">Transferencia</option>
+                    <option value="efectivo">Efectivo</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label for="fecha_pago_declarada" class="form-label">Fecha de Pago</label>
+                  <input type="date" class="form-control" id="fecha_pago_declarada" name="fecha_pago_declarada" required>
+                </div>
+              </div>
+              <div class="row mt-2">
+                <div class="col-md-12 d-grid">
+                  <button type="submit" class="btn btn-success">
+                    <i class="fas fa-upload me-1"></i> Subir Comprobante
+                  </button>
+                </div>
+              </div>
+              <div id="comprobanteError" class="text-danger mt-2" style="display:none;"></div>
+            </form>
+          <% } else if (cobro.estado === 'pendiente' && comprobantes.length > 0) { %>
+            <button class="btn btn-success" disabled>
+              <i class="fas fa-upload me-1"></i> Comprobante en revisión
+            </button>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function subirComprobante(cobroId) {
+  // Crear input de archivo dinámico
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*,application/pdf';
+  input.onchange = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('comprobante', file);
+    formData.append('cobroId', cobroId);
+    fetch(`/dashboard/pagos/${cobroId}/subir-comprobante`, {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        alert('Comprobante subido correctamente');
+        location.reload();
+      } else {
+        alert(data.message || 'Error al subir el comprobante');
+      }
+    })
+    .catch(() => alert('Error al subir el comprobante'));
+  };
+  input.click();
+}
+
+// Nueva lógica de validación y subida
+const form = document.getElementById('comprobanteForm');
+if (form) {
+  // Autocompletar fecha de hoy y método de pago
+  document.getElementById('fecha_pago_declarada').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('metodo_pago').value = 'mercadopago';
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const file = document.getElementById('comprobante').files[0];
+    const metodo = document.getElementById('metodo_pago').value;
+    const fecha = document.getElementById('fecha_pago_declarada').value;
+    const errorDiv = document.getElementById('comprobanteError');
+    errorDiv.style.display = 'none';
+    if (!file || !metodo || !fecha) {
+      errorDiv.textContent = 'Por favor, verifica todos los campos.';
+      errorDiv.style.display = 'block';
+      return;
+    }
+    const formData = new FormData();
+    formData.append('comprobante', file);
+    formData.append('metodo_pago', metodo);
+    formData.append('fecha_pago_declarada', fecha);
+    fetch(`/dashboard/pagos/<%= cobro.id %>/comprobante`, {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        alert('Comprobante subido correctamente');
+        location.reload();
+      } else {
+        errorDiv.textContent = data.message || 'Error al subir el comprobante';
+        errorDiv.style.display = 'block';
+      }
+    })
+    .catch(() => {
+      errorDiv.textContent = 'Error al subir el comprobante';
+      errorDiv.style.display = 'block';
+    });
+  });
+}
+</script> 

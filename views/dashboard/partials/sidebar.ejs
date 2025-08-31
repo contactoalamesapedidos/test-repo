@@ -1,0 +1,29 @@
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-0">
+    <div class="list-group list-group-flush d-none d-md-block dashboard-sidebar-mobile-hide">
+            <a href="/dashboard" class="list-group-item list-group-item-action <%= activePage === 'dashboard' ? 'active' : '' %>">
+                <i class="fas fa-home me-2"></i> Dashboard
+            </a>
+            <a href="/dashboard/products" class="list-group-item list-group-item-action <%= activePage === 'productos' ? 'active' : '' %>">
+                <i class="fas fa-utensils me-2"></i> Productos
+            </a>
+            <a href="/dashboard/estadisticas" class="list-group-item list-group-item-action <%= activePage === 'estadisticas' ? 'active' : '' %>">
+                <i class="fas fa-chart-bar me-2"></i> Estadísticas
+            </a>
+            
+            <a href="/dashboard/orders" class="list-group-item list-group-item-action <%= activePage === 'pedidos' ? 'active' : '' %>">
+                <i class="fas fa-shopping-cart me-2"></i> Pedidos
+            </a>
+            <a href="/dashboard/pagos" class="list-group-item list-group-item-action <%= activePage === 'pagos' ? 'active' : '' %>">
+                <i class="fas fa-money-bill-wave me-2"></i> Pagos
+            </a>
+            
+            <a href="/dashboard/settings" class="list-group-item list-group-item-action <%= activePage === 'configuracion' ? 'active' : '' %>">
+                <i class="fas fa-cog me-2"></i> Configuración
+            </a>
+            <a href="/auth/logout" class="list-group-item list-group-item-action text-danger">
+                <i class="fas fa-sign-out-alt me-2"></i> Cerrar Sesión
+            </a>
+        </div>
+    </div>
+</div>

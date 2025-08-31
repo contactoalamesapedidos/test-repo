@@ -1,0 +1,10 @@
+[build]
+  publish = "public"
+  command = "npm run build"
+
+[dev]
+  command = "npm start"
+  port = 8888
+
+[build.environment]
+  NODE_VERSION = "18.16.0"

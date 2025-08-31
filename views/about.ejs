@@ -1,155 +1,63 @@
-<%- include('partials/header') %>
-
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="text-center mb-5">
-                <h1 class="display-4 text-primary">Acerca de A la Mesa</h1>
-                <p class="lead">Conectamos hambre con sabor, un pedido a la vez</p>
-            </div>
-
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-body p-5">
-                    <h2 class="h3 mb-4">
-                        <i class="fas fa-utensils text-primary"></i>
-                        Nuestra Historia
-                    </h2>
-                    <p>
-                        A la Mesa nació de una idea simple pero poderosa: hacer que la comida deliciosa 
-                        esté al alcance de todos, sin importar dónde se encuentren. Desde nuestros inicios, 
-                        hemos trabajado incansablemente para conectar a los mejores restaurantes locales 
-                        con personas que buscan experiencias gastronómicas excepcionales.
-                    </p>
-                    <p>
-                        Lo que comenzó como un pequeño proyecto se ha convertido en una plataforma 
-                        integral que no solo facilita pedidos de comida, sino que también apoya 
-                        a restaurantes locales y crea empleos en nuestra comunidad.
-                    </p>
-                </div>
-            </div>
-
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body text-center p-4">
-                            <i class="fas fa-rocket fa-3x text-primary mb-3"></i>
-                            <h4>Nuestra Misión</h4>
-                            <p>
-                                Revolucionar la forma en que las personas descubren, ordenan 
-                                y disfrutan de la comida, creando conexiones significativas 
-                                entre restaurantes y comensales.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body text-center p-4">
-                            <i class="fas fa-eye fa-3x text-primary mb-3"></i>
-                            <h4>Nuestra Visión</h4>
-                            <p>
-                                Ser la plataforma de delivery líder que empodera a restaurantes 
-                                locales y ofrece a los usuarios acceso instantáneo a la mejor 
-                                comida de su ciudad.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-body p-5">
-                    <h2 class="h3 mb-4">
-                        <i class="fas fa-heart text-danger"></i>
-                        Nuestros Valores
-                    </h2>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <ul class="list-unstyled">
-                                <li class="mb-3">
-                                    <i class="fas fa-check-circle text-success me-2"></i>
-                                    <strong>Calidad:</strong> Solo trabajamos con restaurantes que cumplan nuestros altos estándares
-                                </li>
-                                <li class="mb-3">
-                                    <i class="fas fa-check-circle text-success me-2"></i>
-                                    <strong>Rapidez:</strong> Entregamos tu comida en el menor tiempo posible
-                                </li>
-                                <li class="mb-3">
-                                    <i class="fas fa-check-circle text-success me-2"></i>
-                                    <strong>Confiabilidad:</strong> Puedes confiar en nosotros para cada pedido
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="col-md-6">
-                            <ul class="list-unstyled">
-                                <li class="mb-3">
-                                    <i class="fas fa-check-circle text-success me-2"></i>
-                                    <strong>Comunidad:</strong> Apoyamos a restaurantes y negocios locales
-                                </li>
-                                <li class="mb-3">
-                                    <i class="fas fa-check-circle text-success me-2"></i>
-                                    <strong>Innovación:</strong> Constantemente mejoramos nuestra tecnología
-                                </li>
-                                <li class="mb-3">
-                                    <i class="fas fa-check-circle text-success me-2"></i>
-                                    <strong>Transparencia:</strong> Precios claros, sin sorpresas
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row text-center mb-5">
-                <div class="col-md-3 col-6 mb-3">
-                    <div class="card border-0 bg-light">
-                        <div class="card-body">
-                            <h3 class="text-primary display-6">500+</h3>
-                            <p class="text-muted">Restaurantes Aliados</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6 mb-3">
-                    <div class="card border-0 bg-light">
-                        <div class="card-body">
-                            <h3 class="text-primary display-6">10K+</h3>
-                            <p class="text-muted">Usuarios Activos</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6 mb-3">
-                    <div class="card border-0 bg-light">
-                        <div class="card-body">
-                            <h3 class="text-primary display-6">50K+</h3>
-                            <p class="text-muted">Pedidos Entregados</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6 mb-3">
-                    <div class="card border-0 bg-light">
-                        <div class="card-body">
-                            <h3 class="text-primary display-6">4.8</h3>
-                            <p class="text-muted">Calificación Promedio</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="text-center">
-                <h3 class="mb-4">¿Listo para unirte a A la Mesa?</h3>
-                <div class="d-flex justify-content-center gap-3 flex-wrap">
-                    <a href="/auth/register" class="btn btn-primary btn-lg">
-                        <i class="fas fa-user-plus"></i>
-                        Regístrate como Cliente
-                    </a>
-                    <a href="/auth/register-restaurant" class="btn btn-outline-primary btn-lg">
-                        <i class="fas fa-store"></i>
-                        Registra tu Restaurante
-                    </a>
-                </div>
-            </div>
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <h1 class="mb-4 text-center" style="color: #ff6b35;">Bienvenido a A la Mesa</h1>
+      <div class="card shadow-sm p-4">
+        <div class="text-center mb-4">
+          <img src="/images/hero-food.jpg" alt="Comida deliciosa" class="img-fluid rounded shadow" style="max-height: 220px; object-fit: cover;">
         </div>
+        <h2 class="mb-3">¿Qué es A la Mesa?</h2>
+        <div class="row align-items-center mb-4">
+          <div class="col-md-4 text-center mb-3 mb-md-0">
+            <img src="/images/logo.jpeg" alt="Logo A la Mesa" class="img-fluid rounded-circle shadow" style="max-width: 120px;">
+          </div>
+          <div class="col-md-8">
+            <p>
+              <strong>A la Mesa</strong> es una plataforma digital que conecta a los mejores restaurantes de tu ciudad con personas que buscan pedir comida de manera fácil, rápida y segura. Nuestro objetivo es que disfrutes de tus platos favoritos desde la comodidad de tu hogar o trabajo, con solo unos clics.
+            </p>
+          </div>
+        </div>
+        <h2 class="mt-4 mb-3">¿Cómo funciona?</h2>
+        <div class="row g-4 mb-4">
+          <div class="col-6 col-md-3 text-center">
+            <img src="/images/slider1.jpeg" alt="Explora restaurantes" class="img-fluid rounded shadow mb-2" style="height: 90px; object-fit: cover;">
+            <div><strong>Explora restaurantes</strong></div>
+          </div>
+          <div class="col-6 col-md-3 text-center">
+            <img src="/images/slider2.jpeg" alt="Agrega productos" class="img-fluid rounded shadow mb-2" style="height: 90px; object-fit: cover;">
+            <div><strong>Agrega productos</strong></div>
+          </div>
+          <div class="col-6 col-md-3 text-center">
+            <img src="/images/slider3.jpg" alt="Realiza tu pedido" class="img-fluid rounded shadow mb-2" style="height: 90px; object-fit: cover;">
+            <div><strong>Realiza tu pedido</strong></div>
+          </div>
+          <div class="col-6 col-md-3 text-center">
+            <img src="/images/slider4.jpg" alt="Recibe tu comida" class="img-fluid rounded shadow mb-2" style="height: 90px; object-fit: cover;">
+            <div><strong>Recibe tu comida</strong></div>
+          </div>
+        </div>
+        <h2 class="mt-4 mb-3">¿Por qué usar A la Mesa?</h2>
+        <ul>
+          <li>Acceso a una gran variedad de restaurantes y tipos de comida en un solo lugar.</li>
+          <li>Plataforma fácil de usar, rápida y segura.</li>
+          <li>Reseñas y valoraciones reales de otros usuarios.</li>
+          <li>Promociones y descuentos exclusivos.</li>
+          <li>Soporte y atención al cliente dedicada.</li>
+        </ul>
+        <div class="text-center my-4">
+          <img src="/images/restaurant.webp" alt="Restaurantes aliados" class="img-fluid rounded shadow" style="max-height: 160px; object-fit: cover;">
+        </div>
+        <h2 class="mt-4 mb-3">¿Cómo empezar a usarla?</h2>
+        <ol>
+          <li><strong>Regístrate gratis:</strong> Crea tu cuenta como cliente o restaurante.</li>
+          <li><strong>Completa tu perfil:</strong> Agrega tus datos de contacto y dirección de entrega.</li>
+          <li><strong>Explora y pide:</strong> Busca restaurantes, elige tus platos y realiza tu primer pedido.</li>
+          <li><strong>¡Disfruta!</strong> Recibe tu comida y califica tu experiencia para ayudar a otros usuarios.</li>
+        </ol>
+        <div class="text-center mt-4">
+          <a href="/register" class="btn btn-lg btn-primary" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); border: none;">Regístrate ahora</a>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
-
-<%- include('partials/footer') %>

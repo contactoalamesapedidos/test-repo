@@ -2,61 +2,7 @@
 
 <!-- Admin Sidebar -->
 <div class="admin-layout">
-    <nav class="admin-sidebar bg-dark text-white">
-        <div class="sidebar-header p-3">
-            <h4><i class="fas fa-shield-alt me-2"></i>Admin Panel</h4>
-            <small class="text-muted">A la Mesa</small>
-        </div>
-        
-        <ul class="nav flex-column p-3">
-            <li class="nav-item mb-2">
-                <a class="nav-link active text-white" href="/admin">
-                    <i class="fas fa-chart-bar me-2"></i>Dashboard
-                </a>
-            </li>
-            <li class="nav-item mb-2">
-                <a class="nav-link text-light" href="/admin/restaurantes">
-                    <i class="fas fa-store me-2"></i>Restaurantes
-                </a>
-            </li>
-            <li class="nav-item mb-2">
-                <a class="nav-link text-light" href="/admin/cobros">
-                    <i class="fas fa-money-bill-wave me-2"></i>Cobros y Comisiones
-                </a>
-            </li>
-            <li class="nav-item mb-2">
-                <a class="nav-link text-light" href="/admin/productos">
-                    <i class="fas fa-utensils me-2"></i>Productos
-                </a>
-            </li>
-            <li class="nav-item mb-2">
-                <a class="nav-link text-light" href="/admin/comprobantes">
-                    <i class="fas fa-receipt me-2"></i>Comprobantes
-                </a>
-            </li>
-            <li class="nav-item mb-2">
-                <a class="nav-link text-light" href="/admin/usuarios">
-                    <i class="fas fa-users me-2"></i>Usuarios
-                </a>
-            </li>
-            <li class="nav-item mb-2">
-                <a class="nav-link text-light" href="/admin/reportes">
-                    <i class="fas fa-chart-line me-2"></i>Reportes
-                </a>
-            </li>
-            <hr class="text-secondary">
-            <li class="nav-item mb-2">
-                <a class="nav-link text-light" href="/admin/configuracion">
-                    <i class="fas fa-cog me-2"></i>Configuración
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link text-light" href="/" target="_blank">
-                    <i class="fas fa-external-link-alt me-2"></i>Ver Sitio
-                </a>
-            </li>
-        </ul>
-    </nav>
+    <%- include('partials/sidebar', { activePage: 'dashboard' }) %>
 
     <!-- Main Content -->
     <div class="admin-content">
@@ -82,16 +28,48 @@
             <!-- Stats Cards -->
             <div class="row mb-4">
                 <div class="col-md-3">
-                    <div class="card border-0 shadow-sm bg-primary text-white">
+                    <div class="card border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
                                 <div>
                                     <h6>Total Restaurantes</h6>
                                     <h3><%= stats.restaurantes.total %></h3>
-                                    <small><%= stats.restaurantes.activos %> activos</small>
+                                     <small><%= stats.restaurantes.activos %> activos, <%= stats.restaurantes.no_verificados %> pendientes</small>
                                 </div>
                                 <div class="align-self-center">
                                     <i class="fas fa-store fa-2x opacity-75"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #28a745 0%, #218838 100%);">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6>Comisiones Realizadas</h6>
+                                    <h3>$<%= comisiones_realizadas.toLocaleString() %></h3>
+                                    <small>Pagadas</small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6>Comisiones Pendientes</h6>
+                                    <h3>$<%= comisiones_pendientes.toLocaleString() %></h3>
+                                    <small>Pendientes y vencidas</small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-hourglass-half fa-2x opacity-75"></i>
                                 </div>
                             </div>
                         </div>
@@ -115,22 +93,7 @@
                     </div>
                 </div>
                 
-                <div class="col-md-3">
-                    <div class="card border-0 shadow-sm bg-warning text-white">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <h6>Comisiones</h6>
-                                    <h3>$<%= Math.round(stats.ventas.comisiones_totales) %></h3>
-                                    <small>Últimos 30 días</small>
-                                </div>
-                                <div class="align-self-center">
-                                    <i class="fas fa-money-bill-wave fa-2x opacity-75"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Eliminar la tarjeta de Comisiones (últimos 30 días) para evitar más de 4 tarjetas por fila -->
                 
                 <div class="col-md-3">
                     <div class="card border-0 shadow-sm bg-info text-white">
@@ -185,7 +148,10 @@
                                 <a href="/admin/comprobantes?estado=pendiente" class="btn btn-warning">
                                     <i class="fas fa-clock me-2"></i>Revisar Pagos
                                 </a>
-                                <a href="/admin/reportes" class="btn btn-info">
+                                <a href="/admin/pagos-semanales" class="btn btn-info">
+                                    <i class="fas fa-calendar-week me-2"></i>Tabla Semanal
+                                </a>
+                                <a href="/admin/reportes" class="btn btn-secondary">
                                     <i class="fas fa-file-alt me-2"></i>Ver Reportes
                                 </a>
                             </div>
@@ -303,6 +269,8 @@
         </div>
     </div>
 </div>
+
+<%- include('../partials/admin-mobile-nav', { user: user, currentPath: path }) %>
 
 <style>
 .admin-layout {

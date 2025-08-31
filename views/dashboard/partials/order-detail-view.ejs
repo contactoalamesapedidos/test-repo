@@ -1,0 +1,46 @@
+<div class="order-detail-container card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Detalles del Pedido #<%= order.numero_pedido %></h5>
+        <button type="button" class="btn-close" id="close-order-details" aria-label="Close"></button>
+    </div>
+    <div class="card-body d-flex flex-column" style="overflow-y: auto; flex: 1;">
+        <p><strong>Cliente:</strong> <%= order.cliente_nombre %> <%= order.cliente_apellido %></p>
+        <p><strong>Email:</strong> <%= order.cliente_email %></p>
+        <p><strong>Teléfono:</strong> <%= order.cliente_telefono %></p>
+        <p><strong>Dirección de Entrega:</strong> <%= order.direccion_entrega %></p>
+        <p><strong>Fecha del Pedido:</strong> <%= new Date(order.fecha_pedido).toLocaleString() %></p>
+        <p><strong>Estado:</strong> <span class="badge bg-info"><%= order.estado %></span></p>
+        <p><strong>Total:</strong> $<%= Number(order.total).toFixed(2) %></p>
+
+        <h6 class="mt-4">Productos:</h6>
+        <ul class="list-group mb-4">
+            <% order.productos.forEach(item => { %>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><%= item.cantidad %> x <%= item.nombre %></span>
+                    <span>$<%= Number(item.precio_unitario).toFixed(2) %></span>
+                </li>
+            <% }); %>
+        </ul>
+
+        <div class="order-actions-detail d-flex justify-content-end mt-auto"> <!-- mt-auto para empujar al final -->
+            <% 
+            const statusTransitions = {
+                'pendiente': { next: 'confirmado', text: '', icon: 'fa-check', color: 'success' },
+                'confirmado': { next: 'preparando', text: 'Preparar', icon: 'fa-cogs', color: 'warning' },
+                'preparando': { next: 'en_camino', text: 'En Camino', icon: 'fa-truck', color: 'primary' },
+                'en_camino': { next: 'entregado', text: 'Entregado', icon: 'fa-check-double', color: 'success' }
+            };
+            const transition = statusTransitions[order.estado];
+            if (transition) { %>
+                <button class="btn btn-<%= transition.color %> me-2 btn-action-text" data-action="update-status" data-order-id="<%= order.id %>" data-status="<%= transition.next %>">
+                    <i class="fas <%= transition.icon %>"></i> <%= transition.text %>
+                </button>
+            <% } %>
+            <% if (order.estado === 'pendiente') { %>
+                <button class="btn btn-danger btn-action-text" data-action="cancel-order" data-order-id="<%= order.id %>">
+                    <i class="fas fa-times"></i> Rechazar
+                </button>
+            <% } %>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,52 @@
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-3 col-lg-2">
+            <div class="col-md-3 col-lg-2">
+            <%- include('partials/sidebar', { activePage: 'cobros' }) %>
+        </div>
+        </div>
+        <div class="col-md-9 col-lg-10">
+            <a href="/dashboard/cobros" class="btn btn-secondary mb-4">Volver a Mis Cobros</a>
+            <h1 class="mb-4">Detalle de Cobro #<%= cobro.id %></h1>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Resumen del Cobro</h5>
+                    <p><strong>Período:</strong> <%= new Date(cobro.semana_inicio).toLocaleDateString() %> - <%= new Date(cobro.semana_fin).toLocaleDateString() %></p>
+                    <p><strong>Monto Comisión:</strong> $<%= cobro.monto_comision.toFixed(2) %></p>
+                    <p><strong>Estado:</strong> <span class="badge bg-<%= cobro.estado === 'pagado' ? 'success' : 'warning' %>"><%= cobro.estado %></span></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Comprobantes de Pago</h5>
+                    <% if (comprobantes && comprobantes.length > 0) { %>
+                        <ul class="list-group">
+                            <% comprobantes.forEach(comprobante => { %>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <a href="/uploads/comprobantes/<%= comprobante.archivo_comprobante %>" target="_blank">
+                                            Ver Comprobante #<%= comprobante.id %>
+                                        </a>
+                                        <small class="d-block text-muted">
+                                            Subido el <%= new Date(comprobante.fecha_subida).toLocaleString() %>
+                                        </small>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-<%= comprobante.estado === 'aprobado' ? 'success' : (comprobante.estado === 'rechazado' ? 'danger' : 'secondary') %>">
+                                            <%= comprobante.estado %>
+                                        </span>
+                                    </div>
+                                </li>
+                            <% }); %>
+                        </ul>
+                    <% } else { %>
+                        <p class="text-muted">No has subido comprobantes de pago para este cobro.</p>
+                    <% } %>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

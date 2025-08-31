@@ -1,0 +1,104 @@
+@media (max-width: 767.98px) {
+  .table-cobros, .table-responsive { display: none !important; }
+  .cobros-cards-list { display: flex; flex-direction: column; gap: 1.2rem; }
+  .cobro-card-mobile {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    padding: 1.1rem 1rem;
+    border: 1px solid #f1f1f1;
+    gap: 0.8rem;
+    position: relative;
+  }
+  
+  .cobro-card-mobile.pendiente {
+    border-left: 4px solid #ffc107;
+  }
+  
+  .cobro-card-mobile.pagado {
+    border-left: 4px solid #28a745;
+  }
+  
+  .cobro-card-mobile.vencido {
+    border-left: 4px solid #dc3545;
+  }
+  
+  .cobro-card-mobile .cobro-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f1f1f1;
+    padding-bottom: 0.8rem;
+  }
+  
+  .cobro-card-mobile .cobro-periodo {
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #333;
+  }
+  
+  .cobro-card-mobile .cobro-estado {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .cobro-card-mobile .cobro-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .cobro-card-mobile .cobro-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .cobro-card-mobile .cobro-label {
+    font-size: 0.9em;
+    color: #666;
+  }
+  
+  .cobro-card-mobile .cobro-value {
+    font-weight: 500;
+    font-size: 1em;
+    color: #333;
+  }
+  
+  .cobro-card-mobile .cobro-value.ventas {
+    color: #FF8C00; /* Naranja para ventas brutas */
+    font-weight: bold;
+  }
+  
+  .cobro-card-mobile .cobro-value.comision {
+    color: #dc3545;
+    font-weight: bold;
+  }
+  
+  .cobro-card-mobile .cobro-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    border-top: 1px solid #f1f1f1;
+    padding-top: 0.8rem;
+  }
+  
+  .cobro-card-mobile .cobro-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+  
+  .cobro-card-mobile .cobro-actions .btn {
+    font-size: 0.9em;
+    padding: 0.4em 0.8em;
+  }
+}
+
+@media (min-width: 768px) {
+  .cobros-cards-list { display: none !important; }
+}

@@ -1,263 +1,356 @@
 <div class="container-fluid py-4">
     <div class="row">
-        <!-- Sidebar -->
-        <div class="col-md-3 col-lg-2">
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        <a href="/dashboard" class="list-group-item list-group-item-action">
-                            <i class="fas fa-home me-2"></i> Dashboard
-                        </a>
-                        <a href="/dashboard/products" class="list-group-item list-group-item-action">
-                            <i class="fas fa-utensils me-2"></i> Productos
-                        </a>
-                        <a href="/dashboard/orders" class="list-group-item list-group-item-action active">
-                            <i class="fas fa-shopping-cart me-2"></i> Pedidos
-                        </a>
-                        <a href="/dashboard/cobros" class="list-group-item list-group-item-action">
-                            <i class="fas fa-money-bill-wave me-2"></i> Cobros
-                        </a>
-                        <a href="/dashboard/settings" class="list-group-item list-group-item-action">
-                            <i class="fas fa-cog me-2"></i> Configuración
-                        </a>
-                    </div>
-                </div>
-            </div>
+        <div class="col-12 col-md-3 col-lg-2 d-none d-md-block">
+            <%- include('partials/sidebar', { activePage: 'pedidos' }) %>
         </div>
 
         <!-- Main Content -->
         <div class="col-md-9 col-lg-10">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="mb-0">
-                    <i class="fas fa-shopping-cart me-2"></i>
-                    Gestionar Pedidos
-                </h2>
+                <h2 class="mb-0">Gestionar Pedidos</h2>
             </div>
 
-            <!-- Filtros -->
+            <!-- Filters -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <select class="form-select" id="statusFilter">
-                                <option value="">Todos los estados</option>
-                                <option value="pendiente">Pendiente</option>
-                                <option value="confirmado">Confirmado</option>
-                                <option value="preparando">Preparando</option>
-                                <option value="listo">Listo</option>
-                                <option value="en_camino">En Camino</option>
-                                <option value="entregado">Entregado</option>
-                                <option value="cancelled">Cancelado</option>
-                            </select>
+                    <form action="/dashboard/orders" method="GET">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <select class="form-select" name="status">
+                                    <option value="">Todos los estados</option>
+                                    <option value="pendiente">Pendiente</option>
+                                    <option value="confirmado">Confirmado</option>
+                                    <option value="preparando">Preparando</option>
+                                    <option value="en_camino">En Camino</option>
+                                    <option value="entregado">Entregado</option>
+                                    <option value="cancelado">Cancelado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="date" class="form-control" name="date" placeholder="Filtrar por fecha">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" name="search" placeholder="Buscar por número de pedido o cliente">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" type="submit">Filtrar</button>
+                            </div>
                         </div>
-                        <div class="col-md-3">
-                            <input type="date" class="form-control" id="dateFilter" placeholder="Filtrar por fecha">
-                        </div>
-                        <div class="col-md-4">
-                            <input type="text" class="form-control" id="searchFilter" placeholder="Buscar por número de pedido o cliente">
-                        </div>
-                        <div class="col-md-2">
-                            <button class="btn btn-primary w-100" onclick="applyFilters()">
-                                <i class="fas fa-filter me-2"></i>Filtrar
-                            </button>
-                        </div>
-                    </div>
+                    </form>
                 </div>
             </div>
 
-            <!-- Lista de Pedidos -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-0">
-                    <% if (orders && orders.length > 0) { %>
+            <!-- Orders Section -->
+            <div class="orders-cards-list d-md-none" id="pedidos-container">
+                <% if (orders && orders.length > 0) { %>
+                    <% orders.forEach(order => { %>
+                        <div class="order-card-mobile" data-status="<%= order.estado %>" data-order-id="<%= order.id %>">
+                            <div class="order-info">
+                                <h5 class="order-title">Pedido #<%= order.numero_pedido %></h5>
+                                <p class="order-restaurant"><%= order.cliente_nombre %> <%= order.cliente_apellido %></p>
+                                <p class="order-meta"><%= new Date(order.fecha_pedido).toLocaleDateString() %> - <%= new Date(order.fecha_pedido).toLocaleTimeString() %></p>
+                                <p class="card-text"><strong>Total:</strong> $<%= Number(order.total || 0).toFixed(2) %></p>
+                            </div>
+                            <div class="order-status-actions">
+                                <div class="order-status-actions">
+                                    <div class="d-flex justify-content-end align-items-center mb-2">
+                                        <span class="badge bg-<%= order.estado === 'pendiente' ? 'warning' : 'info' %> order-badge me-2"><%= order.estado %></span>
+                                        <button class="btn btn-sm btn-outline-primary me-2" data-action="show-details" data-order-id="<%= order.id %>" title="Ver Detalles"><i class="fas fa-eye"></i></button>
+                                        <button class="btn btn-sm btn-outline-info" data-action="open-chat" data-order-id="<%= order.id %>" title="Abrir Chat"><i class="fas fa-comment"></i></button>
+                                    </div>
+                                    <div class="d-flex justify-content-end align-items-center w-100">
+                                        <% 
+                                        const statusTransitions = {
+                                            'pendiente': { next: 'confirmado', text: 'Aceptar', icon: 'fa-check', color: 'success' },
+                                            'confirmado': { next: 'preparando', text: 'Preparar', icon: 'fa-hourglass-half', color: 'warning' },
+                                            'preparando': { next: 'en_camino', text: 'En Camino', icon: 'fa-truck', color: 'primary' },
+                                            'en_camino': { next: 'entregado', text: 'Entregado', icon: 'fa-check', color: 'success' }
+                                        };
+                                        const transition = statusTransitions[order.estado];
+                                        if (transition) { %>
+                                            <button class="btn btn-sm btn-<%= transition.color %> btn-action-text me-2" data-action="update-status" data-order-id="<%= order.id %>" data-status="<%= transition.next %>" title="<%= transition.text %> Pedido">
+                                                <i class="fas <%= transition.icon %>"></i> <%= transition.text %>
+                                            </button>
+                                        <% } %>
+
+                                        <% if (order.estado === 'pendiente') { %>
+                                            <button class="btn btn-sm btn-danger btn-action-text" data-action="cancel-order" data-order-id="<%= order.id %>" title="Cancelar Pedido">
+                                                <i class="fas fa-times"></i> Rechazar
+                                            </button>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                <% } else { %>
+                    <p class="text-muted">No hay pedidos activos.</p>
+                <% } %>
+            </div>
+
+            <!-- Active Orders Section (Desktop) -->
+            <div class="mt-4 d-none d-md-block">
+                <h3 class="mb-4">Pedidos Activos</h3>
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
+                            <table class="table table-hover table-orders-dashboard">
+                                <thead>
                                     <tr>
-                                        <th>Pedido</th>
+                                        <th># Pedido</th>
                                         <th>Cliente</th>
-                                        <th>Total</th>
-                                        <th>Items</th>
-                                        <th>Estado</th>
                                         <th>Fecha</th>
+                                        <th>Total</th>
+                                        <th>Estado</th>
                                         <th>Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <% orders.forEach(order => { %>
+                                    <% if (orders && orders.length > 0) { %>
+                                        <% orders.forEach(order => { %>
+                                            <tr>
+                                                <td><%= order.numero_pedido %></td>
+                                                <td><%= order.cliente_nombre %> <%= order.cliente_apellido %></td>
+                                                <td><%= new Date(order.fecha_pedido).toLocaleDateString() %></td>
+                                                <td>$<%= Number(order.total || 0).toFixed(2) %></td>
+                                                <td>
+                                                    <span class="badge bg-<%= order.estado === 'pendiente' ? 'warning' : 
+                                                                         order.estado === 'pendiente_pago' ? 'warning' :
+                                                                         order.estado === 'confirmado' ? 'info' : 
+                                                                         order.estado === 'preparando' ? 'primary' : 
+                                                                         order.estado === 'en_camino' ? 'info' : 'secondary' %>">
+                                                        <% if (order.estado === 'pendiente_pago') { %>
+                                                            Pendiente de Pago
+                                                        <% } else { %>
+                                                            <%= order.estado.charAt(0).toUpperCase() + order.estado.slice(1).replace('_', ' ') %>
+                                                        <% } %>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <button class="btn btn-sm btn-primary" data-action="show-details" data-order-id="<%= order.id %>" title="Ver Detalles">
+                                                            <i class="fas fa-eye"></i> Ver
+                                                        </button>
+                                                        <button class="btn btn-sm btn-info" data-action="open-chat" data-order-id="<%= order.id %>" title="Abrir Chat">
+                                                            <i class="fas fa-comment"></i> Chat
+                                                        </button>
+                                                        <% 
+                                                        const statusTransitions = {
+                                                            'pendiente': { next: 'confirmado', text: 'Aceptar', icon: 'fa-check', color: 'success' },
+                                                            'confirmado': { next: 'preparando', text: 'Preparar', icon: 'fa-hourglass-half', color: 'warning' },
+                                                            'preparando': { next: 'en_camino', text: 'En Camino', icon: 'fa-truck', color: 'primary' },
+                                                            'en_camino': { next: 'entregado', text: 'Entregado', icon: 'fa-check', color: 'success' }
+                                                        };
+                                                        const transition = statusTransitions[order.estado];
+                                                        if (transition) { %>
+                                                            <button class="btn btn-sm btn-<%= transition.color %>" data-action="update-status" data-order-id="<%= order.id %>" data-status="<%= transition.next %>" title="<%= transition.text %> Pedido">
+                                                                <i class="fas <%= transition.icon %>"></i> <%= transition.text %>
+                                                            </button>
+                                                        <% } %>
+                                                        <% if (order.estado === 'pendiente') { %>
+                                                            <button class="btn btn-sm btn-outline-danger" data-action="cancel-order" data-order-id="<%= order.id %>" title="Cancelar Pedido">
+                                                                <i class="fas fa-times"></i> Cancelar
+                                                            </button>
+                                                        <% } %>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    <% } else { %>
                                         <tr>
-                                            <td>
-                                                <strong>#<%= order.numero_pedido %></strong>
-                                            </td>
-                                            <td>
-                                                <%= order.cliente_nombre %> <%= order.cliente_apellido %>
-                                                <br>
-                                                <small class="text-muted">
-                                                    <i class="fas fa-phone me-1"></i>
-                                                    <%= order.cliente_telefono %>
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <strong>$<%= parseFloat(order.total).toFixed(2) %></strong>
-                                            </td>
-                                            <td>
-                                                <%= order.total_items %> items
-                                            </td>
-                                            <td>
-                                                <select class="form-select form-select-sm status-select" 
-                                                        data-order-id="<%= order.id %>"
-                                                        onchange="updateOrderStatus(this)">
-                                                    <option value="pendiente" <%= order.estado === 'pendiente' ? 'selected' : '' %>>Pendiente</option>
-                                                    <option value="confirmado" <%= order.estado === 'confirmado' ? 'selected' : '' %>>Confirmado</option>
-                                                    <option value="preparando" <%= order.estado === 'preparando' ? 'selected' : '' %>>Preparando</option>
-                                                    <option value="listo" <%= order.estado === 'listo' ? 'selected' : '' %>>Listo</option>
-                                                    <option value="en_camino" <%= order.estado === 'en_camino' ? 'selected' : '' %>>En Camino</option>
-                                                    <option value="entregado" <%= order.estado === 'entregado' ? 'selected' : '' %>>Entregado</option>
-                                                    <option value="cancelled" <%= order.estado === 'cancelled' ? 'selected' : '' %>>Cancelado</option>
-                                                </select>
-                                            </td>
-                                            <td>
-                                                <%= new Date(order.fecha_pedido).toLocaleString('es-AR') %>
-                                            </td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-primary" 
-                                                        onclick="viewOrderDetails('<%= order.id %>')"
-                                                        title="Ver detalles">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                            </td>
+                                            <td colspan="6" class="text-center text-muted">No hay pedidos activos.</td>
                                         </tr>
-                                    <% }); %>
+                                    <% } %>
                                 </tbody>
                             </table>
                         </div>
-                    <% } else { %>
-                        <div class="text-center py-5">
-                            <i class="fas fa-shopping-cart text-muted fs-1 mb-3"></i>
-                            <p class="text-muted">No hay pedidos para mostrar</p>
+                        <% if (totalPages > 1) { %>
+                            <nav aria-label="Paginación de pedidos activos" class="mt-3">
+                                <ul class="pagination justify-content-center">
+                                    <li class="page-item <%= currentPage === 1 ? 'disabled' : '' %>">
+                                        <a class="page-link" href="?page=<%= currentPage - 1 %>&status=<%= filtros.status %>&search=<%= filtros.search %>&date=<%= filtros.date %>" aria-label="Anterior">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </a>
+                                    </li>
+                                    <% for (let i = 1; i <= totalPages; i++) { %>
+                                        <li class="page-item <%= i === currentPage ? 'active' : '' %>">
+                                            <a class="page-link" href="?page=<%= i %>&status=<%= filtros.status %>&search=<%= filtros.search %>&date=<%= filtros.date %>"><%= i %></a>
+                                        </li>
+                                    <% } %>
+                                    <li class="page-item <%= currentPage === totalPages ? 'disabled' : '' %>">
+                                        <a class="page-link" href="?page=<%= currentPage + 1 %>&status=<%= filtros.status %>&search=<%= filtros.search %>&date=<%= filtros.date %>" aria-label="Siguiente">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historical Orders Section (Desktop) -->
+            <div class="mt-5 d-none d-md-block">
+                <h3 class="mb-4">Historial de Pedidos</h3>
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-orders-dashboard">
+                                <thead>
+                                    <tr>
+                                        <th># Pedido</th>
+                                        <th>Cliente</th>
+                                        <th>Fecha</th>
+                                        <th>Total</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (historicalOrders && historicalOrders.length > 0) { %>
+                                        <% historicalOrders.forEach(order => { %>
+                                            <tr>
+                                                <td><%= order.numero_pedido %></td>
+                                                <td><%= order.cliente_nombre %> <%= order.cliente_apellido %></td>
+                                                <td><%= new Date(order.fecha_pedido).toLocaleDateString() %></td>
+                                                <td>$<%= Number(order.total || 0).toFixed(2) %></td>
+                                                <td>
+                                                    <span class="badge bg-<%= order.estado === 'entregado' ? 'success' : 'danger' %>">
+                                                        <%= order.estado %>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary" data-action="show-details" data-order-id="<%= order.id %>" title="Ver Detalles">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">No hay pedidos en el historial.</td>
+                                        </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
                         </div>
+                        <% if (totalHistoricalPages > 1) { %>
+                            <nav aria-label="Paginación historial de pedidos" class="mt-3">
+                                <ul class="pagination justify-content-center">
+                                    <li class="page-item <%= historicalCurrentPage === 1 ? 'disabled' : '' %>">
+                                        <a class="page-link" href="?historicalPage=<%= historicalCurrentPage - 1 %>&status=<%= filtros.status %>&search=<%= filtros.search %>&date=<%= filtros.date %>" aria-label="Anterior">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </a>
+                                    </li>
+                                    <% for (let i = 1; i <= totalHistoricalPages; i++) { %>
+                                        <li class="page-item <%= i === historicalCurrentPage ? 'active' : '' %>">
+                                            <a class="page-link" href="?historicalPage=<%= i %>&status=<%= filtros.status %>&search=<%= filtros.search %>&date=<%= filtros.date %>"><%= i %></a>
+                                        </li>
+                                    <% } %>
+                                    <li class="page-item <%= historicalCurrentPage === totalHistoricalPages ? 'disabled' : '' %>">
+                                        <a class="page-link" href="?historicalPage=<%= historicalCurrentPage + 1 %>&status=<%= filtros.status %>&search=<%= filtros.search %>&date=<%= filtros.date %>" aria-label="Siguiente">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historical Orders Section (Mobile) -->
+            <div class="mt-5 d-md-none">
+                <h3 class="mb-4">Historial de Pedidos</h3>
+                <div class="orders-cards-list">
+                    <% if (historicalOrders && historicalOrders.length > 0) { %>
+                        <% historicalOrders.forEach(order => { %>
+                            <div class="order-card-mobile" data-status="<%= order.estado %>" data-order-id="<%= order.id %>">
+                                <div class="order-info">
+                                    <h5 class="order-title">Pedido #<%= order.numero_pedido %></h5>
+                                    <p class="order-restaurant"><%= order.cliente_nombre %> <%= order.cliente_apellido %></p>
+                                    <p class="order-meta"><%= new Date(order.fecha_pedido).toLocaleDateString() %> - <%= new Date(order.fecha_pedido).toLocaleTimeString() %></p>
+                                    <p class="card-text"><strong>Total:</strong> $<%= Number(order.total || 0).toFixed(2) %></p>
+                                </div>
+                                <div class="order-status-actions">
+                                    <div class="d-flex justify-content-end align-items-center mb-2">
+                                        <span class="badge bg-<%= order.estado === 'entregado' ? 'success' : 'danger' %> order-badge me-2"><%= order.estado %></span>
+                                        <button class="btn btn-sm btn-outline-primary me-2" data-action="show-details" data-order-id="<%= order.id %>" title="Ver Detalles"><i class="fas fa-eye"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }); %>
+                    <% } else { %>
+                        <p class="text-muted">No hay pedidos en el historial.</p>
                     <% } %>
                 </div>
+                <% if (totalHistoricalPages > 1) { %>
+                    <nav aria-label="Paginación historial de pedidos" class="mt-3">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item <%= historicalCurrentPage === 1 ? 'disabled' : '' %>">
+                                <a class="page-link" href="?historicalPage=<%= historicalCurrentPage - 1 %>&status=<%= filtros.status %>&search=<%= filtros.search %>&date=<%= filtros.date %>" aria-label="Anterior">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            <% for (let i = 1; i <= totalHistoricalPages; i++) { %>
+                                <li class="page-item <%= i === historicalCurrentPage ? 'active' : '' %>">
+                                    <a class="page-link" href="?historicalPage=<%= i %>&status=<%= filtros.status %>&search=<%= filtros.search %>&date=<%= filtros.date %>"><%= i %></a>
+                                </li>
+                            <% } %>
+                            <li class="page-item <%= historicalCurrentPage === totalHistoricalPages ? 'disabled' : '' %>">
+                                <a class="page-link" href="?historicalPage=<%= historicalCurrentPage + 1 %>&status=<%= filtros.status %>&search=<%= filtros.search %>&date=<%= filtros.date %>" aria-label="Siguiente">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                <% } %>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal de Detalles del Pedido -->
-<div class="modal fade" id="orderDetailsModal" tabindex="-1">
+<!-- Modals -->
+<div class="modal fade" id="orderDetailModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Detalles del Pedido</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" id="orderDetailsContent">
-                <!-- El contenido se cargará dinámicamente -->
+            <div class="modal-body" id="orderDetailModalBody"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="orderLocationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ubicación de Entrega</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="orderLocationMap" style="height:350px;"></div>
             </div>
         </div>
     </div>
 </div>
 
-<script>
-// Función para actualizar el estado del pedido
-async function updateOrderStatus(selectElement) {
-    const orderId = selectElement.dataset.orderId;
-    const newStatus = selectElement.value;
-    const originalStatus = selectElement.getAttribute('data-original-status');
-    
-    try {
-        const response = await fetch(`/dashboard/orders/${orderId}/status`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ status: newStatus })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            // Actualizar el estado original guardado
-            selectElement.setAttribute('data-original-status', newStatus);
-            showNotification('Estado del pedido actualizado', 'success');
-        } else {
-            // Revertir al estado anterior
-            selectElement.value = originalStatus;
-            showNotification(data.message || 'Error al actualizar el estado', 'error');
-        }
-    } catch (error) {
-        // Revertir al estado anterior
-        selectElement.value = originalStatus;
-        showNotification('Error al actualizar el estado del pedido', 'error');
-    }
+
+
+
+
+<script src="/js/dashboard-orders.js"></script>
+<script src="/js/dashboard-orders-chat.js"></script>
+
+<style>
+.table-orders-dashboard th:nth-child(2),
+.table-orders-dashboard td:nth-child(2) {
+  width: 6%;
 }
-
-// Función para ver los detalles del pedido
-async function viewOrderDetails(orderId) {
-    try {
-        const response = await fetch(`/dashboard/orders/${orderId}/details`);
-        const data = await response.json();
-        
-        if (data.success) {
-            const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
-            document.getElementById('orderDetailsContent').innerHTML = data.html;
-            modal.show();
-        } else {
-            showNotification('Error al cargar los detalles del pedido', 'error');
-        }
-    } catch (error) {
-        showNotification('Error al cargar los detalles del pedido', 'error');
-    }
+.table-orders-dashboard th:nth-child(3),
+.table-orders-dashboard td:nth-child(3) {
+  width: 3%;
 }
-
-// Función para aplicar filtros
-function applyFilters() {
-    const status = document.getElementById('statusFilter').value;
-    const date = document.getElementById('dateFilter').value;
-    const search = document.getElementById('searchFilter').value;
-    
-    // Construir la URL con los filtros
-    let url = '/dashboard/orders?';
-    if (status) url += `status=${status}&`;
-    if (date) url += `date=${date}&`;
-    if (search) url += `search=${encodeURIComponent(search)}`;
-    
-    // Recargar la página con los filtros
-    window.location.href = url;
-}
-
-// Función para mostrar notificaciones
-function showNotification(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
-    toast.setAttribute('role', 'alert');
-    toast.setAttribute('aria-live', 'assertive');
-    toast.setAttribute('aria-atomic', 'true');
-    
-    toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">
-                ${message}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-    `;
-    
-    document.body.appendChild(toast);
-    const bsToast = new bootstrap.Toast(toast);
-    bsToast.show();
-    
-    // Remover el toast después de que se oculte
-    toast.addEventListener('hidden.bs.toast', () => {
-        document.body.removeChild(toast);
-    });
-}
-
-// Inicializar los estados originales de los selects
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.status-select').forEach(select => {
-        select.setAttribute('data-original-status', select.value);
-    });
-});
-</script>
-
-<%- include('../partials/footer') %> 
+</style>

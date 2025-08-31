@@ -1,0 +1,30 @@
+<div class="chat-container" id="chat-container" data-order-id="<%= order.id %>">
+    <div class="chat-header">
+        <h5>Chat con <%= order.restaurante_nombre %></h5>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+        <% if (messages && messages.length > 0) { %>
+            <% messages.forEach(message => {
+                const senderType = typeof message.remitente_tipo === 'string' ? message.remitente_tipo : '';
+                const isClient = senderType === 'cliente';
+            %>
+                <div class="message <%= isClient ? 'sent' : 'received' %>">
+                    <div class="message-content">
+                        <p class="message-text"><%= message.mensaje %></p>
+                        <span class="message-time"><%= new Date(message.fecha_envio).toLocaleTimeString() %></span>
+                    </div>
+                </div>
+            <% }) %>
+        <% } else { %>
+            <p class="text-center text-muted">Aún no hay mensajes en este chat.</p>
+        <% } %>
+    </div>
+    <div class="chat-input">
+        <form id="chat-form">
+            <div class="input-group">
+                <input type="text" class="form-control" id="chat-message-input" placeholder="Escribe un mensaje...">
+                <button class="btn btn-primary" type="submit">Enviar</button>
+            </div>
+        </form>
+    </div>
+</div>

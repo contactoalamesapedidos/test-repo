@@ -1,0 +1,30 @@
+/* Hace que la tabla de pedidos sea horizontal y scrolleable en mobile */
+@media (max-width: 767.98px) {
+  .table-responsive {
+    overflow-x: auto;
+  }
+  .table-mis-pedidos {
+    min-width: 700px;
+    font-size: 0.97rem;
+  }
+  .table-mis-pedidos th, .table-mis-pedidos td {
+    white-space: nowrap;
+    padding: 0.5rem 0.4rem;
+  }
+  .table-mis-pedidos td {
+    vertical-align: middle;
+  }
+}
+@media (max-width: 575.98px) {
+  .table-mis-pedidos {
+    min-width: 600px;
+    font-size: 0.93rem;
+  }
+  .table-mis-pedidos th, .table-mis-pedidos td {
+    padding: 0.4rem 0.2rem;
+  }
+  .table-mis-pedidos .btn, .table-mis-pedidos .badge {
+    font-size: 0.92em;
+    padding: 0.3em 0.7em;
+  }
+}

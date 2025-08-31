@@ -1,0 +1,263 @@
+<link rel="stylesheet" href="/css/dashboard-responsive.css">
+<!-- Banner de Restaurante -->
+<div class="card shadow-sm mb-4 position-relative overflow-hidden">
+    <div class="banner-container position-relative" data-bg="<%= restaurant.imagen_banner ? (restaurant.imagen_banner.startsWith('/') ? restaurant.imagen_banner : '/uploads/' + restaurant.imagen_banner) : '/images/defaults/default-banner.jpg' %>" style="height: 340px; background-size: cover; background-position: center; z-index: 1;">
+        <!-- Logo por encima del banner -->
+        <img src="<%= restaurant.imagen_logo ? (restaurant.imagen_logo.startsWith('/') ? restaurant.imagen_logo : '/uploads/' + restaurant.imagen_logo) : '/images/defaults/default-logo.png' %>" class="rounded-circle border border-3 border-white shadow-lg restaurant-banner-logo" alt="Logo del Restaurante">
+        <span class="badge <%= restaurant.abierto ? 'bg-success' : 'bg-danger' %> position-absolute restaurant-open-badge">
+            <i class="fas fa-circle me-1"></i> <%= restaurant.abierto ? 'Abierto' : 'Cerrado' %>
+        </span>
+        <!-- Info del restaurante debajo del logo -->
+        <div class="restaurant-banner-info">
+            <h2 class="card-title mb-1"><%= restaurant.nombre %></h2>
+            <p class="card-text text-muted mb-1"><%= restaurant.descripcion %></p>
+            <span class="badge bg-light text-dark">
+                <i class="far fa-clock me-1"></i> <%= (restaurant.horario_apertura||'').slice(0,5) %> - <%= (restaurant.horario_cierre||'').slice(0,5) %>
+            </span>
+        </div>
+    </div>
+</div>
+<div style="height: 40px;"></div>
+
+<div class="row">
+    <div class="col-md-3 col-lg-2">
+        <%- include('partials/sidebar', { activePage: 'estadisticas' }) %>
+    </div>
+
+        <!-- Main content -->
+        <div class="col-md-9 col-lg-10">
+        <!-- Filtros de semana y mes -->
+        <form id="filtrosEstadisticas" class="row g-2 mb-3 align-items-end" method="get" action="">
+            <div class="col-auto">
+                <label for="selectMes" class="form-label mb-0">Mes:</label>
+                <select id="selectMes" name="mes" class="form-select">
+                    <option value="">Todos</option>
+                    <% monthlyStats.forEach(stat => { %>
+                        <option value="<%= stat.mes %>" <%= selectedMes === stat.mes ? 'selected' : '' %>><%= new Date(stat.mes + '-02').toLocaleString('es-AR', { month: 'long', year: 'numeric' }) %></option>
+                    <% }); %>
+                </select>
+            </div>
+            <div class="col-auto">
+                <label for="selectSemana" class="form-label mb-0">Semana:</label>
+                <select id="selectSemana" name="semana" class="form-select">
+                    <option value="">Todas</option>
+                    <% weeklyStats.forEach(stat => { %>
+                        <option value="<%= stat.anio %>-W<%= stat.semana %>" <%= selectedSemana === (stat.anio + '-W' + stat.semana) ? 'selected' : '' %>>Semana <%= stat.semana %> - <%= stat.anio %></option>
+                    <% }); %>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+            </div>
+        </form>
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card text-white bg-primary shadow-sm">
+                    <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                        <i class="bi bi-currency-dollar" style="font-size:2.2em;"></i>
+                        <h4 class="mt-2 mb-0"><%= dailyStats && dailyStats[0] ? new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(dailyStats[0].ingresos || 0) : '$0' %></h4>
+                        <span>Ingresos Hoy</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card text-white bg-success shadow-sm">
+                    <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                        <i class="bi bi-calendar-week" style="font-size:2.2em;"></i>
+                        <h4 class="mt-2 mb-0"><%= weeklyStats && weeklyStats[0] ? new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(weeklyStats[0].ingresos_totales || 0) : '$0' %></h4>
+                        <span>Ingresos Semana</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card text-white bg-info shadow-sm">
+                    <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                        <i class="bi bi-calendar-month" style="font-size:2.2em;"></i>
+                        <h4 class="mt-2 mb-0"><%= monthlyStats && monthlyStats[0] ? new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(monthlyStats[0].ingresos_totales || 0) : '$0' %></h4>
+                        <span>Ingresos Mes</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card text-white bg-warning shadow-sm">
+                    <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                            <i class="bi bi-people-fill" style="font-size:2.2em;"></i>
+                            <h4 class="mt-2 mb-0"><%= totalClientes %></h4>
+                            <span>Clientes</span>
+                    </div>
+                </div>
+            </div>
+                <div class="col-6 col-md-3">
+                    <div class="card text-white bg-primary shadow-sm">
+                        <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                            <i class="bi bi-cart4" style="font-size:2.2em;"></i>
+                            <h4 class="mt-2 mb-0"><%= totalPedidos %></h4>
+                            <span>Pedidos</span>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        <!-- Gráfico de ingresos por día -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-gradient bg-primary text-white">
+                <h5 class="mb-0">Ingresos por Día</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="ingresosDiaChart" height="120"></canvas>
+            </div>
+        </div>
+
+        <!-- Gráfico de ingresos por semana -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-gradient bg-success text-white">
+                <h5 class="mb-0">Ingresos por Semana</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="ingresosSemanaChart" height="120"></canvas>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+        // Datos reales para los gráficos
+    const dailyStats = <%- JSON.stringify(dailyStats) %>;
+    const dias = dailyStats.map(d => d.dia).reverse();
+    const ingresosDia = dailyStats.map(d => d.ingresos).reverse();
+
+    const weekChartStats = <%- JSON.stringify(weekChartStats) %>;
+    const semanas = weekChartStats.map(w => `Semana ${w.semana} - ${w.anio}`).reverse();
+    const ingresosSemana = weekChartStats.map(w => w.ingresos).reverse();
+
+        const diaCtx = document.getElementById('ingresosDiaChart').getContext('2d');
+        new Chart(diaCtx, {
+            type: 'line',
+            data: {
+                labels: dias,
+                datasets: [{
+                    label: 'Ingresos',
+                    data: ingresosDia,
+                    backgroundColor: 'rgba(13,110,253,0.2)',
+                    borderColor: 'rgba(13,110,253,1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointBackgroundColor: 'rgba(13,110,253,1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#eee' } } }
+            }
+        });
+
+        const semanaCtx = document.getElementById('ingresosSemanaChart').getContext('2d');
+        new Chart(semanaCtx, {
+            type: 'bar',
+            data: {
+                labels: semanas,
+                datasets: [{
+                    label: 'Ingresos',
+                    data: ingresosSemana,
+                    backgroundColor: 'rgba(25,135,84,0.7)',
+                    borderColor: 'rgba(25,135,84,1)',
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    maxBarThickness: 40
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#eee' } } }
+            }
+        });
+        </script>
+            <h2 class="mb-4">Estadísticas del Restaurante</h2>
+
+    <!-- Tabla de Estadísticas Mensuales -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Estadísticas Mensuales</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Mes</th>
+                            <th scope="col" class="text-center">Pedidos</th>
+                            <th scope="col" class="text-end">Ingresos</th>
+                            <th scope="col" class="text-end">Ticket Promedio</th>
+                        </tr>
+                    </thead>
+                    <%- include('partials/restaurant-mobile-nav', { activePage: 'estadisticas' }) %>
+                    <tbody>
+                        <% monthlyStats.forEach(stat => { %>
+                            <tr>
+                                <td style="min-width:120px"><%= new Date(stat.mes + '-02').toLocaleString('es-AR', { month: 'long', year: 'numeric' }) %></td>
+                                <td class="text-center" style="min-width:90px"><%= stat.total_pedidos %></td>
+                                <td class="text-end" style="min-width:120px"><%= new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(stat.ingresos_totales || 0) %></td>
+                                <td class="text-end" style="min-width:120px"><%= new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(stat.ticket_promedio || 0) %></td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+                <style>
+                @media (max-width: 575.98px) {
+                  .table-responsive .table th, .table-responsive .table td {
+                    padding: 0.5rem 0.3rem;
+                    font-size: 0.97rem;
+                  }
+                  .table-responsive .table th {
+                    white-space: nowrap;
+                  }
+                }
+                </style>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Productos Más Vendidos -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0">Productos Más Vendidos</h5>
+        </div>
+        <div class="card-body">
+            <ul class="list-group list-group-flush">
+                <% topProducts.forEach(product => { %>
+                    <li class="list-group-item p-2">
+                        <div class="d-flex flex-wrap flex-md-nowrap justify-content-between align-items-center gap-2">
+                            <strong class="flex-grow-1" style="min-width:120px;word-break:break-word"><%= product.nombre %></strong>
+                            <span class="badge bg-primary rounded-pill flex-shrink-0" style="font-size:1em;min-width:80px;text-align:center"><%= product.cantidad_vendida %> vendidos</span>
+                        </div>
+                        <div class="progress mt-2" style="height: 10px; min-width: 100px;">
+                        <div class="progress-bar bg-gradient bg-primary" role="progressbar"
+                            style="width: <%= Math.round((product.cantidad_vendida / (topProducts && topProducts.length ? topProducts[0].cantidad_vendida : 1)) * 100) %>%"
+                            aria-valuenow="<%= product.cantidad_vendida %>"
+                            aria-valuemin="0"
+                            aria-valuemax="<%= topProducts && topProducts.length ? topProducts[0].cantidad_vendida : 1 %>"></div>
+                        </div>
+                    </li>
+                <% }); %>
+            </ul>
+            <style>
+            @media (max-width: 575.98px) {
+              .list-group-item strong {
+                font-size: 1.01em;
+              }
+              .list-group-item .badge {
+                font-size: 0.93em;
+                padding: 0.45em 0.7em;
+                min-width: 70px;
+              }
+              .progress {
+                height: 8px;
+              }
+            }
+            </style>
+        </div>
+    </div>
+</div>
+</div>

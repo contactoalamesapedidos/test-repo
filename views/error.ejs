@@ -1,90 +1,26 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %> - A la Mesa</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/css/styles.css">
-    <style>
-        .error-container {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #f8f9fa;
-        }
-        .error-card {
-            max-width: 500px;
-            width: 90%;
-            padding: 2rem;
-            text-align: center;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        }
-        .error-icon {
-            font-size: 4rem;
-            color: #dc3545;
-            margin-bottom: 1rem;
-        }
-        .error-title {
-            color: #dc3545;
-            margin-bottom: 1rem;
-        }
-        .error-message {
-            color: #6c757d;
-            margin-bottom: 2rem;
-        }
-        .error-stack {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 5px;
-            text-align: left;
-            font-family: monospace;
-            font-size: 0.9rem;
-            margin-bottom: 1.5rem;
-            max-height: 200px;
-            overflow-y: auto;
-            display: none;
-        }
-        .error-stack.show {
-            display: block;
-        }
-    </style>
-</head>
-<body>
-    <div class="error-container">
-        <div class="error-card">
-            <div class="error-icon">⚠️</div>
-            <h1 class="error-title"><%= title %></h1>
-            <p class="error-message"><%= message %></p>
-            
-            <% if (error && error.stack && process.env.NODE_ENV === 'development') { %>
-                <button class="btn btn-outline-secondary mb-3" onclick="toggleStack()">
-                    Mostrar detalles técnicos
-                </button>
-                <pre class="error-stack"><%= error.stack %></pre>
-            <% } %>
-
-            <div class="d-grid gap-2">
-                <a href="/" class="btn btn-primary">Volver al inicio</a>
-                <% if (typeof backUrl !== 'undefined' && backUrl) { %>
-                    <a href="<%= backUrl %>" class="btn btn-outline-secondary">Volver atrás</a>
-                <% } %>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Error</h3>
+                </div>
+                <div class="card-body p-4">
+                    <% var errorObj = typeof error !== 'undefined' ? error : null; %>
+                    <h5 class="card-title text-muted mb-3"><%= message || 'Ha ocurrido un error inesperado.' %></h5>
+                    <p class="card-text">Por favor, intenta de nuevo. Si el problema persiste, contacta al soporte.</p>
+                    <% if (errorObj && errorObj.stack) { %>
+                        <div class="alert alert-light text-start" role="alert">
+                            <h6 class="alert-heading">Detalles del Error:</h6>
+                            <pre class="mb-0"><code class="text-danger"><%= errorObj.stack %></code></pre>
+                        </div>
+                    <% } %>
+                    <a href="/" class="btn btn-primary mt-3">
+                        <i class="fas fa-home me-2"></i>
+                        Volver al Inicio
+                    </a>
+                </div>
             </div>
         </div>
     </div>
-
-    <script>
-        function toggleStack() {
-            const stack = document.querySelector('.error-stack');
-            stack.classList.toggle('show');
-            const button = document.querySelector('.btn-outline-secondary');
-            button.textContent = stack.classList.contains('show') ? 
-                'Ocultar detalles técnicos' : 
-                'Mostrar detalles técnicos';
-        }
-    </script>
-</body>
-</html> 
+</div>

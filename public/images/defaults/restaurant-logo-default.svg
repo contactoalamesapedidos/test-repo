@@ -1,0 +1,35 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff6b35;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f7931e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Fondo circular -->
+  <circle cx="100" cy="100" r="90" fill="url(#logoGradient)" stroke="#fff" stroke-width="4"/>
+  
+  <!-- Icono de restaurante -->
+  <g transform="translate(100, 100)">
+    <!-- Plato -->
+    <ellipse cx="0" cy="10" rx="35" ry="8" fill="#fff" opacity="0.9"/>
+    
+    <!-- Tenedor -->
+    <rect x="-25" y="-25" width="3" height="35" fill="#fff" rx="1"/>
+    <rect x="-23" y="-25" width="3" height="25" fill="#fff" rx="1"/>
+    <rect x="-21" y="-25" width="3" height="30" fill="#fff" rx="1"/>
+    
+    <!-- Cuchillo -->
+    <rect x="20" y="-30" width="4" height="40" fill="#fff" rx="2"/>
+    <polygon points="18,-30 24,-30 22,-25" fill="#fff"/>
+    
+    <!-- Cuchara -->
+    <ellipse cx="0" cy="-35" rx="8" ry="6" fill="#fff"/>
+    <rect x="-2" y="-29" width="4" height="25" fill="#fff" rx="2"/>
+  </g>
+  
+  <!-- Texto -->
+  <text x="100" y="170" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-size="12" font-weight="bold">
+    RESTAURANTE
+  </text>
+</svg> 

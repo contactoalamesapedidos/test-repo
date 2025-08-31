@@ -1,0 +1,85 @@
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-3 col-lg-2">
+            <%- include('partials/sidebar', { activePage: 'pedidos' }) %>
+        </div>
+        <div class="col-md-9 col-lg-10">
+            <h1 class="mb-4">Gestión de Pedidos</h1>
+
+            <!-- Filtros -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form action="/admin/pedidos" method="GET">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="restaurante" class="form-label">Restaurante</label>
+                                <input type="text" class="form-control" id="restaurante" name="restaurante" value="<%= filtros.restaurante %>">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="estado" class="form-label">Estado</label>
+                                <select class="form-select" id="estado" name="estado">
+                                    <option value="">Todos</option>
+                                    <option value="pendiente" <%= filtros.estado === 'pendiente' ? 'selected' : '' %>>Pendiente</option>
+                                    <option value="confirmado" <%= filtros.estado === 'confirmado' ? 'selected' : '' %>>Confirmado</option>
+                                    <option value="preparando" <%= filtros.estado === 'preparando' ? 'selected' : '' %>>Preparando</option>
+                                    <option value="en_camino" <%= filtros.estado === 'en_camino' ? 'selected' : '' %>>En Camino</option>
+                                    <option value="entregado" <%= filtros.estado === 'entregado' ? 'selected' : '' %>>Entregado</option>
+                                    <option value="cancelado" <%= filtros.estado === 'cancelado' ? 'selected' : '' %>>Cancelado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="search" class="form-label">Buscar</label>
+                                <input type="text" class="form-control" id="search" name="search" value="<%= filtros.search %>" placeholder="N° Pedido, Cliente...">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-primary w-100">Filtrar</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tabla de Pedidos -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Restaurante</th>
+                                    <th>Cliente</th>
+                                    <th>Fecha</th>
+                                    <th>Total</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% pedidos.forEach(pedido => { %>
+                                    <tr>
+                                        <td><%= pedido.id %></td>
+                                        <td><%= pedido.restaurante_nombre %></td>
+                                        <td><%= pedido.cliente_nombre %> <%= pedido.cliente_apellido %></td>
+                                        <td><%= new Date(pedido.fecha_pedido).toLocaleString() %></td>
+                                        <td>$<%= Number(pedido.total || 0).toFixed(2) %></td>
+                                        <td>
+                                            <span class="badge bg-<%= pedido.estado === 'entregado' ? 'success' : (pedido.estado === 'cancelado' ? 'danger' : 'warning') %>">
+                                                <%= pedido.estado %>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="/admin/pedidos/<%= pedido.id %>" class="btn btn-sm btn-info">Ver</a>
+                                            <a href="/admin/pedidos/<%= pedido.id %>/chat" class="btn btn-sm btn-primary">Chat</a>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

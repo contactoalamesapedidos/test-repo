@@ -1,0 +1,21 @@
+<% if (!locals.cookieConsent) { %>
+<div id="cookieConsentBanner" class="cookie-consent">
+    <div class="cookie-consent-content">
+        <div class="cookie-consent-text">
+            <p>
+                <i class="fas fa-cookie-bite me-2"></i>
+                Utilizamos cookies para mejorar tu experiencia en nuestro sitio. Al continuar, aceptas nuestro uso de cookies.
+                <a href="/privacy">Leer más</a>
+            </p>
+        </div>
+        <div class="cookie-consent-buttons">
+            <button id="acceptCookieConsent" class="cookie-consent-btn accept">
+                <i class="fas fa-check me-1"></i>Aceptar
+            </button>
+            <button id="declineCookieConsent" class="cookie-consent-btn decline">
+                <i class="fas fa-times me-1"></i>Rechazar
+            </button>
+        </div>
+    </div>
+</div>
+<% } %> 

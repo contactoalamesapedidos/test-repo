@@ -1,277 +1,209 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
-    
-    <!-- CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="/css/style.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-    <div class="container-fluid py-4">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2">
-                <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-body p-0">
-                        <div class="list-group list-group-flush">
-                            <a href="/dashboard" class="list-group-item list-group-item-action active">
-                                <i class="fas fa-home me-2"></i> Dashboard
-                            </a>
-                            <a href="/dashboard/products" class="list-group-item list-group-item-action">
-                                <i class="fas fa-utensils me-2"></i> Productos
-                            </a>
-                            <a href="/dashboard/orders" class="list-group-item list-group-item-action">
-                                <i class="fas fa-shopping-cart me-2"></i> Pedidos
-                            </a>
-                            <a href="/dashboard/cobros" class="list-group-item list-group-item-action">
-                                <i class="fas fa-money-bill-wave me-2"></i> Cobros
-                            </a>
-                            <a href="/dashboard/settings" class="list-group-item list-group-item-action">
-                                <i class="fas fa-cog me-2"></i> Configuración
-                            </a>
+<link rel="stylesheet" href="/css/dashboard-responsive.css">
+<div class="container-fluid py-4">
+    <!-- Banner de Restaurante -->
+    <div class="card shadow-sm mb-4 position-relative overflow-hidden">
+    <div class="banner-container position-relative" data-bg="<%= restaurant.imagen_banner ? '/uploads/' + restaurant.imagen_banner : '/images/defaults/default-banner.jpg' %>" style="height: 250px; background-size: cover; background-position: center; z-index: 1;">
+        <!-- Logo por encima del banner -->
+        <img src="<%= restaurant.imagen_logo ? '/uploads/' + restaurant.imagen_logo : '/images/defaults/default-logo.png' %>" class="rounded-circle border border-3 border-white shadow-lg restaurant-banner-logo" alt="Logo del Restaurante">
+        <span class="badge <%= restaurant.abierto ? 'bg-success' : 'bg-danger' %> position-absolute restaurant-open-badge">
+            <i class="fas fa-circle me-1"></i> <%= restaurant.abierto ? 'Abierto' : 'Cerrado' %>
+        </span>
+        <!-- Info superpuesta -->
+        <div class="restaurant-banner-info">
+            <h2 class="card-title mb-1"><%= restaurant.nombre %></h2>
+            <p class="card-text text-muted mb-1"><%= restaurant.descripcion %></p>
+            <span class="badge bg-light text-dark">
+                <i class="far fa-clock me-1"></i> <%= (restaurant.horario_apertura||'').slice(0,5) %> - <%= (restaurant.horario_cierre||'').slice(0,5) %>
+            </span>
+        </div>
+    </div>
+    <div class="card-body p-3"></div>
+</div>
+<style>
+@media (max-width: 576px) {
+  .text-end .badge {
+    white-space: normal !important;
+    word-break: break-word;
+    font-size: 1em !important;
+    padding: 0.5em 0.7em !important;
+    display: block;
+    max-width: 100%;
+    text-align: left;
+  }
+}
+</style>
+
+    <!-- Main content -->
+    <div class="row">
+        <div class="col-md-3 col-lg-2">
+            <%- include('partials/sidebar', { activePage: 'dashboard' }) %>
+        </div>
+
+        <!-- Main content -->
+        <div class="col-md-9 col-lg-10">
+            <!-- Restaurant Status -->
+            <% if (!restaurant.activo) { %>
+                <div class="alert alert-danger text-center fw-bold mb-4">
+                    Tu restaurante está cerrado por el administrador y no recibirá pedidos hasta que lo actives nuevamente.
+                </div>
+            <% } %>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Estadísticas
+                </h2>
+                <div class="d-flex align-items-center">
+                    <button 
+                        class="btn btn-sm <%= restaurant.activo ? 'btn-danger' : 'btn-success' %>"
+                        data-restaurant-status="<%= restaurant.activo ? 'true' : 'false' %>"
+                        onclick="toggleRestaurantStatus()"
+                        title="<%= restaurant.activo ? 'Desactivar restaurante' : 'Activar restaurante' %>">
+                        <i class="fas <%= restaurant.activo ? 'fa-power-off' : 'fa-play' %>"></i>
+                        <span class="ms-1 d-none d-sm-inline"><%= restaurant.activo ? 'Desactivar' : 'Activar' %></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats cards -->
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-utensils text-warning fs-1 mb-2"></i>
+                            <h3 class="card-title"><%= stats.total_productos %></h3>
+                            <p class="card-text text-muted">Productos Activos</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-receipt text-primary fs-1 mb-2"></i>
+                            <h3 class="card-title"><%= stats.total_pedidos %></h3>
+                            <p class="card-text text-muted">Pedidos Totales</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-dollar-sign text-success fs-1 mb-2"></i>
+                            <h3 class="card-title"><%= new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(stats.ingresos_totales || 0) %></h3>
+                            <p class="card-text text-muted">Ingresos Totales</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-concierge-bell text-info fs-1 mb-2"></i>
+                            <h3 class="card-title"><%= stats.pedidos_pendientes %></h3>
+                            <p class="card-text text-muted">Pedidos Pendientes</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Main content -->
-            <div class="col-md-9 col-lg-10">
-                <!-- Restaurant Status -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="mb-0">
-                        <i class="fas fa-store me-2"></i>
-                        Panel de Control
-                    </h2>
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="d-flex align-items-center">
-                            <span class="badge <%= restaurant.activo ? 'bg-success' : 'bg-danger' %> me-2">
-                                <i class="fas <%= restaurant.activo ? 'fa-circle' : 'fa-circle' %> me-1"></i>
-                                <%= restaurant.activo ? 'Abierto' : 'Cerrado' %>
-                            </span>
-                            <small class="text-muted">
-                                <%= restaurant.activo ? 
-                                    'Tu restaurante está recibiendo pedidos' : 
-                                    'Tu restaurante no está recibiendo pedidos' %>
-                            </small>
-                        </div>
-                        <button class="btn <%= restaurant.activo ? 'btn-danger' : 'btn-success' %>" 
-                                onclick="toggleRestaurantStatus('<%= restaurant.activo ? 'desactivar' : 'activar' %>')">
-                            <i class="fas <%= restaurant.activo ? 'fa-store-slash' : 'fa-store' %> me-2"></i>
-                            <%= restaurant.activo ? 'Cerrar Restaurante' : 'Abrir Restaurante' %>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Stats cards -->
-                <div class="row mb-4">
-                    <div class="col-md-3 mb-3">
-                        <div class="card text-center h-100">
-                            <div class="card-body">
-                                <i class="fas fa-shopping-cart text-primary fs-1 mb-2"></i>
-                                <h3 class="card-title"><%= stats.pedidos_hoy %></h3>
-                                <p class="card-text text-muted">Pedidos Hoy</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="card text-center h-100">
-                            <div class="card-body">
-                                <i class="fas fa-dollar-sign text-success fs-1 mb-2"></i>
-                                <h3 class="card-title">$<%= parseFloat(stats.ventas_hoy).toFixed(2) %></h3>
-                                <p class="card-text text-muted">Ventas Hoy</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="card text-center h-100">
-                            <div class="card-body">
-                                <i class="fas fa-utensils text-warning fs-1 mb-2"></i>
-                                <h3 class="card-title"><%= stats.total_productos %></h3>
-                                <p class="card-text text-muted">Productos Activos</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="card text-center h-100">
-                            <div class="card-body">
-                                <i class="fas fa-chart-line text-info fs-1 mb-2"></i>
-                                <h3 class="card-title">$<%= parseFloat(stats.promedio_pedido).toFixed(2) %></h3>
-                                <p class="card-text text-muted">Promedio por Pedido</p>
-                            </div>
+            <!-- Earnings Stats -->
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-calendar-day text-primary fs-1 mb-2"></i>
+                            <h3 class="card-title"><%= new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(dailyEarnings || 0) %></h3>
+                            <p class="card-text text-muted">Ganancias Diarias</p>
                         </div>
                     </div>
                 </div>
-
-                <!-- Recent orders -->
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-clock me-2"></i>Pedidos Recientes
-                        </h5>
-                        <a href="/dashboard/orders" class="btn btn-sm btn-outline-primary">
-                            Ver Todos
-                        </a>
-                    </div>
-                    <div class="card-body p-0">
-                        <% if (recentOrders.length === 0) { %>
-                            <div class="text-center py-5">
-                                <i class="fas fa-shopping-cart text-muted fs-1 mb-3"></i>
-                                <p class="text-muted">No hay pedidos recientes</p>
-                            </div>
-                        <% } else { %>
-                            <div class="table-responsive">
-                                <table class="table table-hover mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Pedido</th>
-                                            <th>Cliente</th>
-                                            <th>Total</th>
-                                            <th>Estado</th>
-                                            <th>Fecha</th>
-                                            <th>Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <% recentOrders.forEach(order => { %>
-                                            <tr>
-                                                <td>
-                                                    <strong>#<%= order.numero_pedido %></strong>
-                                                </td>
-                                                <td>
-                                                    <%= order.cliente_nombre %> <%= order.cliente_apellido %>
-                                                </td>
-                                                <td>
-                                                    <strong>$<%= parseFloat(order.total).toFixed(2) %></strong>
-                                                </td>
-                                                <td>
-                                                    <span class="badge status-<%= order.estado %>">
-                                                        <%= order.estado.charAt(0).toUpperCase() + order.estado.slice(1) %>
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <%= new Date(order.fecha_pedido).toLocaleString('es-AR') %>
-                                                </td>
-                                                <td>
-                                                    <a href="/dashboard/orders" class="btn btn-sm btn-outline-primary">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        <% }); %>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <% } %>
-                    </div>
-                </div>
-
-                <!-- Quick actions -->
-                <div class="row mt-4">
-                    <div class="col-md-6 mb-3">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body text-center">
-                                <i class="fas fa-plus-circle text-primary fs-1 mb-3"></i>
-                                <h5>Agregar Producto</h5>
-                                <p class="text-muted">Añade nuevos productos a tu menú</p>
-                                <a href="/dashboard/products" class="btn btn-primary">
-                                    Gestionar Productos
-                                </a>
-                            </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-calendar-week text-info fs-1 mb-2"></i>
+                            <h3 class="card-title"><%= new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(weeklyEarnings || 0) %></h3>
+                            <p class="card-text text-muted">Ganancias Semanales</p>
                         </div>
                     </div>
-                    
-                    <div class="col-md-6 mb-3">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body text-center">
-                                <i class="fas fa-cog text-secondary fs-1 mb-3"></i>
-                                <h5>Configuración</h5>
-                                <p class="text-muted">Actualiza información del restaurante</p>
-                                <a href="/dashboard/settings" class="btn btn-secondary">
-                                    Configurar
-                                </a>
-                            </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-calendar-alt text-success fs-1 mb-2"></i>
+                            <h3 class="card-title"><%= new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(monthlyEarnings || 0) %></h3>
+                            <p class="card-text text-muted">Ganancias Mensuales</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick actions -->
+            <div class="row mt-4">
+                <div class="col-md-6 mb-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="fas fa-plus-circle text-primary fs-1 mb-3"></i>
+                            <h5>Agregar Producto</h5>
+                            <p class="text-muted">Añade nuevos productos a tu menú</p>
+                            <a href="/dashboard/products" class="btn btn-primary">
+                                Gestionar Productos
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="fas fa-cog text-secondary fs-1 mb-3"></i>
+                            <h5>Configuración</h5>
+                            <p class="text-muted">Actualiza información del restaurante</p>
+                            <a href="/dashboard/settings" class="btn btn-secondary">
+                                Configurar
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
-    <script src="/js/app.js"></script>
+
+<% if (user) { %>
+  <script type="application/json" data-user>
+    <%- JSON.stringify(user) %>
+  </script>
+<% } %>
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Custom JavaScript -->
+<!-- <script src="/js/app.js"></script> -->
+<!-- <script src="/js/push-notifications.js"></script> -->
+<% if (typeof scripts !== 'undefined' && scripts.length > 0) { %>
+    <% scripts.forEach(script => { %>
+        <script src="<%= script %>"></script>
+    <% }); %>
+<% } %>
+
+<script>
+// Verificar que los scripts se cargaron correctamente
+
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Asegurar que el dropdown de usuario funcione
+    const userDropdown = document.getElementById('userDropdown');
+    if (userDropdown && typeof bootstrap !== 'undefined') {
+        new bootstrap.Dropdown(userDropdown);
+    }
+    // Aplicar background del banner desde data-bg
+    document.querySelectorAll('.banner-container[data-bg]').forEach(el => {
+        const bg = el.getAttribute('data-bg');
+        if (bg) el.style.backgroundImage = `url('${bg}')`;
+    });
     
-    <% if (typeof scripts !== 'undefined') { %>
-        <% scripts.forEach(script => { %>
-            <script src="<%= script %>"></script>
-        <% }); %>
-    <% } %>
 
-    <!-- Pass user data to frontend -->
-    <script data-user='<%= JSON.stringify(user || {}) %>'></script>
-
-    <script>
-    // Función para activar/desactivar el restaurante
-    function toggleRestaurantStatus(accion) {
-        if (!confirm(`¿Estás seguro que deseas ${accion} el restaurante?`)) {
-            return;
-        }
-
-        fetch('/dashboard/toggle-status', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ accion })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showNotification(data.message, 'success');
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            } else {
-                showNotification(data.message, 'danger');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error al cambiar el estado del restaurante', 'danger');
-        });
-    }
-
-    // Función para mostrar notificaciones
-    function showNotification(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
-        toast.setAttribute('role', 'alert');
-        toast.setAttribute('aria-live', 'assertive');
-        toast.setAttribute('aria-atomic', 'true');
-        
-        toast.innerHTML = `
-            <div class="d-flex">
-                <div class="toast-body">
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        `;
-        
-        document.body.appendChild(toast);
-        const bsToast = new bootstrap.Toast(toast);
-        bsToast.show();
-        
-        // Remover el toast después de que se oculte
-        toast.addEventListener('hidden.bs.toast', () => {
-            document.body.removeChild(toast);
-        });
-    }
-    </script>
-</body>
-</html>
+});
+</script>

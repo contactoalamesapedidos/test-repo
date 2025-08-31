@@ -1,442 +1,320 @@
-<%- include('../partials/header') %>
+<!-- CSS para vista móvil -->
+<link href="/css/cobros-mobile.css" rel="stylesheet">
 
-<!-- Admin Sidebar -->
-<div class="admin-layout">
-    <%- include('partials/sidebar') %>
-
-    <!-- Main Content -->
-    <div class="admin-content">
-        <!-- Top Bar -->
-        <div class="admin-topbar bg-white shadow-sm px-4 py-3 d-flex justify-content-between align-items-center">
-            <div>
-                <h5 class="mb-0">Gestión de Cobros y Comisiones</h5>
-                <small class="text-muted">Sistema de cobros semanales del 10% de ventas</small>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <a href="/admin/cobros/generar" class="btn btn-success">
-                    <i class="fas fa-calculator me-1"></i>Generar Cobros
-                </a>
-                <a href="/admin" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>Volver
-                </a>
-            </div>
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-3 col-lg-2">
+            <%- include('partials/sidebar', { activePage: 'cobros' }) %>
         </div>
+        <div class="col-md-9 col-lg-10">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="mb-0">Gestión de Cobros</h1>
+                <div class="d-flex gap-2">
+                    <button id="btnGenerarCobros" class="btn btn-warning">
+                        <i class="fas fa-magic me-2"></i>Generar Cobros Semanales
+                    </button>
+                    <a href="/admin/pagos-semanales" class="btn btn-outline-primary">
+                        <i class="fas fa-calendar-week me-2"></i>Ver Tabla Semanal
+                    </a>
+                    <a href="/admin/cobros/export" class="btn btn-success">
+                        <i class="fas fa-download me-2"></i>Exportar
+                    </a>
+                </div>
+            </div>
 
-        <!-- Content -->
-        <div class="p-4">
-            <!-- Filters -->
-            <div class="card border-0 shadow-sm mb-4">
+            <!-- Resumen de Cobros -->
+            <div class="row mb-4 resumen-mobile">
+                <div class="col-md-4 col-12">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Pendiente</h5>
+                            <p class="card-text fs-4">$<%= Number(resumen.total_pendiente || 0).toFixed(2) %></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-12">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Pagado</h5>
+                            <p class="card-text fs-4">$<%= Number(resumen.total_pagado || 0).toFixed(2) %></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-12">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Total de Comisiones</h5>
+                            <p class="card-text fs-4">$<%= Number(resumen.total_comisiones || 0).toFixed(2) %></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="card mb-4">
                 <div class="card-body">
-                    <form method="GET" action="/admin/cobros" class="row g-3">
-                        <div class="col-md-3">
-                            <label for="restaurante" class="form-label">Restaurante</label>
-                            <select class="form-select" id="restaurante" name="restaurante">
-                                <option value="">Todos los restaurantes</option>
-                                <% restaurantes.forEach(rest => { %>
-                                    <option value="<%= rest.id %>" <%= filtros.restaurante == rest.id ? 'selected' : '' %>>
-                                        <%= rest.nombre %>
-                                    </option>
-                                <% }) %>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="estado" class="form-label">Estado</label>
-                            <select class="form-select" id="estado" name="estado">
-                                <option value="">Todos los estados</option>
-                                <option value="pendiente" <%= filtros.estado === 'pendiente' ? 'selected' : '' %>>Pendiente</option>
-                                <option value="pagado" <%= filtros.estado === 'pagado' ? 'selected' : '' %>>Pagado</option>
-                                <option value="vencido" <%= filtros.estado === 'vencido' ? 'selected' : '' %>>Vencido</option>
-                                <option value="exonerado" <%= filtros.estado === 'exonerado' ? 'selected' : '' %>>Exonerado</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="periodo" class="form-label">Período</label>
-                            <select class="form-select" id="periodo" name="periodo">
-                                <option value="">Todo el tiempo</option>
-                                <option value="7" <%= filtros.periodo === '7' ? 'selected' : '' %>>Últimos 7 días</option>
-                                <option value="30" <%= filtros.periodo === '30' ? 'selected' : '' %>>Últimos 30 días</option>
-                                <option value="90" <%= filtros.periodo === '90' ? 'selected' : '' %>>Últimos 90 días</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-search me-1"></i>Filtrar
-                            </button>
+                    <form action="/admin/cobros" method="GET">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="restaurante" class="form-label">Restaurante</label>
+                                <input type="text" class="form-control" id="restaurante" name="restaurante" value="<%= filtros.restaurante %>">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="estado" class="form-label">Estado</label>
+                                <select class="form-select" id="estado" name="estado">
+                                    <option value="" <%= filtros.estado === '' ? 'selected' : '' %>>Todos</option>
+                                    <option value="pendiente" <%= filtros.estado === 'pendiente' ? 'selected' : '' %>>Pendiente</option>
+                                    <option value="pagado" <%= filtros.estado === 'pagado' ? 'selected' : '' %>>Pagado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="semana" class="form-label">Semana</label>
+                                <input type="week" class="form-control" id="semana" name="semana" value="<%= filtros.semana %>">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-primary w-100">Filtrar</button>
+                            </div>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <!-- Summary Stats -->
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card border-0 bg-warning text-white">
-                        <div class="card-body text-center">
-                            <h3><%= cobros.filter(c => c.estado === 'pendiente').length %></h3>
-                            <small>Pendientes</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-0 bg-success text-white">
-                        <div class="card-body text-center">
-                            <h3><%= cobros.filter(c => c.estado === 'pagado').length %></h3>
-                            <small>Pagados</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-0 bg-danger text-white">
-                        <div class="card-body text-center">
-                            <h3><%= cobros.filter(c => c.estado === 'vencido').length %></h3>
-                            <small>Vencidos</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-0 bg-info text-white">
-                        <div class="card-body text-center">
-                            <h3>$<%= Math.round(cobros.reduce((sum, c) => sum + parseFloat(c.monto_comision || 0), 0)).toLocaleString() %></h3>
-                            <small>Total Comisiones</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Charges Table -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">
-                        <i class="fas fa-money-bill-wave me-2"></i>
-                        Lista de Cobros
-                    </h6>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-outline-success" onclick="exportarCobros()">
-                            <i class="fas fa-download me-1"></i>Exportar
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    <% if (cobros.length > 0) { %>
-                        <!-- Vista de tabla para pantallas grandes -->
-                        <div class="table-responsive d-none d-md-block">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
+            <!-- Tabla de Cobros (Desktop) -->
+            <div class="card cobros-desktop-cards">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Restaurante</th>
+                                    <th>Semana</th>
+                                    <th>Monto Comisión</th>
+                                    <th>Monto Pagado</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% cobros.forEach(cobro => { %>
                                     <tr>
-                                        <th>Restaurante</th>
-                                        <th>Período</th>
-                                        <th>Ventas Brutas</th>
-                                        <th>Comisión (10%)</th>
-                                        <th>Estado</th>
-                                        <th>Vencimiento</th>
-                                        <th>Comprobantes</th>
-                                        <th>Acciones</th>
+                                        <td><%= cobro.id %></td>
+                                        <td><%= cobro.restaurante_nombre %></td>
+                                        <td><%= new Date(cobro.semana_inicio).toLocaleDateString() %> - <%= new Date(cobro.semana_fin).toLocaleDateString() %></td>
+                                        <td>$<%= Number(cobro.monto_comision || 0).toFixed(2) %></td>
+                                        <td>$<%= Number(cobro.monto_pagado || 0).toFixed(2) %></td>
+                                        <td>
+                                            <span class="badge bg-<%= cobro.estado === 'pagado' ? 'success' : 'warning' %>">
+                                                <%= cobro.estado %>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="/admin/cobros/<%= cobro.id %>" class="btn btn-sm btn-info">Ver Detalles</a>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    <% cobros.forEach(cobro => { %>
-                                        <tr class="<%= cobro.estado === 'vencido' ? 'table-danger' : cobro.estado === 'pagado' ? 'table-success' : '' %>">
-                                            <td>
-                                                <div class="fw-bold"><%= cobro.restaurante_nombre %></div>
-                                                <small class="text-muted">ID: <%= cobro.restaurante_id %></small>
-                                            </td>
-                                            <td>
-                                                <div class="small">
-                                                    <strong>Desde:</strong> <%= new Date(cobro.semana_inicio).toLocaleDateString('es-AR') %><br>
-                                                    <strong>Hasta:</strong> <%= new Date(cobro.semana_fin).toLocaleDateString('es-AR') %>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="text-end">
-                                                    <strong class="text-primary">$<%= cobro.ventas_brutas.toLocaleString() %></strong>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="text-end">
-                                                    <strong class="text-success">$<%= cobro.monto_comision.toLocaleString() %></strong>
-                                                    <br><small class="text-muted"><%= cobro.porcentaje_comision %>%</small>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <% if (cobro.estado === 'pendiente') { %>
-                                                    <span class="badge bg-warning">Pendiente</span>
-                                                <% } else if (cobro.estado === 'pagado') { %>
-                                                    <span class="badge bg-success">Pagado</span>
-                                                    <% if (cobro.fecha_pago) { %>
-                                                        <br><small class="text-muted">
-                                                            <%= new Date(cobro.fecha_pago).toLocaleDateString('es-AR') %>
-                                                        </small>
-                                                    <% } %>
-                                                <% } else if (cobro.estado === 'vencido') { %>
-                                                    <span class="badge bg-danger">Vencido</span>
-                                                <% } else if (cobro.estado === 'exonerado') { %>
-                                                    <span class="badge bg-secondary">Exonerado</span>
-                                                <% } %>
-                                            </td>
-                                            <td>
-                                                <div class="small">
-                                                    <%= new Date(cobro.fecha_vencimiento).toLocaleDateString('es-AR') %>
-                                                    <% if (new Date(cobro.fecha_vencimiento) < new Date() && cobro.estado === 'pendiente') { %>
-                                                        <br><small class="text-danger">
-                                                            <i class="fas fa-exclamation-triangle"></i> Vencido
-                                                        </small>
-                                                    <% } %>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <% if (cobro.comprobantes_count > 0) { %>
-                                                    <span class="badge bg-info">
-                                                        <%= cobro.comprobantes_count %> subido<%= cobro.comprobantes_count > 1 ? 's' : '' %>
-                                                    </span>
-                                                    <% if (cobro.monto_pagado_total > 0) { %>
-                                                        <br><small class="text-success">
-                                                            $<%= cobro.monto_pagado_total.toLocaleString() %> aprobado
-                                                        </small>
-                                                    <% } %>
-                                                <% } else { %>
-                                                    <span class="badge bg-light text-dark">Sin comprobantes</span>
-                                                <% } %>
-                                            </td>
-                                            <td>
-                                                <div class="dropdown">
-                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
-                                                            type="button" data-bs-toggle="dropdown">
-                                                        <i class="fas fa-ellipsis-v"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu">
-                                                        <li>
-                                                            <a class="dropdown-item" href="/admin/comprobantes?cobro=<%= cobro.id %>">
-                                                                <i class="fas fa-receipt me-2"></i>Ver Comprobantes
-                                                            </a>
-                                                        </li>
-                                                        <% if (cobro.estado === 'pendiente') { %>
-                                                            <li>
-                                                                <a class="dropdown-item" href="#" onclick="marcarComoPagado(<%= cobro.id %>)">
-                                                                    <i class="fas fa-check me-2"></i>Marcar como Pagado
-                                                                </a>
-                                                            </li>
-                                                            <li>
-                                                                <a class="dropdown-item" href="#" onclick="exonerarCobro(<%= cobro.id %>)">
-                                                                    <i class="fas fa-hand-paper me-2"></i>Exonerar
-                                                                </a>
-                                                            </li>
-                                                        <% } %>
-                                                        <li><hr class="dropdown-divider"></li>
-                                                        <li>
-                                                            <a class="dropdown-item" href="#" onclick="enviarRecordatorio(<%= cobro.id %>)">
-                                                                <i class="fas fa-bell me-2"></i>Enviar Recordatorio
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <a class="dropdown-item text-danger" href="#" onclick="eliminarCobro(<%= cobro.id %>)">
-                                                                <i class="fas fa-trash me-2"></i>Eliminar
-                                                            </a>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <% }) %>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Vista de tarjetas para móviles -->
-                        <div class="d-md-none row g-3 p-3">
-                            <% cobros.forEach(cobro => { %>
-                                <div class="col-12">
-                                    <div class="card shadow-sm <%= cobro.estado === 'vencido' ? 'border-danger' : cobro.estado === 'pagado' ? 'border-success' : '' %>">
-                                        <div class="card-body">
-                                            <h5 class="card-title mb-1"><%= cobro.restaurante_nombre %></h5>
-                                            <h6 class="card-subtitle mb-2 text-muted">ID Restaurante: <%= cobro.restaurante_id %></h6>
-                                            <p class="card-text mb-1">
-                                                <strong>Período:</strong> <%= new Date(cobro.semana_inicio).toLocaleDateString('es-AR') %> al <%= new Date(cobro.semana_fin).toLocaleDateString('es-AR') %>
-                                            </p>
-                                            <p class="card-text mb-1">
-                                                <strong>Ventas Brutas:</strong> <strong class="text-primary">$<%= cobro.ventas_brutas.toLocaleString() %></strong>
-                                            </p>
-                                            <p class="card-text mb-1">
-                                                <strong>Comisión (10%):</strong> <strong class="text-success">$<%= cobro.monto_comision.toLocaleString() %></strong>
-                                            </p>
-                                            <p class="card-text mb-1">
-                                                <strong>Estado:</strong> 
-                                                <% if (cobro.estado === 'pendiente') { %>
-                                                    <span class="badge bg-warning">Pendiente</span>
-                                                <% } else if (cobro.estado === 'pagado') { %>
-                                                    <span class="badge bg-success">Pagado</span>
-                                                    <% if (cobro.fecha_pago) { %>
-                                                        <small class="text-muted">(<%= new Date(cobro.fecha_pago).toLocaleDateString('es-AR') %>)</small>
-                                                    <% } %>
-                                                <% } else if (cobro.estado === 'vencido') { %>
-                                                    <span class="badge bg-danger">Vencido</span>
-                                                <% } else if (cobro.estado === 'exonerado') { %>
-                                                    <span class="badge bg-secondary">Exonerado</span>
-                                                <% } %>
-                                            </p>
-                                            <p class="card-text mb-1">
-                                                <strong>Vencimiento:</strong> <%= new Date(cobro.fecha_vencimiento).toLocaleDateString('es-AR') %>
-                                                <% if (new Date(cobro.fecha_vencimiento) < new Date() && cobro.estado === 'pendiente') { %>
-                                                    <span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Vencido</span>
-                                                <% } %>
-                                            </p>
-                                            <p class="card-text mb-3">
-                                                <strong>Comprobantes:</strong> 
-                                                <% if (cobro.comprobantes_count > 0) { %>
-                                                    <span class="badge bg-info">
-                                                        <%= cobro.comprobantes_count %> subido<%= cobro.comprobantes_count > 1 ? 's' : '' %>
-                                                    </span>
-                                                    <% if (cobro.monto_pagado_total > 0) { %>
-                                                        <small class="text-success">($<%= cobro.monto_pagado_total.toLocaleString() %> aprobado)</small>
-                                                    <% } %>
-                                                <% } else { %>
-                                                    <span class="badge bg-light text-dark">Sin comprobantes</span>
-                                                <% } %>
-                                            </p>
-                                            <div class="d-grid gap-2">
-                                                <a class="btn btn-sm btn-outline-primary" href="/admin/comprobantes?cobro=<%= cobro.id %>">
-                                                    <i class="fas fa-receipt me-2"></i>Ver Comprobantes
-                                                </a>
-                                                <% if (cobro.estado === 'pendiente') { %>
-                                                    <button class="btn btn-sm btn-success" onclick="marcarComoPagado(<%= cobro.id %>)">
-                                                        <i class="fas fa-check me-2"></i>Marcar como Pagado
-                                                    </button>
-                                                    <button class="btn btn-sm btn-secondary" onclick="exonerarCobro(<%= cobro.id %>)">
-                                                        <i class="fas fa-hand-paper me-2"></i>Exonerar
-                                                    </button>
-                                                <% } %>
-                                                <button class="btn btn-sm btn-info" onclick="enviarRecordatorio(<%= cobro.id %>)">
-                                                    <i class="fas fa-bell me-2"></i>Enviar Recordatorio
-                                                </button>
-                                                <button class="btn btn-sm btn-danger" onclick="eliminarCobro(<%= cobro.id %>)">
-                                                    <i class="fas fa-trash me-2"></i>Eliminar
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            <% }) %>
-                        </div>
-                    <% } else { %>
-                        <div class="text-center py-5">
-                            <i class="fas fa-money-bill-wave fa-3x text-muted mb-3"></i>
-                            <h5>No se encontraron cobros</h5>
-                            <p class="text-muted">Intenta cambiar los filtros de búsqueda o generar nuevos cobros</p>
-                            <button class="btn btn-primary" onclick="mostrarModalGenerarCobros()">
-                                <i class="fas fa-plus me-1"></i>Generar Cobros
-                            </button>
-                        </div>
-                    <% } %>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
+
+            <!-- Tarjetas de Cobros (Móvil) -->
+            <div class="cobros-mobile-cards">
+                <% cobros.forEach(cobro => { %>
+                    <div class="cobro-card">
+                        <div class="cobro-card-header">
+                            <div class="cobro-card-id">Cobro #<%= cobro.id %></div>
+                            <div class="cobro-card-restaurante"><%= cobro.restaurante_nombre %></div>
+                            <div class="cobro-card-semana">
+                                <%= new Date(cobro.semana_inicio).toLocaleDateString() %> - <%= new Date(cobro.semana_fin).toLocaleDateString() %>
+                            </div>
+                        </div>
+                        <div class="cobro-card-body">
+                            <div class="cobro-info-row">
+                                <span class="cobro-info-label">Comisión:</span>
+                                <span class="cobro-info-value amount">$<%= Number(cobro.monto_comision || 0).toFixed(2) %></span>
+                            </div>
+                            <div class="cobro-info-row">
+                                <span class="cobro-info-label">Pagado:</span>
+                                <span class="cobro-info-value amount <%= cobro.estado === 'pagado' ? '' : 'pending' %>">
+                                    $<%= Number(cobro.monto_pagado || 0).toFixed(2) %>
+                                </span>
+                            </div>
+                            <div class="cobro-info-row">
+                                <span class="cobro-info-label">Estado:</span>
+                                <span class="estado-badge estado-<%= cobro.estado %>">
+                                    <%= cobro.estado %>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="cobro-card-footer">
+                            <a href="/admin/cobros/<%= cobro.id %>" class="btn btn-ver-detalles">
+                                <i class="fas fa-eye me-2"></i>Ver Detalles
+                            </a>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+
         </div>
     </div>
 </div>
 
-<!-- Modal Generar Cobros -->
-<div class="modal fade" id="modalGenerarCobros" tabindex="-1">
-    <div class="modal-dialog">
+<!-- Modal de Confirmación para Generar Cobros -->
+<div class="modal fade" id="modalGenerarCobros" tabindex="-1" aria-labelledby="modalGenerarCobrosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-calculator me-2"></i>Generar Cobros Semanales
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="modalGenerarCobrosLabel">
+                    <i class="fas fa-magic me-2"></i>Generar Cobros Semanales Automáticamente
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="formGenerarCobros">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="fecha_inicio" class="form-label">Fecha de Inicio</label>
-                            <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="fecha_fin" class="form-label">Fecha de Fin</label>
-                            <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required>
-                        </div>
-                        <div class="col-12">
-                            <label for="restaurantes_seleccionados" class="form-label">Restaurantes</label>
-                            <select class="form-select" id="restaurantes_seleccionados" name="restaurante_ids" multiple>
-                                <% restaurantes.forEach(rest => { %>
-                                    <option value="<%= rest.id %>"><%= rest.nombre %></option>
-                                <% }) %>
-                            </select>
-                            <div class="form-text">Si no seleccionas ninguno, se generarán para todos los restaurantes activos</div>
-                        </div>
-                        <div class="col-12">
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Se calculará el 10% de las ventas brutas del período seleccionado para cada restaurante.
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle me-2"></i>¿Qué hace esta función?</h6>
+                    <ul class="mb-0">
+                        <li>Genera cobros semanales para <strong>TODOS</strong> los restaurantes activos y verificados</li>
+                        <li>Calcula comisiones del <strong>10%</strong> sobre ventas brutas</li>
+                        <li>Considera pedidos en estados: <strong>entregado, en_camino, listo, pendiente, confirmado, preparando</strong></li>
+                        <li>Establece fecha de vencimiento en <strong>7 días</strong></li>
+                        <li>Envía emails automáticos a cada restaurante</li>
+                        <li><strong>Nota:</strong> Solo se generan cobros para restaurantes que tengan pedidos en la semana</li>
+                    </ul>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-calendar me-2"></i>Período de la Semana</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="periodoSemana">
+                                    <p class="mb-1"><strong>Desde:</strong> <span id="fechaInicio"></span></p>
+                                    <p class="mb-0"><strong>Hasta:</strong> <span id="fechaFin"></span></p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </form>
+                    <div class="col-md-6">
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0"><i class="fas fa-store me-2"></i>Restaurantes a Procesar</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="infoRestaurantes">
+                                    <p class="mb-1"><strong>Total:</strong> <span id="totalRestaurantes">Todos los activos</span> restaurantes</p>
+                                    <p class="mb-0"><strong>Estado:</strong> <span class="badge bg-success">Activos y Verificados</span></p>
+                                    <p class="mb-0"><strong>Criterio:</strong> Solo restaurantes con pedidos en la semana</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle me-2"></i>Importante</h6>
+                    <p class="mb-0">
+                        Esta acción <strong>NO se puede deshacer</strong>. Los cobros generados se crearán en la base de datos 
+                        y se enviarán emails a todos los restaurantes. Asegúrate de que sea el momento correcto para generar los cobros.
+                    </p>
+                </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-success" onclick="generarCobros()">
-                    <i class="fas fa-calculator me-1"></i>Generar Cobros
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-warning" id="btnConfirmarGenerar">
+                    <i class="fas fa-magic me-2"></i>Generar Cobros Ahora
                 </button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Modal de Progreso -->
+<div class="modal fade" id="modalProgreso" tabindex="-1" aria-labelledby="modalProgresoLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalProgresoLabel">
+                    <i class="fas fa-cog fa-spin me-2"></i>Generando Cobros...
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Generando...</span>
+                    </div>
+                </div>
+                <p class="mb-2">Generando cobros semanales para todos los restaurantes...</p>
+                <p class="text-muted small">Esto puede tomar unos minutos. Por favor, no cierres esta ventana.</p>
+                
+                <div class="progress mt-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SweetAlert2 para notificaciones -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- JavaScript para Generar Cobros -->
 <script>
-// Show generate charges modal
-function mostrarModalGenerarCobros() {
-    // Set default dates (last week)
-    const hoy = new Date();
-    const semanaAnterior = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
-    
-    document.getElementById('fecha_fin').value = hoy.toISOString().split('T')[0];
-    document.getElementById('fecha_inicio').value = semanaAnterior.toISOString().split('T')[0];
-    
-    new bootstrap.Modal(document.getElementById('modalGenerarCobros')).show();
-}
+document.addEventListener('DOMContentLoaded', function() {
+    const btnGenerarCobros = document.getElementById('btnGenerarCobros');
+    const btnConfirmarGenerar = document.getElementById('btnConfirmarGenerar');
+    const modalGenerarCobros = new bootstrap.Modal(document.getElementById('modalGenerarCobros'));
+    const modalProgreso = new bootstrap.Modal(document.getElementById('modalProgreso'));
 
-// Generate charges
-function generarCobros() {
-    const form = document.getElementById('formGenerarCobros');
-    const formData = new FormData(form);
-    
-    const data = {
-        fecha_inicio: formData.get('fecha_inicio'),
-        fecha_fin: formData.get('fecha_fin'),
-        restaurante_ids: formData.getAll('restaurante_ids')
-    };
-    
-    if (!data.fecha_inicio || !data.fecha_fin) {
-        showNotification('Por favor, selecciona las fechas', 'warning');
-        return;
+    // Calcular fechas de la semana actual
+    function calcularPeriodoSemana() {
+        const hoy = new Date();
+        const lunes = new Date(hoy);
+        const diff = hoy.getDay() === 0 ? 6 : hoy.getDay() - 1;
+        lunes.setDate(hoy.getDate() - diff);
+        lunes.setHours(0, 0, 0, 0);
+        
+        const domingo = new Date(lunes);
+        domingo.setDate(lunes.getDate() + 6);
+        domingo.setHours(23, 59, 59, 999);
+
+        return {
+            inicio: lunes.toLocaleDateString('es-AR'),
+            fin: domingo.toLocaleDateString('es-AR')
+        };
     }
-    
-    fetch('/admin/cobros/generar', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showNotification(data.message, 'success');
-            bootstrap.Modal.getInstance(document.getElementById('modalGenerarCobros')).hide();
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            showNotification(data.message || 'Error generando cobros', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Error generando cobros', 'error');
-    });
-}
 
-// Mark as paid
-function marcarComoPagado(cobroId) {
-    if (confirm('¿Marcar este cobro como pagado manualmente?')) {
-        fetch(`/admin/cobros/${cobroId}/marcar-pagado`, {
+    // Mostrar modal de confirmación
+    btnGenerarCobros.addEventListener('click', function() {
+        const periodo = calcularPeriodoSemana();
+        document.getElementById('fechaInicio').textContent = periodo.inicio;
+        document.getElementById('fechaFin').textContent = periodo.fin;
+        
+        // Mostrar información básica primero
+        document.getElementById('totalRestaurantes').textContent = 'Calculando...';
+        
+        // Mostrar información estática por ahora
+        document.getElementById('totalRestaurantes').textContent = 'Todos los activos';
+
+        modalGenerarCobros.show();
+    });
+
+    // Confirmar generación de cobros
+    btnConfirmarGenerar.addEventListener('click', function() {
+        modalGenerarCobros.hide();
+        modalProgreso.show();
+
+        // Deshabilitar botón durante el proceso
+        btnConfirmarGenerar.disabled = true;
+        btnConfirmarGenerar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generando...';
+
+        // Llamar a la API para generar cobros
+        fetch('/admin/cobros/generar-automatico', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -444,41 +322,55 @@ function marcarComoPagado(cobroId) {
         })
         .then(response => response.json())
         .then(data => {
+            modalProgreso.hide();
+            
             if (data.success) {
-                showNotification('Cobro marcado como pagado', 'success');
-                setTimeout(() => location.reload(), 1000);
+                // Mostrar mensaje de éxito
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Cobros Generados Exitosamente!',
+                    html: `
+                        <div class="text-start">
+                            <p><strong>Período:</strong> ${data.data.fecha_inicio} al ${data.data.fecha_fin}</p>
+                            <p><strong>Cobros generados:</strong> ${data.data.cobrosGenerados} restaurantes</p>
+                            <p><strong>Total comisiones:</strong> $${data.data.totalComisiones.toLocaleString()}</p>
+                            <p><strong>Restaurantes procesados:</strong> ${data.data.restaurantes}</p>
+                        </div>
+                    `,
+                    confirmButtonText: 'Perfecto',
+                    confirmButtonColor: '#28a745'
+                }).then(() => {
+                    // Recargar la página para mostrar los nuevos cobros
+                    window.location.reload();
+                });
             } else {
-                showNotification(data.message || 'Error marcando como pagado', 'error');
+                // Mostrar mensaje de error
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al Generar Cobros',
+                    text: data.message,
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#dc3545'
+                });
             }
         })
         .catch(error => {
+            modalProgreso.hide();
             console.error('Error:', error);
-            showNotification('Error procesando la acción', 'error');
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de Conexión',
+                text: 'Hubo un problema al conectar con el servidor. Por favor, intenta nuevamente.',
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: '#dc3545'
+            });
+        })
+        .finally(() => {
+            // Restaurar botón
+            btnConfirmarGenerar.disabled = false;
+            btnConfirmarGenerar.innerHTML = '<i class="fas fa-magic me-2"></i>Generar Cobros Ahora';
         });
-    }
-}
-
-// Export charges
-function exportarCobros() {
-    const params = new URLSearchParams(window.location.search);
-    params.set('export', 'csv');
-    window.open(`/admin/cobros/export?${params.toString()}`, '_blank');
-}
+    });
+});
 </script>
-
-<%- include('../partials/footer') %>
-
-<% if (user && user.tipo_usuario === 'admin') { %>
-<nav class="admin-mobile-nav admin-mobile-nav-main d-md-none d-lg-none d-xl-none">
-  <a href="/admin" class="admin-mobile-nav-item <%= currentPath === '/admin' ? 'active' : '' %>"><i class="fas fa-chart-bar"></i><span>Dashboard</span></a>
-  <a href="/admin/restaurantes" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/restaurantes') ? 'active' : '' %>"><i class="fas fa-store"></i><span>Restaurantes</span></a>
-  <a href="/admin/cobros" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/cobros') ? 'active' : '' %>"><i class="fas fa-money-bill-wave"></i><span>Cobros</span></a>
-  <a href="/admin/productos" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/productos') ? 'active' : '' %>"><i class="fas fa-utensils"></i><span>Productos</span></a>
-</nav>
-<nav class="admin-mobile-nav admin-mobile-nav-secondary d-md-none d-lg-none d-xl-none">
-  <a href="/admin/comprobantes" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/comprobantes') ? 'active' : '' %>"><i class="fas fa-receipt"></i><span>Comprobantes</span></a>
-  <a href="/admin/usuarios" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/usuarios') ? 'active' : '' %>"><i class="fas fa-users"></i><span>Usuarios</span></a>
-  <a href="/admin/reportes" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/reportes') ? 'active' : '' %>"><i class="fas fa-chart-line"></i><span>Reportes</span></a>
-  <a href="/admin/configuracion" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/configuracion') ? 'active' : '' %>"><i class="fas fa-cog"></i><span>Config</span></a>
-</nav>
-<% } %>

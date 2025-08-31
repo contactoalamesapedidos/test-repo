@@ -1,0 +1,68 @@
+<svg width="800" height="300" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bannerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff6b35;stop-opacity:0.8" />
+      <stop offset="50%" style="stop-color:#f7931e;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#e55a2b;stop-opacity:0.8" />
+    </linearGradient>
+    <linearGradient id="overlayGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:rgba(0,0,0,0.3);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:rgba(0,0,0,0.1);stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Fondo principal -->
+  <rect width="800" height="300" fill="url(#bannerGradient)"/>
+  
+  <!-- Overlay para texto -->
+  <rect width="800" height="300" fill="url(#overlayGradient)"/>
+  
+  <!-- Patrón de elementos decorativos -->
+  <g opacity="0.1">
+    <!-- Platos decorativos -->
+    <ellipse cx="100" cy="80" rx="25" ry="6" fill="#fff"/>
+    <ellipse cx="700" cy="120" rx="20" ry="5" fill="#fff"/>
+    <ellipse cx="650" cy="200" rx="30" ry="7" fill="#fff"/>
+    
+    <!-- Cubiertos decorativos -->
+    <rect x="150" y="60" width="2" height="20" fill="#fff" rx="1"/>
+    <rect x="600" y="180" width="2" height="25" fill="#fff" rx="1"/>
+    <rect x="720" y="150" width="2" height="18" fill="#fff" rx="1"/>
+  </g>
+  
+  <!-- Icono principal -->
+  <g transform="translate(400, 150)">
+    <!-- Plato grande -->
+    <ellipse cx="0" cy="0" rx="50" ry="12" fill="#fff" opacity="0.9"/>
+    
+    <!-- Cubiertos principales -->
+    <g transform="translate(-80, -40)">
+      <!-- Tenedor -->
+      <rect x="-2" y="0" width="4" height="40" fill="#fff" rx="2"/>
+      <rect x="-4" y="0" width="4" height="30" fill="#fff" rx="2"/>
+      <rect x="-6" y="0" width="4" height="35" fill="#fff" rx="2"/>
+    </g>
+    
+    <g transform="translate(80, -45)">
+      <!-- Cuchillo -->
+      <rect x="-3" y="0" width="6" height="45" fill="#fff" rx="3"/>
+      <polygon points="-5,0 1,0 -2,8" fill="#fff"/>
+    </g>
+    
+    <!-- Cuchara -->
+    <g transform="translate(0, -60)">
+      <ellipse cx="0" cy="0" rx="12" ry="8" fill="#fff"/>
+      <rect x="-3" y="8" width="6" height="30" fill="#fff" rx="3"/>
+    </g>
+  </g>
+  
+  <!-- Texto principal -->
+  <text x="400" y="250" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-size="24" font-weight="bold">
+    RESTAURANTE
+  </text>
+  
+  <!-- Texto secundario -->
+  <text x="400" y="275" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-size="14" opacity="0.8">
+    Los mejores platos a tu disposición
+  </text>
+</svg> 

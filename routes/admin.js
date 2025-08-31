@@ -53,7 +53,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: function (req, file, cb) {
@@ -96,6 +96,7 @@ router.get('/', requireAdmin, async (req, res) => {
       SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN verificado = 1 THEN 1 ELSE 0 END) as verificados,
+        SUM(CASE WHEN verificado = 0 THEN 1 ELSE 0 END) as no_verificados,
         SUM(CASE WHEN activo = 1 THEN 1 ELSE 0 END) as activos
       FROM restaurantes
     `);
@@ -175,7 +176,10 @@ router.get('/', requireAdmin, async (req, res) => {
   }
 });
 
-// ========== GESTIÓN DE CONFIGURACIÓN ==========
+const axios = require('axios');
+require('dotenv').config();
+
+// ========== GESTIÓN DE CONFIGURACIÓN ========== 
 router.get('/configuracion', requireAdmin, async (req, res) => {
   try {
     // Leer el link de Mercado Pago de la tabla configuraciones
@@ -215,15 +219,89 @@ router.post('/configuracion/save', requireAdmin, async (req, res) => {
   }
 });
 
-// ========== GESTIÓN DE USUARIOS ==========
+// ========== INTEGRACIÓN MERCADO PAGO OAUTH ========== 
+
+// Redirigir para autorización
+router.get('/mercadopago/auth', requireAdmin, (req, res) => {
+  const authUrl = `https://auth.mercadopago.com.ar/authorization?client_id=${process.env.MP_APP_ID}&response_type=code&platform_id=mp&state=${req.session.user.id}&redirect_uri=${process.env.MP_REDIRECT_URI}`;
+  res.redirect(authUrl);
+});
+
+// Callback de Mercado Pago
+router.get('/mercadopago/callback', requireAdmin, async (req, res) => {
+  const { code, state } = req.query;
+
+  if (!code) {
+    return res.redirect('/admin/configuracion?error=mp_auth_failed');
+  }
+
+  try {
+    // Intercambiar código por credenciales
+    const response = await axios.post('https://api.mercadopago.com/oauth/token', {
+      client_secret: process.env.MP_CLIENT_SECRET,
+      client_id: process.env.MP_APP_ID,
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: process.env.MP_REDIRECT_URI,
+    });
+
+    const { access_token, refresh_token, user_id } = response.data;
+
+    // Guardar credenciales en la base de datos para el admin
+    await db.execute(
+      `UPDATE usuarios SET mp_access_token = ?, mp_refresh_token = ?, mp_user_id = ? WHERE id = ?`,
+      [access_token, refresh_token, user_id, req.session.user.id]
+    );
+
+    res.redirect('/admin/configuracion?success=mp_auth_success');
+  } catch (error) {
+    console.error('Error en callback de Mercado Pago:', error);
+    res.redirect('/admin/configuracion?error=mp_token_failed');
+  }
+});
+
+// ========== GESTIÓN DE USUARIOS ========== 
 router.get('/usuarios', requireAdmin, async (req, res) => {
   try {
-    const [usuarios] = await db.execute('SELECT * FROM usuarios ORDER BY fecha_registro DESC');
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const { search, tipo, activo } = req.query;
+
+    let baseSql = `FROM usuarios WHERE 1=1`;
+    const filters = [];
+
+    if (search) {
+      baseSql += ` AND (nombre LIKE ? OR apellido LIKE ? OR email LIKE ? OR telefono LIKE ?)`;
+      const s = `%${search}%`;
+      filters.push(s, s, s, s);
+    }
+    if (tipo) {
+      baseSql += ` AND tipo_usuario = ?`;
+      filters.push(tipo);
+    }
+    if (activo !== undefined && activo !== '') {
+      baseSql += ` AND activo = ?`;
+      filters.push(activo === '1' ? 1 : 0);
+    }
+
+    const sql = `SELECT * ${baseSql} ORDER BY fecha_registro DESC LIMIT ? OFFSET ?`;
+    const countSql = `SELECT COUNT(*) as total_count ${baseSql}`;
+
+    const [usuarios] = await db.execute(sql, [...filters, limit, offset]);
+    const [totalCountResult] = await db.execute(countSql, filters);
+    const totalUsuarios = totalCountResult[0].total_count;
+    const totalPages = Math.ceil(totalUsuarios / limit) || 1;
+
     res.render('admin/usuarios', {
       title: 'Gestión de Usuarios - A la Mesa',
       user: req.session.user,
       usuarios,
-      path: req.path
+      currentPage: page,
+      totalPages,
+      path: req.path,
+      limit,
+      filtros: { search: search || '', tipo: tipo || '', activo: (activo !== undefined ? String(activo) : '') }
     });
   } catch (error) {
     console.error('Error in admin usuarios:', error);
@@ -235,7 +313,67 @@ router.get('/usuarios', requireAdmin, async (req, res) => {
   }
 });
 
-// ========== GESTIÓN DE REPORTES ==========
+// Exportar usuarios CSV (respetando filtros actuales)
+router.get('/usuarios/export', requireAdmin, async (req, res) => {
+  try {
+    const { search, tipo, activo } = req.query;
+
+    let baseSql = `FROM usuarios WHERE 1=1`;
+    const filters = [];
+
+    if (search) {
+      baseSql += ` AND (nombre LIKE ? OR apellido LIKE ? OR email LIKE ? OR telefono LIKE ?)`;
+      const s = `%${search}%`;
+      filters.push(s, s, s, s);
+    }
+    if (tipo) {
+      baseSql += ` AND tipo_usuario = ?`;
+      filters.push(tipo);
+    }
+    if (activo !== undefined && activo !== '') {
+      baseSql += ` AND activo = ?`;
+      filters.push(activo === '1' ? 1 : 0);
+    }
+
+    const sql = `SELECT id, nombre, apellido, email, telefono, ciudad, tipo_usuario, activo, fecha_registro ${baseSql} ORDER BY fecha_registro DESC`;
+    const [rows] = await db.execute(sql, filters);
+
+    const escapeCsv = (val) => {
+      if (val === null || val === undefined) return '';
+      const str = String(val);
+      if (/[",\n]/.test(str)) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    };
+
+    const header = ['id','nombre','apellido','email','telefono','ciudad','tipo_usuario','activo','fecha_registro'];
+    const lines = [header.join(',')];
+    for (const r of rows) {
+      lines.push([
+        escapeCsv(r.id),
+        escapeCsv(r.nombre),
+        escapeCsv(r.apellido),
+        escapeCsv(r.email),
+        escapeCsv(r.telefono),
+        escapeCsv(r.ciudad),
+        escapeCsv(r.tipo_usuario),
+        escapeCsv(r.activo ? 1 : 0),
+        escapeCsv(r.fecha_registro)
+      ].join(','));
+    }
+
+    const csv = lines.join('\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="usuarios.csv"');
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting usuarios CSV:', error);
+    res.status(500).json({ success: false, message: 'Error exportando usuarios' });
+  }
+});
+
+// ========== GESTIÓN DE REPORTES ========== 
 router.get('/reportes', requireAdmin, async (req, res) => {
   try {
     // Aquí podrías cargar datos para los reportes desde la base de datos
@@ -254,13 +392,15 @@ router.get('/reportes', requireAdmin, async (req, res) => {
   }
 });
 
-// ========== GESTIÓN DE RESTAURANTES ==========
+// ========== GESTIÓN DE RESTAURANTES ========== 
 
 // Listar todos los restaurantes
 router.get('/restaurantes', requireAdmin, async (req, res) => {
   try {
-    const { search, estado, categoria, page = 1, limit = 10 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const { search, estado, categoria } = req.query;
     
     let sql = `
       SELECT 
@@ -303,33 +443,35 @@ router.get('/restaurantes', requireAdmin, async (req, res) => {
       WHERE 1=1
     `;
 
-    const params = [];
-    const countParams = [];
+    const filterValues = [];
     
     if (search) {
       sql += ` AND (r.nombre LIKE ? OR r.email_contacto LIKE ?)`;
       countSql += ` AND (r.nombre LIKE ? OR r.email_contacto LIKE ?)`;
-      params.push(`%${search}%`, `%${search}%`);
-      countParams.push(`%${search}%`, `%${search}%`);
+      filterValues.push(`%${search}%`, `%${search}%`);
     }
     
     if (estado) {
       switch(estado) {
         case 'activos':
-          sql += ` AND r.activo = 1`;
-          countSql += ` AND r.activo = 1`;
+          sql += ` AND r.activo = ?`;
+          countSql += ` AND r.activo = ?`;
+          filterValues.push(1);
           break;
         case 'inactivos':
-          sql += ` AND r.activo = 0`;
-          countSql += ` AND r.activo = 0`;
+          sql += ` AND r.activo = ?`;
+          countSql += ` AND r.activo = ?`;
+          filterValues.push(0);
           break;
         case 'verificados':
-          sql += ` AND r.verificado = 1`;
-          countSql += ` AND r.verificado = 1`;
+          sql += ` AND r.verificado = ?`;
+          countSql += ` AND r.verificado = ?`;
+          filterValues.push(1);
           break;
         case 'no_verificados':
-          sql += ` AND r.verificado = 0`;
-          countSql += ` AND r.verificado = 0`;
+          sql += ` AND r.verificado = ?`;
+          countSql += ` AND r.verificado = ?`;
+          filterValues.push(0);
           break;
       }
     }
@@ -345,8 +487,7 @@ router.get('/restaurantes', requireAdmin, async (req, res) => {
         JOIN categorias_restaurantes cr2 ON rc2.categoria_id = cr2.id 
         WHERE rc2.restaurante_id = r.id AND cr2.id = ?
       )`;
-      params.push(categoria);
-      countParams.push(categoria);
+      filterValues.push(categoria);
     }
     
     sql += ` GROUP BY 
@@ -356,18 +497,23 @@ router.get('/restaurantes', requireAdmin, async (req, res) => {
         r.tiempo_entrega_max, r.costo_delivery, r.calificacion_promedio,
         r.total_calificaciones, r.activo, r.verificado
       ORDER BY r.nombre ASC
-      LIMIT ? OFFSET ?`;
+      LIMIT ${limit} OFFSET ${offset}`;
 
-    params.push(parseInt(limit), offset);
+    const queryParams = [...filterValues];
+    const countQueryParams = [...filterValues];
 
-    const [restaurants] = await db.execute(sql, params);
-    const [totalCountResult] = await db.execute(countSql, countParams);
+    console.log('Executing SQL for /admin/restaurantes:');
+    console.log('SQL:', sql);
+    console.log('Params:', queryParams);
+
+    const [restaurants] = await db.execute(sql, queryParams);
+    const [totalCountResult] = await db.execute(countSql, countQueryParams);
     const totalRestaurants = totalCountResult[0].total_count;
-    const totalPages = Math.ceil(totalRestaurants / parseInt(limit));
+    const totalPages = Math.ceil(totalRestaurants / limit);
     
     // Get categories for filter
     const [categorias] = await db.execute(`
-      SELECT * FROM categorias_restaurantes WHERE activa = 1 ORDER BY nombre
+      SELECT id, nombre, imagen FROM categorias_restaurantes WHERE activa = 1 ORDER BY nombre
     `);
 
     res.render('admin/restaurantes', {
@@ -378,6 +524,7 @@ router.get('/restaurantes', requireAdmin, async (req, res) => {
       filtros: { search: search || '', estado: estado || '', categoria: categoria || '' },
       currentPage: parseInt(page),
       totalPages,
+      limit,
       path: req.path
     });
   } catch (error) {
@@ -597,7 +744,7 @@ router.post('/restaurantes/crear', requireAdmin, [
       'restaurante',
       restaurantId,
       null,
-      { 
+      {
         nombre: req.body.restaurante_nombre,
         email: req.body.email,
         activo: req.body.activo ? 1 : 0
@@ -925,13 +1072,15 @@ router.delete('/restaurantes/:id/eliminar', requireAdmin, async (req, res) => {
   }
 });
 
-// ========== GESTIÓN DE PRODUCTOS ==========
+// ========== GESTIÓN DE PRODUCTOS ========== 
 
 // Listar productos
 router.get('/productos', requireAdmin, async (req, res) => {
   try {
-    const { restaurante, search, categoria, disponible, page = 1, limit = 10 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const { restaurante, search, categoria, disponible } = req.query;
     
     let sql = `
       SELECT p.*, r.nombre as restaurante_nombre, cp.nombre as categoria_nombre
@@ -949,46 +1098,42 @@ router.get('/productos', requireAdmin, async (req, res) => {
       WHERE 1=1
     `;
     
-    const params = [];
-    const countParams = [];
+    const filterValues = [];
     
     if (restaurante) {
       sql += ` AND p.restaurante_id = ?`;
       countSql += ` AND p.restaurante_id = ?`;
-      params.push(restaurante);
-      countParams.push(restaurante);
+      filterValues.push(restaurante);
     }
     
     if (search) {
       sql += ` AND (p.nombre LIKE ? OR p.descripcion LIKE ?)`;
       countSql += ` AND (p.nombre LIKE ? OR p.descripcion LIKE ?)`;
-      params.push(`%${search}%`, `%${search}%`);
-      countParams.push(`%${search}%`, `%${search}%`);
+      filterValues.push(`%${search}%`, `%${search}%`);
     }
     
     if (categoria) {
       sql += ` AND cp.nombre = ?`;
       countSql += ` AND cp.nombre = ?`;
-      params.push(categoria);
-      countParams.push(categoria);
+      filterValues.push(categoria);
     }
     
     if (disponible !== undefined && disponible !== '') {
       sql += ` AND p.disponible = ?`;
       countSql += ` AND p.disponible = ?`;
-      params.push(disponible === 'true' ? 1 : 0);
-      countParams.push(disponible === 'true' ? 1 : 0);
+      filterValues.push(disponible === 'true' ? 1 : 0);
     }
     
     sql += ` ORDER BY r.nombre, p.destacado DESC, p.nombre
       LIMIT ? OFFSET ?`;
 
-    params.push(parseInt(limit), offset);
+    const queryParams = [...filterValues, limit, offset];
+    const countQueryParams = [...filterValues];
     
-    const [productos] = await db.execute(sql, params);
-    const [totalCountResult] = await db.execute(countSql, countParams);
+    const [productos] = await db.execute(sql, queryParams);
+    const [totalCountResult] = await db.execute(countSql, countQueryParams);
     const totalProductos = totalCountResult[0].total_count;
-    const totalPages = Math.ceil(totalProductos / parseInt(limit));
+    const totalPages = Math.ceil(totalProductos / limit);
     
     // Get restaurants and categories for filters
     const [restaurantes] = await db.execute(`
@@ -1007,494 +1152,7 @@ router.get('/productos', requireAdmin, async (req, res) => {
       restaurantes,
       categorias, // <-- ahora sí se envía 'categorias'
       filtros: { restaurante: restaurante || '', search: search || '', categoria: categoria || '', disponible: disponible || '' },
-      currentPage: parseInt(page),
-      totalPages,
-      path: req.path
-    });
-  } catch (error) {
-    console.error('Error loading products:', error);
-    res.render('error', {
-      title: 'Error',
-      message: 'Error cargando productos',
-      error: {}
-    });
-  }
-});
-
-// Crear producto
-router.post('/productos/crear', requireAdmin, [ 
-  body('restaurante_id').isInt().withMessage('ID de restaurante inválido'),
-  body('nombre').trim().notEmpty().withMessage('El nombre del producto es requerido'),
-  body('descripcion').trim().notEmpty().withMessage('La descripción es requerida'),
-  body('precio').isFloat({ gt: 0 }).withMessage('El precio debe ser un número positivo'),
-  body('categoria_id').isInt().withMessage('ID de categoría inválido'),
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
-
-    const { restaurante_id, nombre, descripcion, precio, categoria_id, imagen_url, destacado, activo } = req.body;
-
-    const [result] = await db.execute(
-      `INSERT INTO productos (
-        restaurante_id, nombre, descripcion, precio, categoria_id, imagen_url, destacado, activo
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        restaurante_id,
-        nombre,
-        descripcion,
-        precio,
-        categoria_id,
-        imagen_url || null,
-        destacado ? 1 : 0,
-        activo ? 1 : 0,
-      ]
-    );
-
-    await logAdminActivity(
-      req.session.user.id,
-      'crear_producto',
-      `Producto creado: ${nombre} (ID: ${result.insertId})`,
-      'producto',
-      result.insertId,
-      null,
-      req.body,
-      req
-    );
-
-    res.json({ success: true, message: 'Producto creado exitosamente', producto_id: result.insertId });
-  } catch (error) {
-    console.error('Error creating product:', error);
-    res.status(500).json({ success: false, message: 'Error creando producto' });
-  }
-});
-
-// Actualizar producto
-router.put('/productos/:id/editar', requireAdmin, [
-  body('restaurante_id').isInt().withMessage('ID de restaurante inválido'),
-  body('nombre').trim().notEmpty().withMessage('El nombre del producto es requerido'),
-  body('descripcion').trim().notEmpty().withMessage('La descripción es requerida'),
-  body('precio').isFloat({ gt: 0 }).withMessage('El precio debe ser un número positivo'),
-  body('categoria_id').isInt().withMessage('ID de categoría inválido'),
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
-
-    const productId = req.params.id;
-    const { restaurante_id, nombre, descripcion, precio, categoria_id, imagen_url, destacado, activo } = req.body;
-
-    const [currentData] = await db.execute('SELECT * FROM productos WHERE id = ?', [productId]);
-    if (currentData.length === 0) {
-      return res.status(404).json({ success: false, message: 'Producto no encontrado' });
-    }
-
-    await db.execute(
-      `UPDATE productos SET
-        restaurante_id = ?, nombre = ?, descripcion = ?, precio = ?, categoria_id = ?, imagen_url = ?, destacado = ?, activo = ?
-       WHERE id = ?`,
-      [
-        restaurante_id,
-        nombre,
-        descripcion,
-        precio,
-        categoria_id,
-        imagen_url || null,
-        destacado ? 1 : 0,
-        activo ? 1 : 0,
-        productId,
-      ]
-    );
-
-    await logAdminActivity(
-      req.session.user.id,
-      'editar_producto',
-      `Producto editado: ${nombre} (ID: ${productId})`,
-      'producto',
-      productId,
-      currentData[0],
-      req.body,
-      req
-    );
-
-    res.json({ success: true, message: 'Producto actualizado exitosamente' });
-  } catch (error) {
-    console.error('Error updating product:', error);
-    res.status(500).json({ success: false, message: 'Error actualizando producto' });
-  }
-});
-
-// Eliminar producto
-router.delete('/productos/:id/eliminar', requireAdmin, async (req, res) => {
-  try {
-    const productId = req.params.id;
-
-    const [currentData] = await db.execute('SELECT * FROM productos WHERE id = ?', [productId]);
-    if (currentData.length === 0) {
-      return res.status(404).json({ success: false, message: 'Producto no encontrado' });
-    }
-
-    await db.execute('DELETE FROM productos WHERE id = ?', [productId]);
-
-    await logAdminActivity(
-      req.session.user.id,
-      'eliminar_producto',
-      `Producto eliminado: ${currentData[0].nombre} (ID: ${productId})`,
-      'producto',
-      productId,
-      currentData[0],
-      null,
-      req
-    );
-
-    res.json({ success: true, message: 'Producto eliminado exitosamente' });
-  } catch (error) {
-    console.error('Error deleting product:', error);
-    res.status(500).json({ success: false, message: 'Error eliminando producto' });
-  }
-});
-
-// Toggle disponibilidad de producto
-router.post('/productos/:id/toggle-disponibilidad', requireAdmin, async (req, res) => {
-  try {
-    const productId = req.params.id;
-    const { activo } = req.body;
-
-    const [currentData] = await db.execute('SELECT * FROM productos WHERE id = ?', [productId]);
-    if (currentData.length === 0) {
-      return res.status(404).json({ success: false, message: 'Producto no encontrado' });
-    }
-
-    const nuevoEstado = activo ? 1 : 0;
-
-    await db.execute('UPDATE productos SET activo = ? WHERE id = ?', [nuevoEstado, productId]);
-
-    await logAdminActivity(
-      req.session.user.id,
-      'toggle_disponibilidad_producto',
-      `Disponibilidad de producto ${currentData[0].nombre} (ID: ${productId}) cambiada a ${nuevoEstado ? 'activo' : 'inactivo'}`,
-      'producto',
-      productId,
-      { activo: currentData[0].activo },
-      { activo: nuevoEstado },
-      req
-    );
-
-    res.json({ success: true, message: 'Disponibilidad de producto actualizada exitosamente' });
-  } catch (error) {
-    console.error('Error toggling product availability:', error);
-    res.status(500).json({ success: false, message: 'Error actualizando disponibilidad del producto' });
-  }
-});
-
-// Listar cobros semanales
-router.get('/cobros', requireAdmin, async (req, res) => {
-  try {
-    const { restaurante, estado, periodo } = req.query;
-    
-    let sql = `
-      SELECT cs.*, r.nombre as restaurante_nombre,
-             COUNT(cp.id) as comprobantes_count,
-             SUM(CASE WHEN cp.estado = 'aprobado' THEN cp.monto_pagado ELSE 0 END) as monto_pagado_total
-      FROM cobros_semanales cs
-      JOIN restaurantes r ON cs.restaurante_id = r.id
-      LEFT JOIN comprobantes_pago cp ON cs.id = cp.cobro_semanal_id
-      WHERE 1=1
-    `;
-    
-    const params = [];
-    
-    if (restaurante) {
-      sql += ` AND cs.restaurante_id = ?`;
-      params.push(restaurante);
-    }
-    
-    if (estado) {
-      sql += ` AND cs.estado = ?`;
-      params.push(estado);
-    }
-    
-    if (periodo) {
-      sql += ` AND cs.semana_inicio >= DATE_SUB(NOW(), INTERVAL ? DAY)`;
-      const dias = periodo === '30' ? 30 : periodo === '90' ? 90 : 7;
-      params.push(dias);
-    }
-    
-    sql += ` GROUP BY cs.id ORDER BY cs.semana_inicio DESC`;
-    
-    const [cobros] = await db.execute(sql, params);
-    
-    // Get restaurants for filter
-    const [restaurantes] = await db.execute(`
-      SELECT id, nombre FROM restaurantes ORDER BY nombre
-    `);
-
-    res.render('admin/cobros', {
-      title: 'Gestión de Cobros - Admin',
-      user: req.session.user,
-      cobros,
-      restaurantes,
-      filtros: { restaurante: restaurante || '', estado: estado || '', periodo: periodo || '' },
-      path: req.path
-    });
-  } catch (error) {
-    console.error('Error loading charges:', error);
-    res.render('error', {
-      title: 'Error',
-      message: 'Error cargando cobros',
-      error: {}
-    });
-  }
-});
-
-// Generar cobros semanales - Página
-router.get('/cobros/generar', requireAdmin, async (req, res) => {
-  try {
-    // Obtener restaurantes activos
-    const [restaurantes] = await db.execute(`
-      SELECT id, nombre 
-      FROM restaurantes 
-      WHERE activo = 1 
-      ORDER BY nombre
-    `);
-
-    // Obtener el último cobro generado para cada restaurante
-    const [ultimosCobros] = await db.execute(`
-      SELECT 
-        restaurante_id,
-        MAX(semana_fin) as ultima_semana
-      FROM cobros_semanales
-      GROUP BY restaurante_id
-    `);
-
-    // Crear un mapa de últimos cobros por restaurante
-    const ultimosCobrosMap = ultimosCobros.reduce((map, cobro) => {
-      map[cobro.restaurante_id] = cobro.ultima_semana;
-      return map;
-    }, {});
-
-    res.render('admin/cobros-generar', {
-      title: 'Generar Cobros - Admin',
-      user: req.session.user,
-      restaurantes,
-      ultimosCobros: ultimosCobrosMap,
-      path: req.path
-    });
-  } catch (error) {
-    console.error('Error loading generate charges page:', error);
-    res.render('error', {
-      title: 'Error',
-      message: 'Error cargando página de generación de cobros',
-      error: {}
-    });
-  }
-});
-
-// Generar cobros semanales
-router.post('/cobros/generar', requireAdmin, async (req, res) => {
-  const connection = await db.getConnection();
-  
-  try {
-    const { fecha_inicio, fecha_fin, restaurante_ids } = req.body;
-    
-    // If no specific restaurants, get all active ones
-    let restaurantesToProcess;
-    if (restaurante_ids && restaurante_ids.length > 0) {
-      const placeholders = restaurante_ids.map(() => '?').join(',');
-      const [restaurants] = await connection.execute(
-        `SELECT id FROM restaurantes WHERE id IN (${placeholders}) AND activo = 1`,
-        restaurante_ids
-      );
-      restaurantesToProcess = restaurants;
-    } else {
-      const [restaurants] = await connection.execute(
-        'SELECT id FROM restaurantes WHERE activo = 1'
-      );
-      restaurantesToProcess = restaurants;
-    }
-
-    await connection.beginTransaction();
-
-    let cobrosGenerados = 0;
-
-    for (const restaurant of restaurantesToProcess) {
-      // Check if charge already exists for this period
-      const [existingCharge] = await connection.execute(
-        'SELECT id FROM cobros_semanales WHERE restaurante_id = ? AND semana_inicio = ?',
-        [restaurant.id, fecha_inicio]
-      );
-
-      if (existingCharge.length > 0) {
-        continue; // Skip if already exists
-      }
-
-      // Calculate sales for the period
-      const [salesData] = await connection.execute(`
-        SELECT 
-          COALESCE(SUM(total), 0) as ventas_brutas,
-          COUNT(*) as total_pedidos
-        FROM pedidos 
-        WHERE restaurante_id = ? 
-          AND fecha_pedido >= ? 
-          AND fecha_pedido <= ? 
-          AND estado = 'entregado'
-      `, [restaurant.id, fecha_inicio, fecha_fin]);
-
-      const ventasBrutas = salesData[0].ventas_brutas || 0;
-      const montoComision = ventasBrutas * 0.10; // 10%
-
-      // Insert charge
-      await connection.execute(`
-        INSERT INTO cobros_semanales 
-        (restaurante_id, semana_inicio, semana_fin, ventas_brutas, monto_comision, fecha_vencimiento)
-        VALUES (?, ?, ?, ?, ?, DATE_ADD(?, INTERVAL 7 DAY))
-      `, [restaurant.id, fecha_inicio, fecha_fin, ventasBrutas, montoComision, fecha_fin]);
-
-      // Obtener datos del restaurante para el email
-      const [restData] = await connection.execute(
-        'SELECT nombre, email_contacto FROM restaurantes WHERE id = ?',
-        [restaurant.id]
-      );
-      if (restData.length > 0 && restData[0].email_contacto) {
-        // Obtener el cobro recién creado
-        const [cobroRows] = await connection.execute(
-          'SELECT * FROM cobros_semanales WHERE restaurante_id = ? AND semana_inicio = ? LIMIT 1',
-          [restaurant.id, fecha_inicio]
-        );
-        const cobro = cobroRows[0];
-        await sendEmail(
-          restData[0].email_contacto,
-          'Nuevo cobro generado - A la Mesa',
-          'restaurant-charge',
-          {
-            nombreRestaurante: restData[0].nombre,
-            semana_inicio: cobro.semana_inicio,
-            semana_fin: cobro.semana_fin,
-            ventas_brutas: cobro.ventas_brutas,
-            monto_comision: cobro.monto_comision,
-            fecha_vencimiento: cobro.fecha_vencimiento
-          }
-        );
-      }
-      cobrosGenerados++;
-    }
-
-    await connection.commit();
-
-    // Log admin activity
-    await logAdminActivity(
-      req.session.user.id,
-      'generar_cobro',
-      `Generados ${cobrosGenerados} cobros para período ${fecha_inicio} - ${fecha_fin}`,
-      'cobro',
-      null,
-      null,
-      { cobros_generados: cobrosGenerados, periodo: `${fecha_inicio}_${fecha_fin}` },
-      req
-    );
-
-    res.json({ 
-      success: true, 
-      message: `Se generaron ${cobrosGenerados} cobros exitosamente`,
-      cobros_generados: cobrosGenerados
-    });
-
-  } catch (error) {
-    await connection.rollback();
-    console.error('Error generating charges:', error);
-    res.status(500).json({ success: false, message: 'Error generando cobros' });
-  } finally {
-    connection.release();
-  }
-});
-
-// ========== GESTIÓN DE PRODUCTOS ==========
-
-// Listar productos
-router.get('/productos', requireAdmin, async (req, res) => {
-  try {
-    const { restaurante, search, categoria, disponible, page = 1, limit = 10 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    
-    let sql = `
-      SELECT p.*, r.nombre as restaurante_nombre, cp.nombre as categoria_nombre
-      FROM productos p
-      JOIN restaurantes r ON p.restaurante_id = r.id
-      LEFT JOIN categorias_productos cp ON p.categoria_id = cp.id
-      WHERE 1=1
-    `;
-    
-    let countSql = `
-      SELECT COUNT(*) as total_count
-      FROM productos p
-      JOIN restaurantes r ON p.restaurante_id = r.id
-      LEFT JOIN categorias_productos cp ON p.categoria_id = cp.id
-      WHERE 1=1
-    `;
-    
-    const params = [];
-    const countParams = [];
-    
-    if (restaurante) {
-      sql += ` AND p.restaurante_id = ?`;
-      countSql += ` AND p.restaurante_id = ?`;
-      params.push(restaurante);
-      countParams.push(restaurante);
-    }
-    
-    if (search) {
-      sql += ` AND (p.nombre LIKE ? OR p.descripcion LIKE ?)`;
-      countSql += ` AND (p.nombre LIKE ? OR p.descripcion LIKE ?)`;
-      params.push(`%${search}%`, `%${search}%`);
-      countParams.push(`%${search}%`, `%${search}%`);
-    }
-    
-    if (categoria) {
-      sql += ` AND cp.nombre = ?`;
-      countSql += ` AND cp.nombre = ?`;
-      params.push(categoria);
-      countParams.push(categoria);
-    }
-    
-    if (disponible !== undefined && disponible !== '') {
-      sql += ` AND p.disponible = ?`;
-      countSql += ` AND p.disponible = ?`;
-      params.push(disponible === 'true' ? 1 : 0);
-      countParams.push(disponible === 'true' ? 1 : 0);
-    }
-    
-    sql += ` ORDER BY r.nombre, p.destacado DESC, p.nombre
-      LIMIT ? OFFSET ?`;
-
-    params.push(parseInt(limit), offset);
-    
-    const [productos] = await db.execute(sql, params);
-    const [totalCountResult] = await db.execute(countSql, countParams);
-    const totalProductos = totalCountResult[0].total_count;
-    const totalPages = Math.ceil(totalProductos / parseInt(limit));
-    
-    // Get restaurants and categories for filters
-    const [restaurantes] = await db.execute(`
-      SELECT id, nombre FROM restaurantes ORDER BY nombre
-    `);
-    
-    // Obtener categorías globales para el filtro y el formulario
-    const [categorias] = await db.execute(`
-      SELECT id, nombre FROM categorias_productos WHERE restaurante_id IS NULL AND activa = 1 ORDER BY orden_display, nombre
-    `);
-
-    res.render('admin/productos', {
-      title: 'Gestión de Productos - Admin',
-      user: req.session.user,
-      productos,
-      restaurantes,
-      categorias, // <-- ahora sí se envía 'categorias'
-      filtros: { restaurante: restaurante || '', search: search || '', categoria: categoria || '', disponible: disponible || '' },
-      currentPage: parseInt(page),
+      currentPage: page,
       totalPages,
       path: req.path
     });
@@ -1728,10 +1386,10 @@ router.get('/cobros/export', requireAdmin, async (req, res) => {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=cobros.csv');
       
-      let csv = 'ID,Restaurante,Período Inicio,Período Fin,Ventas Brutas,Comisión,Estado,Vencimiento,Comprobantes,Monto Pagado\\n';
+      let csv = 'ID,Restaurante,Período Inicio,Período Fin,Ventas Brutas,Comisión,Estado,Vencimiento,Comprobantes,Monto Pagado\n';
       
       cobros.forEach(c => {
-        csv += `${c.id},"${c.restaurante_nombre}",${c.semana_inicio},${c.semana_fin},${c.ventas_brutas},${c.monto_comision},${c.estado},${c.fecha_vencimiento},${c.comprobantes_count},${c.monto_pagado_total || 0}\\n`;
+        csv += `${c.id},"${c.restaurante_nombre}",${c.semana_inicio},${c.semana_fin},${c.ventas_brutas},${c.monto_comision},${c.estado},${c.fecha_vencimiento},${c.comprobantes_count},${c.monto_pagado_total || 0}\n`;
       });
       
       res.send(csv);
@@ -1742,6 +1400,456 @@ router.get('/cobros/export', requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error exporting charges:', error);
     res.status(500).json({ success: false, message: 'Error exportando cobros' });
+  }
+});
+
+// Listado de cobros (GET)
+router.get('/cobros', requireAdmin, async (req, res) => {
+  try {
+    const { restaurante = '', estado = '', semana = '' } = req.query;
+
+    // Construcción de filtros
+    let whereSql = 'WHERE 1=1';
+    const params = [];
+
+    if (restaurante) {
+      whereSql += ' AND r.nombre LIKE ?';
+      params.push(`%${restaurante}%`);
+    }
+    if (estado) {
+      whereSql += ' AND cs.estado = ?';
+      params.push(estado);
+    }
+    // Filtro por semana (input type week: YYYY-Www)
+    let semanaInicio = null;
+    let semanaFin = null;
+    if (semana) {
+      // Parsear semana ISO: YYYY-Www
+      const match = semana.match(/^(\d{4})-W(\d{2})$/);
+      if (match) {
+        const year = parseInt(match[1], 10);
+        const week = parseInt(match[2], 10);
+
+        // Obtener lunes de la semana ISO
+        const simple = new Date(year, 0, 1 + (week - 1) * 7);
+        const dow = simple.getDay();
+        const ISOweekStart = new Date(simple);
+        const diff = (dow <= 4 ? 1 - dow : 8 - dow); // Lunes como inicio
+        ISOweekStart.setDate(simple.getDate() + diff);
+        const ISOweekEnd = new Date(ISOweekStart);
+        ISOweekEnd.setDate(ISOweekStart.getDate() + 6);
+
+        const toDateStr = (d) => d.toISOString().slice(0, 10);
+        semanaInicio = toDateStr(ISOweekStart);
+        semanaFin = toDateStr(ISOweekEnd);
+
+        whereSql += ' AND cs.semana_inicio >= ? AND cs.semana_fin <= ?';
+        params.push(semanaInicio, semanaFin);
+      }
+    }
+
+    // Listado de cobros con monto_pagado calculado
+    const [cobros] = await db.execute(
+      `SELECT cs.*, r.nombre AS restaurante_nombre,
+              COALESCE(SUM(CASE WHEN cp.estado = 'aprobado' THEN cp.monto_pagado ELSE 0 END), 0) AS monto_pagado
+       FROM cobros_semanales cs
+       JOIN restaurantes r ON cs.restaurante_id = r.id
+       LEFT JOIN comprobantes_pago cp ON cp.cobro_semanal_id = cs.id
+       ${whereSql}
+       GROUP BY cs.id
+       ORDER BY cs.semana_inicio DESC`,
+      params
+    );
+
+    // Resumen con los mismos filtros
+    const [resumenRows] = await db.execute(
+      `SELECT 
+          COALESCE(SUM(CASE WHEN cs.estado IN ('pendiente','vencido') THEN cs.monto_comision ELSE 0 END), 0) AS total_pendiente,
+          COALESCE(SUM(CASE WHEN cs.estado = 'pagado' THEN cs.monto_comision ELSE 0 END), 0) AS total_pagado,
+          COALESCE(SUM(cs.monto_comision), 0) AS total_comisiones
+       FROM cobros_semanales cs
+       JOIN restaurantes r ON cs.restaurante_id = r.id
+       ${whereSql.replace('WHERE 1=1', 'WHERE 1=1')}`,
+      params
+    );
+
+    const resumen = resumenRows[0] || { total_pendiente: 0, total_pagado: 0, total_comisiones: 0 };
+
+    res.render('admin/cobros', {
+      title: 'Gestión de Cobros - Admin',
+      user: req.session.user,
+      resumen,
+      filtros: { restaurante, estado, semana },
+      cobros,
+      path: req.path
+    });
+  } catch (error) {
+    console.error('Error cargando cobros:', error);
+    res.render('error', {
+      title: 'Error',
+      message: 'Error cargando cobros',
+      error: {}
+    });
+  }
+});
+
+// Tabla semanal de pagos por restaurante (GET)
+router.get('/pagos-semanales', requireAdmin, async (req, res) => {
+  try {
+    const { year = new Date().getFullYear(), restaurante = '' } = req.query;
+    const currentYear = parseInt(year);
+
+    // Construcción de filtros
+    let whereSql = 'WHERE YEAR(cs.semana_inicio) = ?';
+    const params = [currentYear];
+
+    if (restaurante) {
+      whereSql += ' AND r.id = ?';
+      params.push(restaurante);
+    }
+
+    // Obtener todas las semanas del año con datos de pagos
+    const [semanasData] = await db.execute(`
+      SELECT 
+        cs.*,
+        r.nombre as restaurante_nombre,
+        r.id as restaurante_id,
+        COALESCE(SUM(CASE WHEN cp.estado = 'aprobado' THEN cp.monto_pagado ELSE 0 END), 0) AS monto_pagado_aprobado,
+        COUNT(cp.id) as comprobantes_count,
+        CASE 
+          WHEN cs.estado = 'pagado' THEN 'Pagado'
+          WHEN cs.estado = 'pendiente' AND cs.fecha_vencimiento < CURDATE() THEN 'Vencido'
+          WHEN cs.estado = 'pendiente' THEN 'Pendiente'
+          WHEN cs.estado = 'exonerado' THEN 'Exonerado'
+          ELSE cs.estado
+        END as estado_display
+      FROM cobros_semanales cs
+      JOIN restaurantes r ON cs.restaurante_id = r.id
+      LEFT JOIN comprobantes_pago cp ON cs.id = cp.cobro_semanal_id
+      ${whereSql}
+      GROUP BY cs.id
+      ORDER BY cs.semana_inicio ASC, r.nombre ASC
+    `, params);
+
+    // Generar estructura de semanas del año
+    const semanasAnio = [];
+    const inicioAnio = new Date(currentYear, 0, 1);
+    const finAnio = new Date(currentYear, 11, 31);
+    
+    // Encontrar el primer lunes del año
+    let primerLunes = new Date(inicioAnio);
+    while (primerLunes.getDay() !== 1) {
+      primerLunes.setDate(primerLunes.getDate() + 1);
+    }
+
+    // Generar todas las semanas del año
+    let semanaActual = new Date(primerLunes);
+    let numeroSemana = 1;
+    
+    while (semanaActual <= finAnio) {
+      const semanaFin = new Date(semanaActual);
+      semanaFin.setDate(semanaActual.getDate() + 6);
+      
+      semanasAnio.push({
+        numero: numeroSemana,
+        inicio: new Date(semanaActual),
+        fin: semanaFin,
+        fecha_inicio: semanaActual.toISOString().split('T')[0],
+        fecha_fin: semanaFin.toISOString().split('T')[0]
+      });
+      
+      semanaActual.setDate(semanaActual.getDate() + 7);
+      numeroSemana++;
+    }
+
+    // Obtener lista de restaurantes para filtros
+    const [restaurantes] = await db.execute(`
+      SELECT DISTINCT r.id, r.nombre 
+      FROM restaurantes r 
+      JOIN cobros_semanales cs ON r.id = cs.restaurante_id 
+      WHERE YEAR(cs.semana_inicio) = ?
+      ORDER BY r.nombre
+    `, [currentYear]);
+
+    // Calcular resumen anual
+    const [resumenAnual] = await db.execute(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN cs.estado = 'pagado' THEN cs.monto_comision ELSE 0 END), 0) AS total_pagado,
+        COALESCE(SUM(CASE WHEN cs.estado IN ('pendiente', 'vencido') THEN cs.monto_comision ELSE 0 END), 0) AS total_pendiente,
+        COALESCE(SUM(CASE WHEN cs.estado = 'exonerado' THEN cs.monto_comision ELSE 0 END), 0) AS total_exonerado,
+        COALESCE(SUM(cs.monto_comision), 0) AS total_comisiones,
+        COUNT(DISTINCT cs.restaurante_id) as total_restaurantes
+      FROM cobros_semanales cs
+      ${whereSql}
+    `, params);
+
+    const resumen = resumenAnual[0] || { 
+      total_pagado: 0, 
+      total_pendiente: 0, 
+      total_exonerado: 0, 
+      total_comisiones: 0, 
+      total_restaurantes: 0 
+    };
+
+    res.render('admin/pagos-semanales', {
+      title: 'Tabla Semanal de Pagos - Admin',
+      user: req.session.user,
+      year: currentYear,
+      semanasAnio,
+      restaurantes,
+      semanasData,
+      resumen,
+      filtros: { year: currentYear, restaurante },
+      path: req.path
+    });
+
+  } catch (error) {
+    console.error('Error cargando tabla semanal de pagos:', error);
+    res.render('error', {
+      title: 'Error',
+      message: 'Error cargando tabla semanal de pagos',
+      error: {}
+    });
+  }
+});
+
+// Exportar tabla semanal de pagos
+router.get('/pagos-semanales/export', requireAdmin, async (req, res) => {
+  try {
+    const { year = new Date().getFullYear(), restaurante = '', format = 'csv' } = req.query;
+    const currentYear = parseInt(year);
+
+    // Construcción de filtros
+    let whereSql = 'WHERE YEAR(cs.semana_inicio) = ?';
+    const params = [currentYear];
+
+    if (restaurante) {
+      whereSql += ' AND r.id = ?';
+      params.push(restaurante);
+    }
+
+    // Obtener datos para exportar
+    const [semanasData] = await db.execute(`
+      SELECT 
+        cs.*,
+        r.nombre as restaurante_nombre,
+        COALESCE(SUM(CASE WHEN cp.estado = 'aprobado' THEN cp.monto_pagado ELSE 0 END), 0) AS monto_pagado_aprobado,
+        COUNT(cp.id) as comprobantes_count
+      FROM cobros_semanales cs
+      JOIN restaurantes r ON cs.restaurante_id = r.id
+      LEFT JOIN comprobantes_pago cp ON cs.id = cp.cobro_semanal_id
+      ${whereSql}
+      GROUP BY cs.id
+      ORDER BY cs.semana_inicio ASC, r.nombre ASC
+    `, params);
+
+    if (format === 'csv') {
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename=pagos-semanales-${currentYear}.csv`);
+      
+      let csv = 'Semana,Restaurante,Período Inicio,Período Fin,Ventas Brutas,Comisión (10%),Estado,Monto Pagado,Comprobantes,Vencimiento\n';
+      
+      semanasData.forEach(cobro => {
+        const semana = Math.ceil((new Date(cobro.semana_inicio).getTime() - new Date(currentYear, 0, 1).getTime()) / (1000 * 60 * 60 * 24 * 7));
+        const estado = cobro.estado === 'pendiente' && new Date(cobro.fecha_vencimiento) < new Date() ? 'vencido' : cobro.estado;
+        
+        csv += `"Semana ${semana}","${cobro.restaurante_nombre}","${cobro.semana_inicio}","${cobro.semana_fin}",${cobro.ventas_brutas},${cobro.monto_comision},"${estado}",${cobro.monto_pagado_aprobado},${cobro.comprobantes_count},"${cobro.fecha_vencimiento}"\n`;
+      });
+      
+      res.send(csv);
+    } else {
+      res.json({
+        year: currentYear,
+        total_records: semanasData.length,
+        data: semanasData
+      });
+    }
+
+  } catch (error) {
+    console.error('Error exportando tabla semanal de pagos:', error);
+    res.status(500).json({ success: false, message: 'Error exportando datos' });
+  }
+});
+
+// Contar restaurantes activos y verificados
+router.get('/restaurantes/count-active', requireAdmin, async (req, res) => {
+  try {
+    const [result] = await db.execute(`
+      SELECT COUNT(*) as count
+      FROM restaurantes 
+      WHERE activo = 1 AND verificado = 1
+    `);
+    
+    res.json({ 
+      success: true, 
+      count: result[0].count 
+    });
+  } catch (error) {
+    console.error('Error contando restaurantes activos:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error contando restaurantes activos'
+    });
+  }
+});
+
+
+
+// Generar cobros (GET)
+router.get('/cobros/generar', requireAdmin, async (req, res) => {
+  try {
+    // Restaurantes activos y verificados para listar en el formulario
+    const [restaurantes] = await db.execute(`
+      SELECT id, nombre FROM restaurantes WHERE activo = 1 AND verificado = 1 ORDER BY nombre
+    `);
+
+    // Último cobro por restaurante para mostrar referencia
+    const [ultimos] = await db.execute(`
+      SELECT restaurante_id, MAX(semana_fin) AS ultimo
+      FROM cobros_semanales
+      GROUP BY restaurante_id
+    `);
+
+    const ultimosCobros = {};
+    ultimos.forEach(u => { if (u.restaurante_id) ultimosCobros[u.restaurante_id] = u.ultimo; });
+
+    res.render('admin/cobros-generar', {
+      title: 'Generar Cobros - Admin',
+      user: req.session.user,
+      restaurantes,
+      ultimosCobros,
+      path: req.path
+    });
+  } catch (error) {
+    console.error('Error cargando datos para generar cobros:', error);
+    res.render('error', {
+      title: 'Error',
+      message: 'Error cargando datos para generar cobros',
+      error: {}
+    });
+  }
+});
+
+// Ver detalle de un cobro
+router.get('/cobros/:id', requireAdmin, async (req, res) => {
+  try {
+    const cobroId = req.params.id;
+
+    const [cobros] = await db.execute(
+      'SELECT cs.*, r.nombre as restaurante_nombre FROM cobros_semanales cs JOIN restaurantes r ON cs.restaurante_id = r.id WHERE cs.id = ?',
+      [cobroId]
+    );
+
+    if (cobros.length === 0) {
+      return res.status(404).render('error', {
+        title: 'Cobro No Encontrado',
+        message: 'El cobro que buscas no existe',
+        error: {}
+      });
+    }
+
+    const [comprobantes] = await db.execute(
+      'SELECT * FROM comprobantes_pago WHERE cobro_semanal_id = ? ORDER BY fecha_subida DESC',
+      [cobroId]
+    );
+
+    res.render('admin/cobro-detalle', {
+      title: `Detalle de Cobro #${cobroId}`,
+      user: req.session.user,
+      cobro: cobros[0],
+      comprobantes,
+      path: req.path
+    });
+  } catch (error) {
+    console.error('Error loading charge detail:', error);
+    res.render('error', {
+      title: 'Error',
+      message: 'Error cargando detalle del cobro',
+      error: {}
+    });
+  }
+});
+
+// Aprobar comprobante
+router.post('/comprobantes/:id/aprobar', requireAdmin, async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const comprobanteId = req.params.id;
+
+    await connection.beginTransaction();
+
+    // Actualizar el estado del comprobante
+    await connection.execute(
+      'UPDATE comprobantes_pago SET estado = ?, fecha_revision = NOW(), admin_revisor_id = ? WHERE id = ?',
+      ['aprobado', req.session.user.id, comprobanteId]
+    );
+
+    // Obtener el cobro_semanal_id del comprobante
+    const [comprobante] = await connection.execute('SELECT cobro_semanal_id FROM comprobantes_pago WHERE id = ?', [comprobanteId]);
+    const cobroId = comprobante[0].cobro_semanal_id;
+
+    // Actualizar el estado del cobro a pagado
+    await connection.execute('UPDATE cobros_semanales SET estado = ?, fecha_pago = NOW() WHERE id = ?', ['pagado', cobroId]);
+
+    await connection.commit();
+
+    // Log admin activity
+    await logAdminActivity(
+      req.session.user.id,
+      'aprobar_pago',
+      `Comprobante aprobado: ${comprobanteId}`,
+      'comprobante',
+      comprobanteId,
+      null,
+      { estado: 'aprobado' },
+      req
+    );
+
+    res.redirect('back');
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error approving receipt:', error);
+    res.redirect('back');
+  } finally {
+    connection.release();
+  }
+});
+
+// Rechazar comprobante
+router.post('/comprobantes/:id/rechazar', requireAdmin, async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const comprobanteId = req.params.id;
+
+    await connection.beginTransaction();
+
+    // Actualizar el estado del comprobante
+    await connection.execute(
+      'UPDATE comprobantes_pago SET estado = ?, fecha_revision = NOW(), admin_revisor_id = ? WHERE id = ?',
+      ['rechazado', req.session.user.id, comprobanteId]
+    );
+
+    await connection.commit();
+
+    // Log admin activity
+    await logAdminActivity(
+      req.session.user.id,
+      'rechazar_pago',
+      `Comprobante rechazado: ${comprobanteId}`,
+      'comprobante',
+      comprobanteId,
+      null,
+      { estado: 'rechazado' },
+      req
+    );
+
+    res.redirect('back');
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error rejecting receipt:', error);
+    res.redirect('back');
+  } finally {
+    connection.release();
   }
 });
 
@@ -1762,10 +1870,10 @@ router.get('/productos/export', requireAdmin, async (req, res) => {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=productos.csv');
       
-      let csv = 'ID,Restaurante,Producto,Categoría,Precio,Destacado,Disponible,Fecha Creación\\n';
+      let csv = 'ID,Restaurante,Producto,Categoría,Precio,Destacado,Disponible,Fecha Creación\n';
       
       productos.forEach(p => {
-        csv += `${p.id},"${p.restaurante_nombre}","${p.nombre}","${p.categoria_nombre || 'Sin categoría'}",${p.precio},${p.destacado ? 'Sí' : 'No'},${p.disponible ? 'Sí' : 'No'},${p.fecha_creacion}\\n`;
+        csv += `${p.id},"${p.restaurante_nombre}","${p.nombre}","${p.categoria_nombre || 'Sin categoría'}",${p.precio},${p.destacado ? 'Sí' : 'No'},${p.disponible ? 'Sí' : 'No'},${p.fecha_creacion}\n`;
       });
       
       res.send(csv);
@@ -1797,10 +1905,10 @@ router.get('/comprobantes/export', requireAdmin, async (req, res) => {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=comprobantes.csv');
       
-      let csv = 'ID,Restaurante,Período,Método Pago,Monto,Estado,Fecha Subida,Fecha Revisión\\n';
+      let csv = 'ID,Restaurante,Período,Método Pago,Monto,Estado,Fecha Subida,Fecha Revisión\n';
       
       comprobantes.forEach(c => {
-        csv += `${c.id},"${c.restaurante_nombre}","${c.semana_inicio} - ${c.semana_fin}","${c.metodo_pago}",${c.monto_pagado},${c.estado},${c.fecha_subida},${c.fecha_revision || 'N/A'}\\n`;
+        csv += `${c.id},"${c.restaurante_nombre}","${c.semana_inicio} - ${c.semana_fin}","${c.metodo_pago}",${c.monto_pagado},${c.estado},${c.fecha_subida},${c.fecha_revision || 'N/A'}\n`;
       });
       
       res.send(csv);
@@ -1837,10 +1945,10 @@ router.get('/restaurantes/export', requireAdmin, async (req, res) => {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=restaurantes.csv');
       
-      let csv = 'ID,Nombre Restaurante,Propietario,Email,Telefono,Direccion,Activo,Verificado,Total Productos,Total Pedidos,Ventas Totales,Fecha Registro\\n';
+      let csv = 'ID,Nombre Restaurante,Propietario,Email,Telefono,Direccion,Activo,Verificado,Total Productos,Total Pedidos,Ventas Totales,Fecha Registro\n';
       
       restaurantes.forEach(r => {
-        csv += `${r.id},"${r.nombre}\",\"${r.propietario_nombre} ${r.propietario_apellido}\",${r.email},${r.telefono || ''},\"${r.direccion}\",${r.activo ? 'Sí' : 'No'},${r.verificado ? 'Sí' : 'No'},${r.total_productos},${r.total_pedidos},${r.ventas_totales},${r.fecha_registro}\\n`;
+        csv += `${r.id},"${r.nombre}","${r.propietario_nombre} ${r.propietario_apellido}",${r.email},${r.telefono || ''},"${r.direccion}",${r.activo ? 'Sí' : 'No'},${r.verificado ? 'Sí' : 'No'},${r.total_productos},${r.total_pedidos},${r.ventas_totales},${r.fecha_registro}\n`;
       });
       
       res.send(csv);
@@ -1894,8 +2002,136 @@ router.get('/reportes', requireAdmin, async (req, res) => {
   }
 });
 
+// Listar todos los pedidos
+router.get('/pedidos', requireAdmin, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const { restaurante, estado, search } = req.query;
+
+    let sql = `
+      SELECT p.*, r.nombre as restaurante_nombre, u.nombre as cliente_nombre, u.apellido as cliente_apellido
+      FROM pedidos p
+      JOIN restaurantes r ON p.restaurante_id = r.id
+      JOIN usuarios u ON p.cliente_id = u.id
+      WHERE 1=1
+    `;
+    let countSql = `
+      SELECT COUNT(p.id) as total_count
+      FROM pedidos p
+      JOIN restaurantes r ON p.restaurante_id = r.id
+      JOIN usuarios u ON p.cliente_id = u.id
+      WHERE 1=1
+    `;
+
+    const filterValues = [];
+
+    if (restaurante) {
+      sql += ` AND r.nombre LIKE ?`;
+      countSql += ` AND r.nombre LIKE ?`;
+      filterValues.push(`%${restaurante}%`);
+    }
+
+    if (estado) {
+      sql += ` AND p.estado = ?`;
+      countSql += ` AND p.estado = ?`;
+      filterValues.push(estado);
+    }
+
+    if (search) {
+      sql += ` AND (p.id LIKE ? OR u.nombre LIKE ? OR u.apellido LIKE ?)`;
+      countSql += ` AND (p.id LIKE ? OR u.nombre LIKE ? OR u.apellido LIKE ?)`;
+      filterValues.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    sql += ` ORDER BY p.fecha_pedido DESC LIMIT ${limit} OFFSET ${offset}`;
+
+    const [pedidos] = await db.execute(sql, filterValues);
+    const [totalCountResult] = await db.execute(countSql, filterValues);
+    const totalPedidos = totalCountResult[0].total_count;
+    const totalPages = Math.ceil(totalPedidos / limit);
+
+    res.render('admin/pedidos', {
+      title: 'Gestión de Pedidos - Admin',
+      user: req.session.user,
+      pedidos,
+      filtros: { restaurante: restaurante || '', estado: estado || '', search: search || '' },
+      currentPage: page,
+      totalPages,
+      path: req.path
+    });
+  } catch (error) {
+    console.error('Error loading orders:', error);
+    res.render('error', {
+      title: 'Error',
+      message: 'Error cargando pedidos',
+      error: {}
+    });
+  }
+});
+
 router.get('/dashboard', requireAdmin, (req, res) => {
   res.redirect('/admin');
+});
+
+// Ver chat de un pedido
+router.get('/pedidos/:id/chat', requireAdmin, async (req, res) => {
+  try {
+    const orderId = req.params.id;
+
+    // Obtener detalles del pedido
+    const [orders] = await db.execute(`
+      SELECT p.id, p.numero_pedido, p.estado, p.metodo_pago, p.total,
+             r.nombre as restaurante_nombre, r.imagen_logo as restaurante_logo,
+             u.nombre as cliente_nombre, u.apellido as cliente_apellido
+      FROM pedidos p
+      JOIN restaurantes r ON p.restaurante_id = r.id
+      JOIN usuarios u ON p.cliente_id = u.id
+      WHERE p.id = ?
+    `, [orderId]);
+
+    if (orders.length === 0) {
+      return res.status(404).render('error', {
+        title: 'Pedido No Encontrado',
+        message: 'El pedido que buscas no existe.',
+        error: {}
+      });
+    }
+    const order = orders[0];
+
+    // Obtener mensajes del chat
+    const [messages] = await db.execute(`
+      SELECT mp.*, 
+             CASE 
+                WHEN mp.remitente_tipo = 'cliente' THEN u.nombre
+                WHEN mp.remitente_tipo = 'restaurante' THEN r.nombre
+                ELSE 'Desconocido'
+             END as remitente_nombre
+      FROM mensajes_pedido mp
+      LEFT JOIN usuarios u ON mp.remitente_id = u.id AND mp.remitente_tipo = 'cliente'
+      LEFT JOIN restaurantes r ON mp.remitente_id = r.usuario_id AND mp.remitente_tipo = 'restaurante'
+      WHERE mp.pedido_id = ?
+      ORDER BY mp.fecha_envio ASC
+    `, [orderId]);
+
+    res.render('admin/order-chat', {
+      title: `Chat Pedido #${order.numero_pedido} - Admin`,
+      user: req.session.user,
+      order,
+      messages,
+      path: req.path,
+      scripts: ['/js/dashboard-orders-chat.js'] // Reutilizar el script de chat
+    });
+
+  } catch (error) {
+    console.error('Error loading order chat:', error);
+    res.render('error', {
+      title: 'Error',
+      message: 'Error cargando el chat del pedido',
+      error: {}
+    });
+  }
 });
 
 // Eliminar usuario
@@ -1914,9 +2150,12 @@ router.delete('/usuarios/:id/eliminar', requireAdmin, async (req, res) => {
   }
 });
 
-// ========== GESTIÓN DE COMPROBANTES ==========
+// ========== GESTIÓN DE COMPROBANTES ========== 
 router.get('/comprobantes', requireAdmin, async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
     const { estado, restaurante, fecha_desde, fecha_hasta } = req.query;
     let sql = `
       SELECT cp.*, r.nombre as restaurante_nombre, r.id as restaurante_id, cs.semana_inicio, cs.semana_fin, cs.ventas_brutas, cs.monto_comision
@@ -1925,25 +2164,41 @@ router.get('/comprobantes', requireAdmin, async (req, res) => {
       JOIN restaurantes r ON cs.restaurante_id = r.id
       WHERE 1=1
     `;
-    const params = [];
+    let countSql = `
+      SELECT COUNT(*) as total_count
+      FROM comprobantes_pago cp
+      JOIN cobros_semanales cs ON cp.cobro_semanal_id = cs.id
+      JOIN restaurantes r ON cs.restaurante_id = r.id
+      WHERE 1=1
+    `;
+    const filterValues = [];
     if (estado) {
       sql += ' AND cp.estado = ?';
-      params.push(estado);
+      countSql += ' AND cp.estado = ?';
+      filterValues.push(estado);
     }
     if (restaurante) {
       sql += ' AND r.id = ?';
-      params.push(restaurante);
+      countSql += ' AND r.id = ?';
+      filterValues.push(restaurante);
     }
     if (fecha_desde) {
       sql += ' AND cp.fecha_subida >= ?';
-      params.push(fecha_desde + ' 00:00:00');
+      countSql += ' AND cp.fecha_subida >= ?';
+      filterValues.push(fecha_desde + ' 00:00:00');
     }
     if (fecha_hasta) {
       sql += ' AND cp.fecha_subida <= ?';
-      params.push(fecha_hasta + ' 23:59:59');
+      countSql += ' AND cp.fecha_subida <= ?';
+      filterValues.push(fecha_hasta + ' 23:59:59');
     }
-    sql += ' ORDER BY cp.fecha_subida DESC';
-    const [comprobantes] = await db.execute(sql, params);
+    sql += ` ORDER BY cp.fecha_subida DESC LIMIT ${limit} OFFSET ${offset}`;
+    const queryParams = [...filterValues];
+    const countQueryParams = [...filterValues];
+    const [comprobantes] = await db.execute(sql, queryParams);
+    const [totalCountResult] = await db.execute(countSql, countQueryParams);
+    const totalComprobantes = totalCountResult[0].total_count;
+    const totalPages = Math.ceil(totalComprobantes / limit);
     const [restaurantes] = await db.execute('SELECT id, nombre FROM restaurantes ORDER BY nombre');
     res.render('admin/comprobantes', {
       title: 'Gestión de Comprobantes - Admin',
@@ -1956,6 +2211,8 @@ router.get('/comprobantes', requireAdmin, async (req, res) => {
         fecha_desde: fecha_desde || '',
         fecha_hasta: fecha_hasta || ''
       },
+      currentPage: page,
+      totalPages,
       path: req.path
     });
   } catch (error) {
@@ -2078,3 +2335,246 @@ router.post('/comprobantes/:id/revisar', requireAdmin, async (req, res) => {
 });
 
 module.exports = router;
+
+// Generar cobros semanales
+router.post('/cobros/generar', requireAdmin, async (req, res) => {
+  const { fecha_inicio, fecha_fin, restaurante_ids } = req.body;
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // Validación básica
+    if (!fecha_inicio || !fecha_fin) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Fechas inválidas' });
+    }
+
+    // Obtener restaurantes destino: seleccionados o todos activos/verificados
+    let restaurantesQuery = `
+      SELECT r.id, r.nombre, u.email
+      FROM restaurantes r
+      JOIN usuarios u ON r.usuario_id = u.id
+      WHERE r.activo = 1 AND r.verificado = 1`;
+    const params = [];
+    if (Array.isArray(restaurante_ids) && restaurante_ids.length > 0) {
+      const placeholders = restaurante_ids.map(() => '?').join(',');
+      restaurantesQuery += ` AND r.id IN (${placeholders})`;
+      params.push(...restaurante_ids);
+    }
+
+    const [restaurantes] = await connection.execute(restaurantesQuery, params);
+
+    for (const restaurante of restaurantes) {
+      // Calcular ventas brutas en el período - incluir todos los estados relevantes
+      const [ventas] = await connection.execute(
+        `SELECT 
+           COALESCE(SUM(CASE WHEN estado IN ('entregado', 'en_camino', 'listo') THEN total ELSE 0 END), 0) as ventas_confirmadas,
+           COALESCE(SUM(CASE WHEN estado IN ('pendiente', 'confirmado', 'preparando') THEN total ELSE 0 END), 0) as ventas_pendientes,
+           COALESCE(SUM(CASE WHEN estado IN ('entregado', 'en_camino', 'listo', 'pendiente', 'confirmado', 'preparando') THEN total ELSE 0 END), 0) as ventas_brutas,
+           COUNT(CASE WHEN estado IN ('entregado', 'en_camino', 'listo', 'pendiente', 'confirmado', 'preparando') THEN 1 END) as total_pedidos
+         FROM pedidos
+         WHERE restaurante_id = ? AND fecha_pedido BETWEEN ? AND ?`,
+        [restaurante.id, fecha_inicio, fecha_fin]
+      );
+      
+      const ventas_brutas = Number(ventas[0].ventas_brutas || 0);
+      const ventas_confirmadas = Number(ventas[0].ventas_confirmadas || 0);
+      const ventas_pendientes = Number(ventas[0].ventas_pendientes || 0);
+      const total_pedidos = Number(ventas[0].total_pedidos || 0);
+
+      if (ventas_brutas > 0) {
+        const monto_comision = ventas_brutas * 0.10; // 10% comisión
+        const fecha_vencimiento = new Date();
+        fecha_vencimiento.setDate(fecha_vencimiento.getDate() + 7);
+
+        // Insertar cobro semanal con información detallada
+        await connection.execute(
+          `INSERT INTO cobros_semanales (
+            restaurante_id, semana_inicio, semana_fin, ventas_brutas, 
+            monto_comision, fecha_vencimiento, notas
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            restaurante.id, 
+            fecha_inicio, 
+            fecha_fin, 
+            ventas_brutas, 
+            monto_comision, 
+            fecha_vencimiento,
+            `Pedidos: ${total_pedidos} | Confirmados: $${ventas_confirmadas.toLocaleString()} | Pendientes: $${ventas_pendientes.toLocaleString()}`
+          ]
+        );
+
+        // Enviar email con información detallada
+        await sendEmail(
+          restaurante.email,
+          `Nuevo cobro semanal generado para ${restaurante.nombre}`,
+          'restaurant-charge',
+          {
+            nombreRestaurante: restaurante.nombre,
+            semana_inicio: fecha_inicio,
+            semana_fin: fecha_fin,
+            ventas_brutas,
+            ventas_confirmadas,
+            ventas_pendientes,
+            total_pedidos,
+            monto_comision,
+            fecha_vencimiento: fecha_vencimiento.toISOString().split('T')[0]
+          }
+        );
+      }
+    }
+
+    await connection.commit();
+    res.json({ success: true, message: 'Cobros generados exitosamente' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error generando cobros:', error);
+    res.status(500).json({ success: false, message: 'Error generando cobros' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Generar cobros automáticamente para la semana actual
+router.post('/cobros/generar-automatico', requireAdmin, async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // Calcular fechas de la semana actual (lunes a domingo)
+    const hoy = new Date();
+    const lunes = new Date(hoy);
+    const diff = hoy.getDay() === 0 ? 6 : hoy.getDay() - 1; // Si es domingo, retroceder 6 días
+    lunes.setDate(hoy.getDate() - diff);
+    lunes.setHours(0, 0, 0, 0);
+    
+    const domingo = new Date(lunes);
+    domingo.setDate(lunes.getDate() + 6);
+    domingo.setHours(23, 59, 59, 999);
+
+    const fecha_inicio = lunes.toISOString().split('T')[0];
+    const fecha_fin = domingo.toISOString().split('T')[0];
+
+    // Verificar si ya existen cobros para esta semana
+    const [cobrosExistentes] = await connection.execute(
+      `SELECT COUNT(*) as total FROM cobros_semanales 
+       WHERE semana_inicio = ? AND semana_fin = ?`,
+      [fecha_inicio, fecha_fin]
+    );
+
+    if (cobrosExistentes[0].total > 0) {
+      await connection.rollback();
+      return res.status(400).json({ 
+        success: false, 
+        message: `Ya existen cobros para la semana del ${fecha_inicio} al ${fecha_fin}` 
+      });
+    }
+
+    // Obtener todos los restaurantes activos y verificados
+    const [restaurantes] = await connection.execute(`
+      SELECT r.id, r.nombre, u.email
+      FROM restaurantes r
+      JOIN usuarios u ON r.usuario_id = u.id
+      WHERE r.activo = 1 AND r.verificado = 1
+      ORDER BY r.nombre
+    `);
+
+    let cobrosGenerados = 0;
+    let totalComisiones = 0;
+
+    for (const restaurante of restaurantes) {
+      // Calcular ventas brutas en el período - incluir todos los estados relevantes
+      const [ventas] = await connection.execute(
+        `SELECT 
+           COALESCE(SUM(CASE WHEN estado IN ('entregado', 'en_camino', 'listo') THEN total ELSE 0 END), 0) as ventas_confirmadas,
+           COALESCE(SUM(CASE WHEN estado IN ('pendiente', 'confirmado', 'preparando') THEN total ELSE 0 END), 0) as ventas_pendientes,
+           COALESCE(SUM(CASE WHEN estado IN ('entregado', 'en_camino', 'listo', 'pendiente', 'confirmado', 'preparando') THEN total ELSE 0 END), 0) as ventas_brutas,
+           COUNT(CASE WHEN estado IN ('entregado', 'en_camino', 'listo', 'pendiente', 'confirmado', 'preparando') THEN 1 END) as total_pedidos
+         FROM pedidos
+         WHERE restaurante_id = ? AND fecha_pedido BETWEEN ? AND ?`,
+        [restaurante.id, fecha_inicio, fecha_fin]
+      );
+      
+      const ventas_brutas = Number(ventas[0].ventas_brutas || 0);
+      const ventas_confirmadas = Number(ventas[0].ventas_confirmadas || 0);
+      const ventas_pendientes = Number(ventas[0].ventas_pendientes || 0);
+      const total_pedidos = Number(ventas[0].total_pedidos || 0);
+
+      if (ventas_brutas > 0) {
+        const monto_comision = ventas_brutas * 0.10; // 10% comisión
+        const fecha_vencimiento = new Date();
+        fecha_vencimiento.setDate(fecha_vencimiento.getDate() + 7);
+
+        // Insertar cobro semanal con información detallada
+        await connection.execute(
+          `INSERT INTO cobros_semanales (
+            restaurante_id, semana_inicio, semana_fin, ventas_brutas, 
+            monto_comision, fecha_vencimiento, notas
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            restaurante.id, 
+            fecha_inicio, 
+            fecha_fin, 
+            ventas_brutas, 
+            monto_comision, 
+            fecha_vencimiento,
+            `Pedidos: ${total_pedidos} | Confirmados: $${ventas_confirmadas.toLocaleString()} | Pendientes: $${ventas_pendientes.toLocaleString()}`
+          ]
+        );
+
+        cobrosGenerados++;
+        totalComisiones += monto_comision;
+
+        // Enviar email con información detallada
+        await sendEmail(
+          restaurante.email,
+          `Nuevo cobro semanal generado para ${restaurante.nombre}`,
+          'restaurant-charge',
+          {
+            nombreRestaurante: restaurante.nombre,
+            semana_inicio: fecha_inicio,
+            semana_fin: fecha_fin,
+            ventas_brutas,
+            ventas_confirmadas,
+            ventas_pendientes,
+            total_pedidos,
+            monto_comision,
+            fecha_vencimiento: fecha_vencimiento.toISOString().split('T')[0]
+          }
+        );
+      }
+    }
+
+    await connection.commit();
+    
+    // Log de actividad administrativa
+    await logAdminActivity(
+      req.session.user.id,
+      'generar_cobro',
+      `Generación automática de cobros semanales para ${cobrosGenerados} restaurantes. Total comisiones: $${totalComisiones.toLocaleString()}`,
+      'cobro',
+      null,
+      null,
+      { fecha_inicio, fecha_fin, cobrosGenerados, totalComisiones }
+    );
+
+    res.json({ 
+      success: true, 
+      message: `Cobros generados exitosamente para ${cobrosGenerados} restaurantes`,
+      data: {
+        fecha_inicio,
+        fecha_fin,
+        cobrosGenerados,
+        totalComisiones,
+        restaurantes: restaurantes.length
+      }
+    });
+
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error generando cobros automáticos:', error);
+    res.status(500).json({ success: false, message: 'Error generando cobros automáticos' });
+  } finally {
+    connection.release();
+  }
+});

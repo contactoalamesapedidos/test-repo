@@ -1,11 +1,9 @@
-<%- include('../partials/header') %>
-
-<div class="container mt-4">
+<div class="container mt-4" style="position: relative; z-index: 1;">
     <div class="row">
         <!-- Order Summary -->
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
                     <h5 class="mb-0">
                         <i class="fas fa-shopping-cart me-2"></i>
                         Confirmar Pedido
@@ -16,14 +14,16 @@
                         <!-- Restaurant Info -->
                         <div class="restaurant-info mb-4 p-3 bg-light rounded">
                             <div class="d-flex align-items-center">
-                                <img src="<%= cart[0].restaurant_logo || '/images/no-image.png' %>" 
-                                     alt="<%= cart[0].restaurant_name %>" 
-                                     class="rounded me-3" width="60" height="60">
+                                <img src="<%= restaurant.imagen_logo ? '/uploads/' + restaurant.imagen_logo : '/images/defaults/restaurant-logo-default.svg' %>"
+                                     alt="<%= restaurant.nombre %>"
+                                     class="img-fluid rounded"
+                                     style="max-width: 100px; max-height: 100px; object-fit: cover;"
+                                     onerror="this.src='/images/defaults/restaurant-logo-default.svg'">
                                 <div>
-                                    <h6 class="mb-1"><%= cart[0].restaurant_name %></h6>
+                                    <h5 class="mb-1"><%= restaurant.nombre %></h5>
                                     <small class="text-muted">
                                         <i class="fas fa-clock me-1"></i>
-                                        Tiempo estimado: <%= cart[0].restaurant_delivery_time || '30-45' %> min
+                                        Tiempo estimado: <%= restaurant.tiempo_entrega_min %> - <%= restaurant.tiempo_entrega_max %> min
                                     </small>
                                 </div>
                             </div>
@@ -35,9 +35,10 @@
                             <% cart.forEach(item => { %>
                                 <div class="order-item d-flex justify-content-between align-items-center mb-3 p-3 border rounded">
                                     <div class="d-flex align-items-center">
-                                        <img src="<%= item.imagen || '/images/no-image.png' %>" 
+                                        <img src="<%= item.imagen ? (item.imagen.startsWith('/uploads/') ? item.imagen : '/uploads/' + item.imagen) : '/images/no-image.png' %>" 
                                              alt="<%= item.name %>" 
-                                             class="rounded me-3" width="50" height="50">
+                                             class="rounded me-3" width="50" height="50"
+                                             onerror="this.onerror=null;this.src='/images/no-image.png';">
                                         <div>
                                             <h6 class="mb-1"><%= item.name %></h6>
                                             <small class="text-muted">Cantidad: <%= item.quantity %></small>
@@ -50,8 +51,8 @@
                                         </div>
                                     </div>
                                     <div class="text-end">
-                                        <div class="fw-bold">$<%= (item.price * item.quantity).toFixed(2) %></div>
-                                        <small class="text-muted">$<%= item.price.toFixed(2) %> c/u</small>
+                                        <div class="fw-bold">$<%= (typeof ((item.price || item.precio || 0) * item.quantity) === 'number' && !isNaN((item.price || item.precio || 0) * item.quantity)) ? ((item.price || item.precio || 0) * item.quantity).toFixed(2) : '0.00' %></div>
+                                        <small class="text-muted">$<%= (typeof (item.price || item.precio || 0) === 'number' && !isNaN(item.price || item.precio || 0)) ? (item.price || item.precio || 0).toFixed(2) : '0.00' %> c/u</small>
                                     </div>
                                 </div>
                             <% }) %>
@@ -63,11 +64,36 @@
                             <div class="form-group">
                                 <input type="text" class="form-control address-autocomplete" 
                                        id="deliveryAddress" name="deliveryAddress"
-                                       placeholder="Ingresa tu dirección completa"
+                                       placeholder="<%= user.direccion_principal ? user.direccion_principal : 'Ingresa tu dirección completa' %>"
                                        value="<%= user.direccion_principal || '' %>" required>
                                 <div class="form-text">
                                     <i class="fas fa-info-circle me-1"></i>
                                     Asegúrate de incluir número, piso y departamento si corresponde
+                                </div>
+                                <div class="invalid-feedback" id="deliveryAddressError"></div>
+                            </div>
+
+                            
+                            <!-- Checkbox para mejor precisión -->
+                            <div class="form-check mt-3">
+                                <input class="form-check-input" type="checkbox" id="betterLocationCheckbox">
+                                <label class="form-check-label" for="betterLocationCheckbox">
+                                    Utilizar mejor precisión de ubicación
+                                </label>
+                            </div>
+                            <!-- Mapa Leaflet oculto por defecto -->
+                            <div id="leafletMapContainer" style="display:none; margin-top:15px;">
+                                <div style="position:relative;">
+                                    <div id="leafletMap" style="height:300px; border-radius:12px; border:1px solid #ccc;"></div>
+                                    <div id="mapMarkerCenter" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);pointer-events:none;z-index:500;">
+                                        <img src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon.png" style="width:32px;height:48px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));">
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-success mt-2" id="confirmMapLocationBtn">Confirmar ubicación</button>
+                                <input type="hidden" id="latitude" name="latitude">
+                                <input type="hidden" id="longitude" name="longitude">
+                                <div class="form-text mt-2">
+                                    Mueve el mapa para ajustar la ubicación y presiona "Confirmar ubicación".
                                 </div>
                             </div>
                         </div>
@@ -83,7 +109,7 @@
                             <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
                             <h5>Tu carrito está vacío</h5>
                             <p class="text-muted">Agrega algunos productos para continuar</p>
-                            <a href="/" class="btn btn-primary">Explorar Restaurantes</a>
+                            <a href="/" class="btn" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">Explorar Restaurantes</a>
                         </div>
                     <% } %>
                 </div>
@@ -102,22 +128,22 @@
                         <div class="price-breakdown">
                             <div class="d-flex justify-content-between mb-2">
                                 <span>Subtotal:</span>
-                                <span>$<%= subtotal.toFixed(2) %></span>
+                                <span>$<%= (typeof subtotal === 'number' && !isNaN(subtotal)) ? subtotal.toFixed(2) : '0.00' %></span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Costo de envío:</span>
-                                <span>$<%= deliveryFee.toFixed(2) %></span>
+                                <span>Delivery:</span>
+                                <span><%= (typeof deliveryFee === 'number' && !isNaN(deliveryFee) && deliveryFee > 0) ? `$${deliveryFee.toFixed(2)}` : 'Gratis' %></span>
                             </div>
                             <% if (restaurant.descuento_delivery > 0) { %>
                             <div class="d-flex justify-content-between mb-2 text-success">
                                 <span>Descuento:</span>
-                                <span>-$<%= restaurant.descuento_delivery.toFixed(2) %></span>
+                                <span>-$<%= (typeof restaurant.descuento_delivery === 'number' && !isNaN(restaurant.descuento_delivery)) ? restaurant.descuento_delivery.toFixed(2) : '0.00' %></span>
                             </div>
                             <% } %>
                             <hr>
                             <div class="d-flex justify-content-between mb-3">
                                 <strong>Total:</strong>
-                                <strong>$<%= total.toFixed(2) %></strong>
+                                <strong>$<%= (typeof total === 'number' && !isNaN(total)) ? total.toFixed(2) : '0.00' %></strong>
                             </div>
                         </div>
 
@@ -127,34 +153,38 @@
                             
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="radio" name="paymentMethod" 
-                                       id="mercadopago" value="mercadopago" checked>
-                                <label class="form-check-label d-flex align-items-center" for="mercadopago">
-                                    <img src="/images/mercadopago-logo.png" alt="MercadoPago" height="20" class="me-2">
-                                    MercadoPago
-                                </label>
-                            </div>
-                            
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="radio" name="paymentMethod" 
-                                       id="efectivo" value="efectivo">
+                                       id="efectivo" value="efectivo" checked>
                                 <label class="form-check-label" for="efectivo">
                                     <i class="fas fa-money-bill-wave text-success me-2"></i>
-                                    Efectivo
+                                    Efectivo <span class="badge bg-success">5% descuento</span>
                                 </label>
                             </div>
                             
-                            <div class="form-check">
+                            <% if (restaurant.datos_transferencia_cbu && restaurant.datos_transferencia_alias) { %>
+                            <div class="form-check mb-2">
                                 <input class="form-check-input" type="radio" name="paymentMethod" 
                                        id="transferencia" value="transferencia">
                                 <label class="form-check-label" for="transferencia">
                                     <i class="fas fa-university text-primary me-2"></i>
-                                    Transferencia
+                                    Transferencia Bancaria <span class="badge bg-success">5% descuento</span>
                                 </label>
                             </div>
+                            <% } %>
+
+                            <% if (restaurant.mp_access_token && restaurant.mp_user_id) { %>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="paymentMethod" 
+                                       id="mercadopago" value="mercadopago">
+                                <label class="form-check-label" for="mercadopago">
+                                    <i class="fas fa-credit-card text-info me-2"></i>
+                                    Mercado Pago
+                                </label>
+                            </div>
+                            <% } %>
                         </div>
 
                         <!-- Order Button -->
-                        <button class="btn btn-primary w-100 btn-lg" id="confirmOrderBtn" onclick="confirmOrder()">
+                        <button class="btn w-100 btn-lg" id="confirmOrderBtn" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">
                             <i class="fas fa-check me-2"></i>
                             Confirmar Pedido
                         </button>
@@ -173,221 +203,14 @@
     </div>
 </div>
 
-<!-- MercadoPago SDK -->
-<script>
-// Función para cargar el SDK de MercadoPago
-function loadMercadoPagoSDK() {
-    return new Promise((resolve, reject) => {
-        if (typeof MercadoPago !== 'undefined') {
-            resolve();
-            return;
-        }
-
-        const script = document.createElement('script');
-        script.src = 'https://sdk.mercadopago.com/js/v2';
-        script.async = true;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error('Error cargando el SDK de MercadoPago'));
-        document.body.appendChild(script);
-    });
-}
-
-let mp = null;
-let currentOrder = null;
-
-// Función para mostrar notificaciones
-function showNotification(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
-    toast.setAttribute('role', 'alert');
-    toast.setAttribute('aria-live', 'assertive');
-    toast.setAttribute('aria-atomic', 'true');
-    
-    toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">
-                ${message}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-    `;
-    
-    document.body.appendChild(toast);
-    const bsToast = new bootstrap.Toast(toast);
-    bsToast.show();
-    
-    toast.addEventListener('hidden.bs.toast', () => {
-        document.body.removeChild(toast);
-    });
-}
-
-// Inicializar MercadoPago
-async function initializeMercadoPago() {
-    try {
-        await loadMercadoPagoSDK();
-        mp = new MercadoPago('<%= process.env.MERCADOPAGO_PUBLIC_KEY || "TEST-YOUR-PUBLIC-KEY" %>', {
-            locale: 'es-AR'
-        });
-        console.log('MercadoPago SDK inicializado correctamente');
-    } catch (error) {
-        console.error('Error inicializando MercadoPago:', error);
-        showNotification('Error cargando el sistema de pagos', 'error');
-    }
-}
-
-// Inicializar cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', initializeMercadoPago);
-
-async function confirmOrder() {
-    const deliveryAddress = document.getElementById('deliveryAddress').value.trim();
-    const specialInstructions = document.getElementById('specialInstructions').value.trim();
-    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
-    const confirmBtn = document.getElementById('confirmOrderBtn');
-
-    // Validation
-    if (!deliveryAddress) {
-        showNotification('Por favor, ingresa una dirección de entrega', 'error');
-        document.getElementById('deliveryAddress').focus();
-        return;
-    }
-
-    // Disable button and show loading
-    confirmBtn.disabled = true;
-    confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
-
-    try {
-        // Create order first
-        const orderResponse = await fetch('/orders/create', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                direccion: deliveryAddress,
-                ciudad: 'La Plata', // Por ahora hardcodeado
-                codigo_postal: '1900', // Por ahora hardcodeado
-                instrucciones: specialInstructions,
-                metodo_pago: paymentMethod,
-                telefono_entrega: '' // Por ahora vacío
-            })
-        });
-
-        const orderData = await orderResponse.json();
-        console.log('Respuesta del backend:', orderData); // Debug
-
-        if (!orderData.success) {
-            throw new Error(orderData.message || 'Error creando el pedido');
-        }
-
-        if (!orderData.orderId) {
-            throw new Error('No se recibió el ID del pedido');
-        }
-
-        // Handle payment based on method
-        if (paymentMethod === 'mercadopago') {
-            if (!mp) {
-                throw new Error('El sistema de pagos no está disponible');
-            }
-            await processMercadoPagoPayment(orderData.orderId);
-        } else if (paymentMethod === 'efectivo') {
-            // For cash payment, just redirect to success
-            window.location.href = `/orders/${orderData.orderId}?payment=cash`;
-        } else if (paymentMethod === 'transferencia') {
-            // For transfer payment, show transfer details
-            window.location.href = `/orders/${orderData.orderId}?payment=transfer`;
-        }
-    } catch (error) {
-        console.error('Error confirming order:', error);
-        showNotification(error.message || 'Error confirmando el pedido', 'error');
-    } finally {
-        // Re-enable button
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = '<i class="fas fa-check me-2"></i>Confirmar Pedido';
-    }
-}
-
-async function processMercadoPagoPayment(orderId) {
-    try {
-        // Create payment preference
-        const preferenceResponse = await fetch('/payments/create-preference', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                orderId: orderId
-            })
-        });
-
-        const preferenceData = await preferenceResponse.json();
-        console.log('Respuesta de preferencia:', preferenceData); // Debug
-
-        if (!preferenceData.success) {
-            throw new Error(preferenceData.message || 'Error creando preferencia de pago');
-        }
-
-        // Open MercadoPago checkout
-        const checkout = mp.checkout({
-            preference: {
-                id: preferenceData.preferenceId
-            },
-            autoOpen: true
-        });
-
-        // Handle checkout errors
-        checkout.on('error', (error) => {
-            console.error('MercadoPago checkout error:', error);
-            showNotification('Error abriendo el checkout de pago', 'error');
-        });
-
-    } catch (error) {
-        console.error('Error processing MercadoPago payment:', error);
-        showNotification(error.message || 'Error procesando el pago', 'error');
-    }
-}
-
-// Update delivery cost based on address
-document.getElementById('deliveryAddress').addEventListener('blur', function() {
-    const address = this.value.trim();
-    if (address) {
-        // This could be enhanced to calculate delivery cost based on distance
-        console.log('Address updated:', address);
-    }
-});
-
-// Payment method change handler
-document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        const method = this.value;
-        console.log('Payment method changed to:', method);
-        
-        // You could update UI based on payment method
-        if (method === 'efectivo') {
-            // Show cash payment info
-        } else if (method === 'transferencia') {
-            // Show transfer info
-        }
-    });
-});
-
-// Initialize address autocomplete
-document.addEventListener('DOMContentLoaded', function() {
-    // Address autocomplete is already initialized in app.js
-    
-    // Load user's saved address
-    const saved = localStorage.getItem('alamesa_location');
-    if (saved) {
-        try {
-            const locationData = JSON.parse(saved);
-            const addressInput = document.getElementById('deliveryAddress');
-            if (addressInput && !addressInput.value.trim()) {
-                addressInput.value = locationData.address;
-            }
-        } catch (error) {
-            console.error('Error loading saved address:', error);
-        }
-    }
-});
+<script id="cart-data" type="application/json">
+    <%- JSON.stringify({ cart, subtotal, deliveryFee, total, user }) %>
 </script>
 
-<%- include('../partials/footer') %>
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+<script src="/js/checkout.js"></script>
+

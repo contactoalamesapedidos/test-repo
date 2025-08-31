@@ -1,0 +1,312 @@
+// <%- include('../partials/header') %>
+
+<style>
+.review-bg {
+  background: #fff5ee;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(255,107,53,0.08);
+  padding: 2rem 2.5rem;
+  margin-bottom: 2rem;
+}
+.rating-stars .star-rating {
+  font-size: 2.5rem;
+  transition: color 0.2s, transform 0.2s;
+}
+.rating-stars .star-rating:hover {
+  color: #ff6b35 !important;
+  transform: scale(1.15);
+}
+.card-header.bg-white, .card-header {
+  background: #fff5ee !important;
+  border-bottom: none;
+}
+.card.shadow-sm {
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(255,107,53,0.08);
+}
+.card-body {
+  padding: 2rem 2.5rem;
+}
+.form-control, textarea.form-control {
+  border-radius: 10px;
+  border: 1px solid #ff6b35;
+  background: #fff;
+  font-size: 1.1rem;
+}
+.btn[style*="linear-gradient"] {
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgba(255,107,53,0.08);
+  transition: box-shadow 0.2s;
+}
+.btn[style*="linear-gradient"]:hover {
+  box-shadow: 0 4px 16px rgba(255,107,53,0.18);
+}
+.restaurant-info {
+  background: #fff0e6 !important;
+  border: 1px solid #ff6b35;
+  border-radius: 12px;
+}
+.list-group-item {
+  border: none;
+  border-bottom: 1px solid #ff6b35;
+  background: #fff;
+}
+.list-group-item:last-child {
+  border-bottom: none;
+}
+.alert-warning {
+  background: #fff0e6;
+  border: 1px solid #ff6b35;
+  color: #ff6b35;
+  border-radius: 10px;
+}
+</style>
+
+<div class="container mt-4 review-bg">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <a href="/orders" class="btn btn-outline-secondary me-3">
+                            <i class="fas fa-arrow-left"></i>
+                        </a>
+                        <div>
+                            <h4 class="mb-1">Dejar Reseña</h4>
+                            <p class="text-muted mb-0">Pedido #<%= review.numero_pedido %></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Restaurant Info -->
+                    <div class="restaurant-info p-3 bg-light rounded">
+                        <div class="d-flex align-items-center">
+                            <img src="/uploads/<%= review.restaurante_logo || 'no-image.png' %>" 
+                                 alt="<%= review.restaurante_nombre %>" 
+                                 class="rounded me-3" width="60" height="60"
+                                 onerror="this.src='/images/no-image.png'">
+                            <div>
+                                <h6 class="mb-1"><%= review.restaurante_nombre %></h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Entregado el <%= new Date(review.fecha_entrega).toLocaleDateString('es-AR') %>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Items -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-utensils me-2"></i>
+                        Productos del Pedido
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <% if (items && items.length > 0) { %>
+                        <div class="list-group list-group-flush">
+                            <% items.forEach(item => { %>
+                                <div class="list-group-item d-flex align-items-center">
+                                    <img src="/uploads/<%= item.imagen || 'no-image.png' %>" 
+                                         alt="<%= item.nombre %>" 
+                                         class="rounded me-3" width="50" height="50"
+                                         onerror="this.src='/images/no-image.png'">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1"><%= item.nombre %></h6>
+                                        <small class="text-muted">
+                                            Cantidad: <%= item.cantidad %> • 
+                                            $<%= parseFloat(item.precio_unitario).toFixed(2) %>
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <strong>$<%= parseFloat(item.subtotal).toFixed(2) %></strong>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        </div>
+                    <% } else { %>
+                        <div class="p-3 text-center text-muted">
+                            No hay productos para mostrar
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Review Form -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-star me-2"></i>
+                        Tu Reseña
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form id="reviewForm">
+                        <!-- Rating -->
+                        <div class="mb-4">
+                            <label class="form-label">Calificación del Restaurante</label>
+                            <div class="rating-stars mb-2">
+                                <% for (let i = 1; i <= 5; i++) { %>
+                                    <i class="fas fa-star fa-2x star-rating" 
+                                       data-rating="<%= i %>" 
+                                       style="cursor: pointer; color: #ddd; margin-right: 5px;"></i>
+                                <% } %>
+                            </div>
+                            <small class="text-muted">Haz clic en las estrellas para calificar</small>
+                            <input type="hidden" id="calificacion" name="calificacion_restaurante" required>
+                        </div>
+
+                        <!-- Comment -->
+                        <div class="mb-4">
+                            <label for="comentario" class="form-label">Comentario (opcional)</label>
+                            <textarea class="form-control" id="comentario" name="comentario_restaurante" 
+                                      rows="4" placeholder="Comparte tu experiencia con este restaurante..."></textarea>
+                        </div>
+
+                        <!-- Time Limit Warning -->
+                        <div class="alert alert-warning">
+                            <i class="fas fa-clock me-2"></i>
+                            <strong>Tiempo límite:</strong> 
+                            Tienes hasta el <%= new Date(review.fecha_limite_resena).toLocaleString('es-AR') %> 
+                            para dejar tu reseña.
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">Enviar Reseña</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let selectedRating = 0;
+    const stars = document.querySelectorAll('.star-rating');
+    const ratingInput = document.getElementById('calificacion');
+
+    // Star rating functionality
+    stars.forEach(star => {
+        star.addEventListener('click', function() {
+            const rating = parseInt(this.dataset.rating);
+            selectedRating = rating;
+            ratingInput.value = rating;
+            
+            // Update star display
+            stars.forEach((s, index) => {
+                if (index < rating) {
+                    s.style.color = '#ffc107';
+                } else {
+                    s.style.color = '#ddd';
+                }
+            });
+        });
+
+        // Hover effects
+        star.addEventListener('mouseenter', function() {
+            const rating = parseInt(this.dataset.rating);
+            stars.forEach((s, index) => {
+                if (index < rating) {
+                    s.style.color = '#ffc107';
+                }
+            });
+        });
+
+        star.addEventListener('mouseleave', function() {
+            stars.forEach((s, index) => {
+                if (index < selectedRating) {
+                    s.style.color = '#ffc107';
+                } else {
+                    s.style.color = '#ddd';
+                }
+            });
+        });
+    });
+
+    // Form submission
+    document.getElementById('reviewForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!selectedRating) {
+            alert('Por favor selecciona una calificación');
+            return;
+        }
+
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
+
+        try {
+            const response = await fetch('/reviews/<%= review.pedido_id %>', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    calificacion_restaurante: selectedRating,
+                    comentario_restaurante: formData.get('comentario_restaurante')
+                })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast('Reseña enviada exitosamente', 'success');
+                setTimeout(() => {
+                    window.location.href = '/orders/history';
+                }, 1500);
+            } else {
+                showToast(data.message || 'Error enviando la reseña', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('Error enviando la reseña', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
+});
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        document.body.appendChild(container);
+    }
+    
+    container.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 5000);
+}
+</script>
+
+// <%- include('../partials/footer') %> 

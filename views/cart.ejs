@@ -1,0 +1,166 @@
+<%- include('../partials/header') %>
+
+<div class="container py-5">
+    <div class="row">
+        <!-- Lista de productos -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <% if (cart && cart.length > 0) { %>
+                        <% cart.forEach((item, index) => { %>
+                            <div class="cart-item mb-4" data-producto-id="<%= item.producto_id %>">
+                                <div class="d-flex align-items-center">
+                                    <!-- Imagen del producto -->
+                                    <img src="<%= item.imagen || '/images/no-image.png' %>" 
+                                         alt="<%= item.producto_nombre || item.nombre %>"
+                                         class="rounded me-3"
+                                         width="80"
+                                         height="80">
+                                    
+                                    <!-- Detalles del producto -->
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h5 class="mb-1"><%= item.producto_nombre || item.nombre %></h5>
+                                                <% if (item.specialInstructions) { %>
+                                                    <small class="text-muted"><%= item.specialInstructions %></small>
+                                                <% } %>
+                                                <div class="d-flex align-items-center mt-2">
+                                                    <span class="me-2">Cantidad:</span>
+                                                    <div class="d-flex align-items-center">
+                                                        <button class="btn btn-quantity minus-btn" 
+                                                                data-producto-id="<%= item.producto_id %>">
+                                                            <span class="btn-quantity-text">-</span>
+                                                        </button>
+                                                        <input type="number" 
+                                                               class="form-control-sm quantity-input mx-2"
+                                                               value="<%= item.quantity %>"
+                                                               min="1"
+                                                               readonly>
+                                                        <button class="btn btn-quantity plus-btn" 
+                                                                data-producto-id="<%= item.producto_id %>">
+                                                            <span class="btn-quantity-text">+</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="ms-3">
+                                                <h5 class="mb-0">$<%= ((item.precio || item.price) / 100).toFixed(2) %></h5>
+                                                <small class="text-muted d-block">c/u</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Botón de eliminar -->
+                                    <button class="btn btn-quantity btn-outline-danger ms-2 remove-item-btn"
+                                            data-producto-id="<%= item.producto_id %>">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        <% }); %>
+                    <% } else { %>
+                        <div class="text-center py-5">
+                            <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">Tu carrito está vacío</h4>
+                            <p class="text-muted">¡Agrega algunos productos para continuar!</p>
+                            <a href="/" class="btn btn-primary">Ver Productos</a>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumen del pedido -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h4 class="card-title mb-4">Resumen del Pedido</h4>
+                    
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Subtotal</span>
+                        <span>$<%= cart.subtotal.toFixed(2) %></span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Envío</span>
+                        <span><%= cart.delivery > 0 ? `${cart.delivery.toFixed(2)}` : 'Gratis' %></span>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <div class="d-flex justify-content-between mb-4">
+                        <span>Total</span>
+                        <span class="cart-total">$<%= cart.total.toFixed(2) %></span>
+                    </div>
+                    
+                    <% if (cart.items && cart.items.length > 0) { %>
+                        <div id="wallet_container"></div>
+                        <button class="btn btn-danger w-100 mt-2" onclick="clearCart()">
+                            <i class="fas fa-trash me-2"></i>Limpiar Carrito
+                        </button>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        initializeQuantityControls();
+        initializeRemoveItemButtons();
+
+        if (<%= cart.items && cart.items.length > 0 %>) {
+            try {
+                // 1. Crear el pedido en el backend
+                const orderResponse = await fetch('/orders/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cart: <%- JSON.stringify(cart) %> })
+                });
+                const orderData = await orderResponse.json();
+
+                if (!orderData.success) {
+                    throw new Error(orderData.message || 'Error al crear el pedido');
+                }
+
+                // 2. Crear la preferencia de pago
+                const preferenceResponse = await fetch('/payments/create-preference', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId: orderData.orderId })
+                });
+                const preferenceData = await preferenceResponse.json();
+
+                if (preferenceData.success) {
+                    const mp = new MercadoPago(process.env.MP_PUBLIC_KEY, {
+                        locale: 'es-AR'
+                    });
+
+                    mp.checkout({
+                        preference: {
+                            id: preferenceData.preferenceId
+                        },
+                        render: {
+                            container: '#wallet_container', 
+                            label: 'Pagar con Mercado Pago',
+                        }
+                    });
+                } else {
+                    throw new Error(preferenceData.message || 'Error al crear la preferencia de pago');
+                }
+
+            } catch (error) {
+                console.error('Error en el proceso de pago:', error);
+                alert('Hubo un error al iniciar el proceso de pago. Por favor, intenta de nuevo.');
+            }
+        }
+    });
+
+    // ... (el resto de las funciones de JS se mantienen igual)
+</script>
+
+<%- include('../partials/footer') %>

@@ -75,10 +75,10 @@
 }
 
 .sidebar .list-unstyled li.active a, .admin-sidebar .list-unstyled li.active a {
-    background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
+    background: linear-gradient(90deg, #ff6b35 0%, #e55a2b 100%);
     color: #fff;
     border-left-color: #fff;
-    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+    box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3);
 }
 
 .sidebar .list-unstyled li a i, .admin-sidebar .list-unstyled li a i {
@@ -170,7 +170,7 @@
 /* Main Content */
 .admin-content, .main-content {
     flex: 1;
-    margin-left: 250px;
+    /* margin-left: 250px; */
     padding-top: 56px; /* Altura del navbar */
     min-height: 100vh;
     background-color: #f8f9fa;
@@ -340,7 +340,7 @@
 
 /* Tablas */
 .table-responsive .table {
-    min-width: 1200px; /* Ensure horizontal scroll for large tables */
+    max-width: 800px; /* Ensure horizontal scroll for large tables */
 }
 
 .admin-table {
@@ -388,14 +388,14 @@
 }
 
 .admin-action-btn.btn-primary {
-    background-color: #007bff;
+    background-color: #ff6b35;
     color: white;
-    border: 1px solid #007bff;
+    border: 1px solid #ff6b35;
 }
 
 .admin-action-btn.btn-primary:hover {
-    background-color: #0056b3;
-    border-color: #0056b3;
+    background-color: #e55a2b;
+    border-color: #e55a2b;
 }
 
 .admin-action-btn.btn-success {
@@ -494,7 +494,46 @@
 
 /* ===== RESPONSIVE DESIGN ===== */
 
+
+/* Category Carousel Mobile Styles */
+@media (max-width: 768px) {
+    .category-carousel-container {
+        padding: 15px 0; /* Remove horizontal padding from container, apply to carousel instead */
+    }
+
+    .category-carousel {
+        justify-content: flex-start;
+        gap: 0; /* Remove gap, use margin-right on items */
+        padding: 0 20px; /* Add horizontal padding to the carousel itself */
+    }
+
+    .category-item {
+        /* Ensure consistent size on mobile */
+        width: 75px !important;
+        min-width: 75px !important;
+        max-width: 75px !important;
+        height: 75px;
+        padding: 5px; /* Add internal padding */
+        margin-right: 80px; /* Add spacing between items */
+    }
+
+    .category-item:last-child {
+        margin-right: 0; /* No margin on the last item */
+    }
+
+    .category-item img {
+        width: 55px !important;
+        height: 55px !important;
+    }
+
+    .category-item span {
+        font-size: 0.75rem;
+        margin-top: 5px; 
+    }
+}
+
 /* Mobile (hasta 576px) */
+
 @media (max-width: 576px) {
     .admin-page-content {
         padding: 1rem;
@@ -603,10 +642,6 @@
         width: 250px;
     }
     
-    .admin-content {
-        margin-left: 250px;
-    }
-    
     .admin-topbar {
         left: 250px;
     }
@@ -615,6 +650,47 @@
     .admin-card:hover {
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     }
+
+/* === Category Carousel (Admin) === */
+.category-carousel-container {
+  overflow-x: auto;
+}
+.category-carousel {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  padding-bottom: 4px;
+}
+.category-item {
+  flex: 0 0 auto;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+}
+.category-item.active .category-name {
+  font-weight: 700;
+  color: #ff6b35;
+}
+.category-img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  display: block;
+  margin: 0 auto 6px;
+}
+.category-name {
+  font-size: 0.9rem;
+  color: #333;
+}
+
+@media (max-width: 576px) {
+  .category-img { width: 60px; height: 60px; }
+  .category-name { font-size: 0.85rem; }
+}
     
     .admin-action-btn:hover {
         transform: translateY(-1px);
@@ -763,6 +839,8 @@
     }
 }
 
+
+
 /* Mobile Admin Nav */
 .admin-mobile-nav {
     position: fixed;
@@ -771,6 +849,7 @@
     width: 100%;
     background-color: #343a40; /* Dark background */
     display: flex;
+    flex-direction: row !important;
     justify-content: space-around;
     padding: 10px 0;
     box-shadow: 0 -2px 10px rgba(0,0,0,0.1);

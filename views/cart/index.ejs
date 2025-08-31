@@ -1,11 +1,9 @@
-<%- include('../partials/header') %>
-
 <div class="container mt-4">
     <div class="row">
         <!-- Cart Items -->
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
                     <h5 class="mb-0">
                         <i class="fas fa-shopping-cart me-2"></i>
                         Tu Carrito
@@ -16,7 +14,7 @@
                         <!-- Restaurant Info -->
                         <div class="restaurant-info mb-4 p-3 bg-light rounded">
                             <div class="d-flex align-items-center">
-                                <i class="fas fa-store text-primary fs-4 me-3"></i>
+                                <i class="fas fa-store text-orange fs-4 me-3"></i>
                                 <div>
                                     <h6 class="mb-1"><%= cart[0].restaurante_nombre %></h6>
                                     <small class="text-muted">
@@ -30,41 +28,35 @@
                         <!-- Cart Items -->
                         <div class="cart-items">
                             <% cart.forEach(item => { %>
-                                <div class="cart-item d-flex align-items-center mb-3 p-3 border rounded">
-                                    <img src="<%= item.imagen || '/images/no-image.png' %>" 
+                                <div class="cart-item d-flex align-items-start mb-3 p-3 border rounded">
+                                    <img src="<%= item.imagen ? (item.imagen.startsWith('/') ? item.imagen : '/uploads/' + item.imagen) : '/images/defaults/product.jpeg' %>"
                                          alt="<%= item.name %>" 
-                                         class="rounded me-3" width="80" height="80"
-                                         style="object-fit: cover;">
+                                         class="rounded me-3 flex-shrink-0" width="80" height="80"
+                                         style="object-fit: cover;"
+                                         onerror="this.onerror=null;this.src='/images/defaults/product.jpeg';">
                                     
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1"><%= item.name %></h6>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <h6 class="mb-1 text-truncate"><%= item.name %></h6>
                                         <% if (item.specialInstructions) { %>
-                                            <small class="text-muted d-block mb-1">
+                                            <small class="text-muted d-block mb-1 text-break">
                                                 <i class="fas fa-comment-alt me-1"></i>
                                                 <%= item.specialInstructions %>
                                             </small>
                                         <% } %>
-                                        <div class="d-flex align-items-center">
-                                            <div class="quantity-controls me-3">
-                                                <button class="btn btn-sm btn-outline-secondary" 
-                                                        onclick="updateCartItemQuantity(<%= item.productId %>, -1)">
-                                                    <i class="fas fa-minus"></i>
-                                                </button>
-                                                <span class="mx-2"><%= item.quantity %></span>
-                                                <button class="btn btn-sm btn-outline-secondary" 
-                                                        onclick="updateCartItemQuantity(<%= item.productId %>, 1)">
-                                                    <i class="fas fa-plus"></i>
-                                                </button>
+                                        <div class="d-flex align-items-center flex-wrap">
+                                            <div class="quantity-controls me-3 mb-2">
+                                                <button class="cart-qty-btn" data-action="decrement" data-producto-id="<%= item.producto_id %>">-</button>
+                                                <span class="mx-2"><%= item.quantity || item.cantidad %></span>
+                                                <button class="cart-qty-btn" data-action="increment" data-producto-id="<%= item.producto_id %>">+</button>
                                             </div>
-                                            <div class="price">
-                                                <strong>$<%= (item.price * item.quantity).toFixed(2) %></strong>
-                                                <small class="text-muted d-block">$<%= item.price %> c/u</small>
+                                            <div class="price text-end">
+                                                <strong>$<%= ((item.price || item.precio) * (item.quantity || item.cantidad)).toFixed(2) %></strong>
+                                                <small class="text-muted d-block">$<%= (item.price || item.precio).toFixed(2) %> c/u</small>
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <button class="btn btn-outline-danger ms-3" 
-                                            onclick="removeFromCart(<%= item.productId %>)">
+                                    <button class="remove-item-btn flex-shrink-0 ms-2" data-producto-id="<%= item.producto_id %>">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -73,7 +65,7 @@
 
                         <!-- Clear Cart Button -->
                         <div class="text-end mt-3">
-                            <button class="btn btn-outline-danger" onclick="clearCart()">
+                            <button class="btn btn-outline-danger clear-cart-btn">
                                 <i class="fas fa-trash me-2"></i>
                                 Vaciar Carrito
                             </button>
@@ -83,7 +75,7 @@
                             <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
                             <h5>Tu carrito está vacío</h5>
                             <p class="text-muted">Agrega productos de tus restaurantes favoritos</p>
-                            <a href="/search" class="btn btn-primary mt-3">
+                            <a href="/search" class="btn mt-3" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">
                                 <i class="fas fa-utensils me-2"></i>
                                 Ver Restaurantes
                             </a>
@@ -96,7 +88,7 @@
         <!-- Order Summary -->
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
                     <h5 class="mb-0">
                         <i class="fas fa-receipt me-2"></i>
                         Resumen del Pedido
@@ -115,10 +107,10 @@
                         <hr>
                         <div class="d-flex justify-content-between mb-3">
                             <span class="fs-5">Total</span>
-                            <strong class="fs-5 text-primary">$<%= total.toFixed(2) %></strong>
+                            <strong class="fs-5 text-orange">$<%= total.toFixed(2) %></strong>
                         </div>
                         
-                        <a href="/orders/checkout" class="btn btn-primary w-100">
+                        <a href="/orders/checkout" class="btn w-100 mb-3 proceed-checkout-btn" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">
                             <i class="fas fa-credit-card me-2"></i>
                             Proceder al Pago
                         </a>
@@ -141,6 +133,9 @@
 </div>
 
 <style>
+.text-orange {
+  color: #ff6b35 !important;
+}
 .quantity-controls {
     display: flex;
     align-items: center;
@@ -154,123 +149,88 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 4px;
+}
+
+.quantity-controls button:hover {
+    background: #f8f9fa;
 }
 
 .cart-item img {
     width: 80px;
     height: 80px;
     object-fit: cover;
+    flex-shrink: 0;
 }
 
 .cart-item .price {
-    min-width: 100px;
+    min-width: 80px;
+    text-align: right;
+}
+
+.cart-item .flex-grow-1 {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.cart-item h6 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.remove-item-btn {
+    background: none;
+    border: none;
+    color: #dc3545;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.remove-item-btn:hover {
+    background-color: #f8d7da;
+}
+
+@media (max-width: 768px) {
+    .cart-item {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+    
+    .cart-item img {
+        width: 60px;
+        height: 60px;
+        margin-right: 10px;
+    }
+    
+    .cart-item .flex-grow-1 {
+        min-width: 0;
+        flex: 1;
+    }
+    
+    .cart-item .d-flex {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .quantity-controls {
+        margin-right: 0 !important;
+        margin-bottom: 0 !important;
+    }
+    
+    .cart-item .price {
+        min-width: 60px;
+        font-size: 0.9rem;
+    }
+    
+    .cart-item h6 {
+        font-size: 0.95rem;
+    }
 }
 </style>
 
-<script>
-// Cart functions
-async function updateCartItemQuantity(productId, change) {
-    try {
-        const response = await fetch('/cart/update', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ productId, change })
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-            location.reload();
-        } else {
-            showToast(data.message || 'Error actualizando el carrito', 'error');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        showToast('Error actualizando el carrito', 'error');
-    }
-}
-
-function removeFromCart(productId) {
-    if (!confirm('¿Estás seguro de que quieres eliminar este producto del carrito?')) {
-        return;
-    }
-    
-    fetch('/cart/remove', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ productId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            showToast(data.message || 'Error eliminando del carrito', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Error eliminando del carrito', 'error');
-    });
-}
-
-function clearCart() {
-    if (!confirm('¿Estás seguro de que quieres vaciar el carrito?')) {
-        return;
-    }
-    
-    fetch('/cart/clear', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            showToast(data.message || 'Error limpiando el carrito', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Error limpiando el carrito', 'error');
-    });
-}
-
-// Toast notification
-function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} border-0`;
-    toast.setAttribute('role', 'alert');
-    toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">${message}</div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-    `;
-    
-    let container = document.querySelector('.toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.className = 'toast-container position-fixed top-0 end-0 p-3';
-        document.body.appendChild(container);
-    }
-    
-    container.appendChild(toast);
-    const bsToast = new bootstrap.Toast(toast);
-    bsToast.show();
-    
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.parentNode.removeChild(toast);
-        }
-    }, 5000);
-}
-</script>
-
-<%- include('../partials/footer') %> 
+<% // Footer ya incluido en layout.ejs %>
