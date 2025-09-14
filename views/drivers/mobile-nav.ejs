@@ -1,0 +1,273 @@
+<!-- Driver Mobile Navigation with Menu -->
+<nav class="driver-mobile-nav" style="z-index:1050;">
+    <a href="/repartidores" class="driver-mobile-nav-item <%= currentPath === '/repartidores' ? 'active' : '' %>">
+        <i class="fas fa-tachometer-alt"></i>
+        <span>Panel de Repartidor</span>
+    </a>
+    <a href="/repartidores/historial" class="driver-mobile-nav-item <%= currentPath === '/repartidores/historial' ? 'active' : '' %>">
+        <i class="fas fa-history"></i>
+        <span>Historial</span>
+    </a>
+    <a href="/repartidores/comisiones" class="driver-mobile-nav-item <%= currentPath === '/repartidores/comisiones' ? 'active' : '' %>">
+        <i class="fas fa-wallet"></i>
+        <span>Ganancias</span>
+    </a>
+    <button class="driver-mobile-nav-item driver-menu-btn" onclick="toggleDriverMenu()">
+        <i class="fas fa-bars"></i>
+        <span>Menú</span>
+    </button>
+</nav>
+
+<!-- Driver Menu Overlay -->
+<div class="driver-menu-overlay" id="driverMenuOverlay" onclick="closeDriverMenu()"></div>
+
+<!-- Driver Menu Sidebar -->
+<div class="driver-menu-sidebar" id="driverMenuSidebar">
+    <div class="driver-menu-header">
+        <h6 class="mb-0">Menú</h6>
+        <button class="btn-close" onclick="closeDriverMenu()" aria-label="Cerrar"></button>
+    </div>
+    <div class="driver-menu-content">
+        <a href="/repartidores" class="driver-menu-item <%= currentPath === '/repartidores' ? 'active' : '' %>">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Panel de Repartidor</span>
+        </a>
+        <a href="/repartidores/disponibilidad" class="driver-menu-item <%= currentPath === '/repartidores/disponibilidad' ? 'active' : '' %>">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Mi Disponibilidad</span>
+        </a>
+        <div class="driver-menu-divider"></div>
+        <a href="/auth/logout" class="driver-menu-item text-danger">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Cerrar Sesión</span>
+        </a>
+    </div>
+</div>
+
+<style>
+/* Driver Mobile Navigation - Bottom Style */
+.driver-mobile-nav {
+    display: none; /* Hidden by default, shown only on mobile */
+    position: fixed !important;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #fff;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+    border-top: 1px solid #eee;
+    z-index: 1050;
+    width: 100%;
+    height: 60px; /* Fixed height for the nav bar */
+    justify-content: space-around;
+    align-items: center;
+    flex-wrap: nowrap; /* Prevent wrapping */
+}
+
+@media (max-width: 767.98px) { /* Bootstrap's md breakpoint is 768px */
+    .driver-mobile-nav {
+        display: flex; /* Show on mobile */
+        flex-direction: row; /* Horizontal layout */
+    }
+}
+
+.driver-mobile-nav-item {
+    display: flex;
+    flex-direction: column; /* Icon and text stacked vertically */
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #000;
+    font-size: 0.75rem;
+    padding: 5px 0;
+    font-weight: normal;
+    flex-grow: 1; /* Distribute space evenly */
+    text-align: center;
+}
+
+.driver-mobile-nav-item i {
+    font-size: 1.2rem;
+    margin-bottom: 3px;
+    color: #000;
+}
+
+.driver-mobile-nav-item.active {
+    color: var(--primary-color);
+    background-color: #fff0e6;
+    border-radius: 10px;
+    padding: 8px 12px;
+}
+
+.driver-mobile-nav-item:hover {
+    color: var(--primary-color);
+}
+
+.driver-mobile-nav-item.text-danger {
+    color: #dc3545 !important;
+}
+
+.driver-mobile-nav-item.text-danger:hover {
+    color: #b02a37 !important;
+}
+
+/* Driver Menu Styles */
+.driver-menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1045;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.driver-menu-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.driver-menu-sidebar {
+    position: fixed;
+    top: 0;
+    right: -280px;
+    width: 280px;
+    height: 100vh;
+    background: white;
+    z-index: 1050;
+    transition: right 0.3s ease;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.driver-menu-sidebar.show {
+    right: 0;
+}
+
+.driver-menu-header {
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+}
+
+.driver-menu-content {
+    flex: 1;
+    padding: 0.5rem 0;
+}
+
+.driver-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: #495057;
+    text-decoration: none;
+    transition: background-color 0.2s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+}
+
+.driver-menu-item:hover,
+.driver-menu-item.active {
+    background-color: #f8f9fa;
+    color: var(--primary-color);
+}
+
+.driver-menu-item i {
+    width: 20px;
+    margin-right: 0.75rem;
+    text-align: center;
+}
+
+.driver-menu-item.active {
+    border-left: 3px solid var(--primary-color);
+    background-color: rgba(255, 107, 53, 0.1);
+}
+
+.driver-menu-item.text-danger {
+    color: #dc3545 !important;
+}
+
+.driver-menu-item.text-danger:hover {
+    color: #b02a37 !important;
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.driver-menu-divider {
+    height: 1px;
+    background: #e9ecef;
+    margin: 0.5rem 1rem;
+}
+
+/* Menu button special styling */
+.driver-menu-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.driver-menu-btn:hover {
+    background-color: #f8f9fa;
+}
+
+/* Hide menu on desktop */
+@media (min-width: 992px) {
+    .driver-menu-overlay,
+    .driver-menu-sidebar {
+        display: none !important;
+    }
+}
+</style>
+
+<script>
+// Driver Menu Functions
+function toggleDriverMenu() {
+    const overlay = document.getElementById('driverMenuOverlay');
+    const sidebar = document.getElementById('driverMenuSidebar');
+
+    if (overlay && sidebar) {
+        const isOpen = overlay.classList.contains('show');
+
+        if (isOpen) {
+            closeDriverMenu();
+        } else {
+            openDriverMenu();
+        }
+    }
+}
+
+function openDriverMenu() {
+    const overlay = document.getElementById('driverMenuOverlay');
+    const sidebar = document.getElementById('driverMenuSidebar');
+
+    if (overlay && sidebar) {
+        overlay.classList.add('show');
+        sidebar.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeDriverMenu() {
+    const overlay = document.getElementById('driverMenuOverlay');
+    const sidebar = document.getElementById('driverMenuSidebar');
+
+    if (overlay && sidebar) {
+        overlay.classList.remove('show');
+        sidebar.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+}
+
+// Close menu on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeDriverMenu();
+    }
+});
+</script>

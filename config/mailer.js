@@ -56,7 +56,6 @@ const sendEmail = async (to, subject, template, data) => {
         };
 
         await transporter.sendMail(mailOptions);
-        console.log(`Correo enviado exitosamente a ${to}`);
     } catch (error) {
         console.error(`Error al enviar correo a ${to} usando plantilla ${template}:`, error);
         // No relanzamos el error para no interrumpir flujos críticos como el registro.
@@ -66,4 +65,4 @@ const sendEmail = async (to, subject, template, data) => {
 module.exports = {
     transporter,
     sendEmail
-}; 
+};

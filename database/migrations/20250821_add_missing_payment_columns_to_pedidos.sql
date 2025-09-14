@@ -1,5 +1,0 @@
-ALTER TABLE pedidos
-ADD COLUMN mp_payment_id VARCHAR(255) NULL,
-ADD COLUMN mp_status VARCHAR(50) NULL,
-ADD COLUMN mp_status_detail VARCHAR(255) NULL,
-ADD COLUMN fecha_pago TIMESTAMP NULL;

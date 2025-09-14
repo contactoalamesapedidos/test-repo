@@ -164,12 +164,18 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group">
-                                                    
+
                                                     <% if (cobro.estado === 'pendiente') { %>
-                                                        <button class="btn btn-sm btn-primary pagar-mp-btn" data-cobro-id="<%= cobro.id %>" data-amount="<%= cobro.monto_comision %>">
-                                                            <i class="fas fa-credit-card"></i> Pagar (MP)
-                                                        </button>
-                                                        <button class="btn btn-sm btn-success" onclick="window.location.href='/dashboard/pagos/<%= cobro.id %>'">
+                                                        <% if (mpConfigured) { %>
+                                                            <button class="btn btn-sm btn-primary pagar-mp-btn" data-cobro-id="<%= cobro.id %>" data-amount="<%= cobro.monto_comision %>">
+                                                                <i class="fas fa-credit-card"></i> Pagar (MP)
+                                                            </button>
+                                                        <% } else { %>
+                                                            <button class="btn btn-sm btn-primary pagar-mp-btn" data-cobro-id="<%= cobro.id %>" data-amount="<%= cobro.monto_comision %>">
+                                                                <i class="fas fa-external-link-alt"></i> Pagar Online
+                                                            </button>
+                                                        <% } %>
+                                                        <button class="btn btn-sm btn-success" onclick="window.location.href='/dashboard/cobros/<%= cobro.id %>/upload'">
                                                             <i class="fas fa-upload"></i> Subir Comprobante
                                                         </button>
                                                     <% } %>
@@ -255,10 +261,16 @@
                                     <% if (cobro.estado === 'pendiente') { %>
                                         <div class="cobro-footer">
                                             <div class="cobro-actions">
-                                                <a href="<%= cobro.mercadopago_url || '#' %>" target="_blank" class="btn btn-sm btn-primary">
-                                                    <i class="fas fa-credit-card"></i> Pagar (MP)
-                                                </a>
-                                                <button class="btn btn-sm btn-success" onclick="window.location.href='/dashboard/pagos/<%= cobro.id %>'">
+                                                <% if (mpConfigured) { %>
+                                                    <button class="btn btn-sm btn-primary pagar-mp-btn" data-cobro-id="<%= cobro.id %>" data-amount="<%= cobro.monto_comision %>">
+                                                        <i class="fas fa-credit-card"></i> Pagar (MP)
+                                                    </button>
+                                                <% } else { %>
+                                                    <button class="btn btn-sm btn-primary pagar-mp-btn" data-cobro-id="<%= cobro.id %>" data-amount="<%= cobro.monto_comision %>">
+                                                        <i class="fas fa-external-link-alt"></i> Pagar Online
+                                                    </button>
+                                                <% } %>
+                                                <button class="btn btn-sm btn-success" onclick="window.location.href='/dashboard/cobros/<%= cobro.id %>/upload'">
                                                     <i class="fas fa-upload"></i> Subir Comprobante
                                                 </button>
                                             </div>
@@ -305,10 +317,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 const response = await fetch(`/dashboard/payments/mercadopago/create?cobro_id=${cobroId}&amount=${amount}`);
                 const data = await response.json();
 
-                if (data.success && data.preferenceId) {
-                    // Redirigir al usuario a la URL de pago de Mercado Pago
-                    const mercadopagoCheckoutUrl = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${data.preferenceId}`;
-                    window.location.href = mercadopagoCheckoutUrl;
+                if (data.success) {
+                    if (data.redirect && data.redirectUrl) {
+                        // Redirigir al link configurado en admin
+                        window.location.href = data.redirectUrl;
+                    } else if (data.preferenceId) {
+                        // Redirigir al usuario a la URL de pago de Mercado Pago
+                        const mercadopagoCheckoutUrl = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${data.preferenceId}`;
+                        window.location.href = mercadopagoCheckoutUrl;
+                    } else {
+                        showNotification('Error: No se pudo generar el link de pago', 'error');
+                    }
                 } else {
                     showNotification(data.message || 'Error al generar el link de pago de Mercado Pago', 'error');
                 }

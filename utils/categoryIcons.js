@@ -94,6 +94,9 @@ function getCategoryImagePath(categoryName) {
         'ensalada': 'ensaladas.jpg',
         'parrillas': 'parrillas.jpg',
         'parrilla': 'parrillas.jpg',
+        'panaderia': 'panaderia.png',
+        'panadería': 'panaderia.png',
+        'pan': 'panaderia.png',
         'otros': 'otros.jpg',
         'otro': 'otros.jpg'
     };
@@ -122,4 +125,4 @@ if (typeof window !== 'undefined') {
         getCategoryIconPath,
         getCategoryImagePath // Add the new function to exports
     };
-} 
+}

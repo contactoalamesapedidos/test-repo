@@ -4,7 +4,7 @@ const router = express.Router();
 router.get('/', (req, res) => {
   res.redirect('/orders/history');
 });
-const pushRoutes = require('./push');
+const { sendNotificationToUser, sendNotificationToRestaurant } = require('./push');
 const { isRestaurantOpen } = require('../utils/restaurantUtils');
 const db = require('../config/database');
 const multer = require('multer');
@@ -66,18 +66,15 @@ function requireAuth(req, res, next) {
 // Checkout page
 router.get('/checkout', requireAuth, async (req, res) => {
   const cart = req.session.cart || [];
-  console.log('[/orders/checkout] Cart length:', cart.length);
-  
-  if (cart.length === 0) {
-    console.log('[/orders/checkout] Cart is empty, redirecting to /cart');
-    return res.redirect('/cart');
-  }
+    if (cart.length === 0) {
+        return res.redirect('/cart');
+    }
 
   try {
     // Get restaurant info from the first cart item
     const restaurantId = cart[0].restaurante_id;
     const [restaurants] = await db.execute(`
-      SELECT *, mp_access_token, mp_user_id FROM restaurantes WHERE id = ?
+      SELECT *, mp_access_token, mp_user_id, imagen_logo FROM restaurantes WHERE id = ?
     `, [restaurantId]);
 
     if (restaurants.length === 0) {
@@ -133,28 +130,53 @@ router.get('/checkout', requireAuth, async (req, res) => {
 // Process order
 router.post('/create', requireAuth, upload.none(), async (req, res) => {
   const connection = await db.getConnection();
-  
+
   try {
+    // Verificar que el usuario esté autenticado y tenga un ID válido
+    if (!req.session.user || !req.session.user.id) {
+      return res.status(401).json({ success: false, message: 'Usuario no autenticado. Por favor, inicia sesión nuevamente.' });
+    }
+
+    // Verificar que el usuario existe en la base de datos
+    const [userCheck] = await db.execute('SELECT id FROM usuarios WHERE id = ?', [req.session.user.id]);
+    if (userCheck.length === 0) {
+      // Limpiar la sesión inválida
+      req.session.destroy(err => {
+        if (err) console.error('Error destruyendo sesión:', err);
+      });
+      return res.status(401).json({ success: false, message: 'Sesión inválida. Por favor, inicia sesión nuevamente.' });
+    }
+
     let { cart, subtotal, deliveryFee, total, direccion, ciudad, instrucciones, metodo_pago, latitude, longitude, payment_status } = req.body;
 
+    // Validar que el carrito esté presente y sea un string válido
+    if (!cart || typeof cart !== 'string' || cart.trim() === '') {
+      return res.status(400).json({ success: false, message: 'El carrito está vacío o no es válido' });
+    }
+
     // Parsear el carrito de JSON string a objeto
-    cart = JSON.parse(cart);
+    try {
+      cart = JSON.parse(cart);
+    } catch (parseError) {
+      console.error('Error parsing cart JSON:', parseError);
+      return res.status(400).json({ success: false, message: 'El formato del carrito no es válido' });
+    }
     subtotal = parseFloat(subtotal);
     deliveryFee = parseFloat(deliveryFee);
     total = parseFloat(total);
     
+    const restaurantId = cart[0].restaurante_id;
     // Aplicar descuento del 5% para pagos en efectivo y transferencia
-    if (metodo_pago === 'efectivo' || metodo_pago === 'transferencia') {
+    const [restaurantRows] = await connection.execute('SELECT ofrece_descuento_efectivo FROM restaurantes WHERE id = ?', [restaurantId]);
+
+    if (restaurantRows.length > 0 && restaurantRows[0].ofrece_descuento_efectivo && (metodo_pago === 'efectivo' || metodo_pago === 'transferencia')) {
       const descuento = total * 0.05;
       total = total - descuento;
-      console.log(`Aplicando descuento del 5% (${descuento.toFixed(2)}) para pago con ${metodo_pago}. Total final: ${total.toFixed(2)}`);
     }
 
     if (!cart || cart.length === 0) {
       return res.status(400).json({ success: false, message: 'El carrito está vacío' });
     }
-    
-    const restaurantId = cart[0].restaurante_id;
 
     // Obtener la información completa del restaurante para verificar el horario
     const [fullRestaurantInfo] = await connection.execute(
@@ -163,7 +185,16 @@ router.post('/create', requireAuth, upload.none(), async (req, res) => {
     );
 
     if (fullRestaurantInfo.length === 0) {
-      throw new Error('El restaurante asociado al carrito no fue encontrado.');
+      console.error(`Restaurante con ID ${restaurantId} no encontrado. Limpiando carrito.`);
+      // Limpiar el carrito si el restaurante no existe
+      req.session.cart = [];
+      req.session.cartTotal = 0;
+      req.session.cartCount = 0;
+      return res.status(400).json({
+        success: false,
+        message: 'El restaurante seleccionado ya no está disponible. Tu carrito ha sido limpiado.',
+        redirect: '/cart'
+      });
     }
 
     const restaurant = fullRestaurantInfo[0];
@@ -207,6 +238,12 @@ router.post('/create', requireAuth, upload.none(), async (req, res) => {
     ]);
 
     const orderId = orderResult.insertId;
+
+    // Verificar que las coordenadas se guardaron correctamente
+    const [verifyOrder] = await connection.execute(
+      'SELECT latitud_entrega, longitud_entrega FROM pedidos WHERE id = ?',
+      [orderId]
+    );
 
     // Actualizar numero_pedido con el id real
     const numeroPedidoCorto = orderId.toString();
@@ -268,7 +305,16 @@ router.post('/create', requireAuth, upload.none(), async (req, res) => {
             body: `Tu pedido en ${info.restaurante_nombre} ha sido recibido. Te notificaremos cuando cambie de estado.`,
             url: `/orders/${info.id}`
         };
-        await pushRoutes.sendNotificationToUser(req.session.user.id, pushNotificationData);
+        await sendNotificationToUser(req.session.user.id, pushNotificationData);
+
+        // Enviar notificación PUSH al restaurante
+        const restaurantNotificationData = {
+            title: '🍽️ Nuevo pedido recibido',
+            body: `Pedido #${info.numero_pedido} - Total: $${info.total}`,
+            url: `/dashboard/orders/${info.id}`,
+            orderId: info.id
+        };
+        await sendNotificationToRestaurant(restaurantId, restaurantNotificationData);
       }
     } catch (notificationErr) {
       console.error('Error enviando email o notificación push de creación de pedido:', notificationErr);
@@ -290,7 +336,6 @@ router.post('/create', requireAuth, upload.none(), async (req, res) => {
       );
 
       if (pedidoCreado.length > 0) {
-        console.log(`[Socket.IO] Emitiendo evento 'nuevo_pedido' al restaurante: ${restaurantId}`);
         io.to(`restaurante_${restaurantId}`).emit('nuevo_pedido', pedidoCreado[0]);
       }
     }
@@ -309,7 +354,23 @@ router.post('/create', requireAuth, upload.none(), async (req, res) => {
   } catch (error) {
     await connection.rollback();
     console.error('Error creando pedido:', error);
-    res.status(500).json({ success: false, message: 'Error creando el pedido' });
+
+    // Manejar errores específicos de base de datos
+    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+      return res.status(400).json({
+        success: false,
+        message: 'Error de autenticación. Por favor, inicia sesión nuevamente.'
+      });
+    }
+
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({
+        success: false,
+        message: 'Ya existe un pedido similar. Por favor, intenta de nuevo.'
+      });
+    }
+
+    res.status(500).json({ success: false, message: 'Error creando el pedido. Por favor, intenta de nuevo.' });
   } finally {
     connection.release();
   }
@@ -318,7 +379,7 @@ router.post('/create', requireAuth, upload.none(), async (req, res) => {
 // Upload payment proof
 router.post('/:id/upload-comprobante', requireAuth, uploadComprobante, async (req, res) => {
     try {
-        const orderId = req.params.id;
+        const orderId = parseInt(req.params.id, 10);
         const connection = await db.getConnection();
 
         // Verificar que el pedido existe y pertenece al usuario
@@ -385,7 +446,7 @@ router.post('/:id/upload-comprobante', requireAuth, uploadComprobante, async (re
 
 router.get('/:id/chat-content', requireAuth, async (req, res) => {
   try {
-    const orderId = req.params.id;
+    const orderId = parseInt(req.params.id, 10);
     // You might want to fetch some order data here if needed for the partial
     // For now, we just render the partial
     res.render('partials/chat-interface', { layout: false }); // layout: false ensures only the partial is rendered
@@ -395,10 +456,55 @@ router.get('/:id/chat-content', requireAuth, async (req, res) => {
   }
 });
 
+// Get chat messages for an order
+router.get('/:id/chat/messages', requireAuth, async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.id, 10);
+
+    // Verify the order belongs to the user
+    const [orders] = await db.execute(
+      'SELECT id FROM pedidos WHERE id = ? AND cliente_id = ?',
+      [orderId, req.session.user.id]
+    );
+
+    if (orders.length === 0) {
+      return res.status(403).json({ success: false, message: 'No tienes acceso a este chat' });
+    }
+
+    // Get chat messages
+    const [messages] = await db.execute(`
+      SELECT
+        mp.id,
+        mp.mensaje,
+        mp.fecha_envio,
+        mp.remitente_tipo,
+        CASE
+          WHEN mp.remitente_tipo = 'cliente' THEN u.nombre
+          WHEN mp.remitente_tipo = 'restaurante' THEN r.nombre
+          ELSE 'Sistema'
+        END as remitente_nombre
+      FROM mensajes_pedido mp
+      LEFT JOIN usuarios u ON mp.remitente_id = u.id AND mp.remitente_tipo = 'cliente'
+      LEFT JOIN restaurantes r ON mp.remitente_id = r.usuario_id AND mp.remitente_tipo = 'restaurante'
+      WHERE mp.pedido_id = ?
+      ORDER BY mp.fecha_envio ASC
+    `, [orderId]);
+
+    res.json({
+      success: true,
+      messages: messages
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo mensajes del chat:', error);
+    res.status(500).json({ success: false, message: 'Error al cargar los mensajes' });
+  }
+});
+
 // Ruta para mostrar la página de completar pago
 router.get('/:id/complete-payment', async (req, res) => {
   try {
-    const orderId = req.params.id;
+    const orderId = parseInt(req.params.id, 10);
 
     // Verificar que el pedido existe y está pendiente de pago
     const [orders] = await db.execute(`
@@ -455,7 +561,7 @@ router.get('/:id/complete-payment', async (req, res) => {
 // Ruta para completar pago posteriormente (hasta 15 minutos después)
 router.post('/:id/complete-payment', async (req, res) => {
   try {
-    const orderId = req.params.id;
+    const orderId = parseInt(req.params.id, 10);
     const { paymentMethod } = req.body;
 
     // Verificar que el pedido existe y está pendiente de pago
@@ -570,7 +676,7 @@ router.get('/history', requireAuth, async (req, res) => {
     const pageSize = 10;
     const currentPage = parseInt(req.query.page) > 0 ? parseInt(req.query.page) : 1;
     const offset = (currentPage - 1) * pageSize;
-    let query = `SELECT p.*, r.nombre as restaurante_nombre, r.imagen_logo, COUNT(DISTINCT ip.id) as total_items
+    let query = `SELECT p.*, p.fecha_entrega, r.nombre as restaurante_nombre, r.imagen_logo, COUNT(DISTINCT ip.id) as total_items
       FROM pedidos p
       JOIN restaurantes r ON p.restaurante_id = r.id
       LEFT JOIN items_pedido ip ON p.id = ip.pedido_id`;
@@ -666,22 +772,25 @@ router.get('/history', requireAuth, async (req, res) => {
 // Order detail
 router.get('/:id', requireAuth, async (req, res) => {
   try {
-    const orderId = req.params.id;
-    console.log('Buscando pedido:', orderId);
+    const orderId = parseInt(req.params.id, 10);
     // Get order info
     const [orders] = await db.execute(`
       SELECT p.id, p.numero_pedido, p.cliente_id, p.restaurante_id, p.direccion_entrega,
              p.latitud_entrega, p.longitud_entrega, p.subtotal, p.costo_delivery, p.total,
-             p.estado, p.metodo_pago, p.notas_especiales, p.comprobante_pago_url, p.fecha_pedido,
-             r.nombre as restaurante_nombre,
+             p.estado, p.metodo_pago, p.notas_especiales, p.comprobante_pago_url, p.fecha_pedido, p.repartidor_id,
+             r.nombre as restaurante_nombre, r.latitud as restaurante_lat, r.longitud as restaurante_lng,
              r.direccion as restaurante_direccion, r.imagen_logo as restaurante_logo,
-             u.nombre as repartidor_nombre, u.telefono as repartidor_telefono
+             u_driver.nombre as repartidor_nombre, u_driver.telefono as repartidor_telefono,
+             d.current_latitude as driver_lat, d.current_longitude as driver_lng
       FROM pedidos p
-      JOIN restaurantes r ON p.restaurante_id = r.id
-      LEFT JOIN usuarios u ON p.repartidor_id = u.id
+      JOIN usuarios u ON p.cliente_id = u.id
+      LEFT JOIN drivers d ON p.repartidor_id = d.id
+      LEFT JOIN usuarios u_driver ON d.user_id = u_driver.id
+      LEFT JOIN restaurantes r ON p.restaurante_id = r.id
       WHERE p.id = ? AND p.cliente_id = ?
     `, [orderId, req.session.user.id]);
-    console.log('Pedido encontrado:', orders[0] || 'No encontrado');
+
+    // Verificar que el pedido existe
     if (orders.length === 0) {
       return res.render('orders/history', {
         title: 'Mis Pedidos - A la Mesa',
@@ -702,12 +811,10 @@ router.get('/:id', requireAuth, async (req, res) => {
       JOIN productos pr ON ip.producto_id = pr.id
       WHERE ip.pedido_id = ?
     `, [orderId]);
-    console.log('Items del pedido:', items);
     // Get restaurant info
     const [restaurants] = await db.execute(`
       SELECT * FROM restaurantes WHERE id = ?
     `, [order.restaurante_id]);
-    console.log('Restaurante encontrado:', restaurants[0] || 'No encontrado');
     if (restaurants.length === 0) {
       return res.render('orders/history', {
         title: 'Mis Pedidos - A la Mesa',
@@ -734,14 +841,13 @@ router.get('/:id', requireAuth, async (req, res) => {
       restaurant,
       canChat, // Pasar la variable canChat a la vista
       script: '<script src="/js/order-detail.js"></script>',
-      user: req.session.user
+      user: req.session.user,
+      driverLocation: (order.estado === 'en_camino' && order.repartidor_id && order.driver_lat && order.driver_lng) ? {
+        latitude: order.driver_lat,
+        longitude: order.driver_lng
+      } : null
     };
-    console.log('Datos enviados a la vista:', {
-      orderId: order.id,
-      restaurantId: restaurant.id,
-      itemsCount: items.length,
-      canChat: canChat // Log para depuración
-    });
+
     res.render('orders/detail', viewData);
   } catch (error) {
     console.error('Error cargando pedido:', error);
@@ -761,7 +867,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 // Cancel order
 router.post('/:id/cancel', requireAuth, async (req, res) => {
   try {
-    const orderId = req.params.id;
+    const orderId = parseInt(req.params.id, 10);
     const { motivo } = req.body;
     
     // Check if order can be cancelled
@@ -810,7 +916,7 @@ router.post('/:id/cancel', requireAuth, async (req, res) => {
 // Mark order as delivered
 router.post('/:id/mark-delivered', requireAuth, async (req, res) => {
   try {
-    const orderId = req.params.id;
+    const orderId = parseInt(req.params.id, 10);
     // Check if order exists and belongs to user
     const [orders] = await db.execute(`
       SELECT estado FROM pedidos 
@@ -832,10 +938,23 @@ router.post('/:id/mark-delivered', requireAuth, async (req, res) => {
     }
     // Mark order as delivered
     await db.execute(`
-      UPDATE pedidos 
+      UPDATE pedidos
       SET estado = 'entregado', fecha_entrega = NOW()
       WHERE id = ?
     `, [orderId]);
+
+    // Create $100 commission for the driver
+    const [orderInfo] = await db.execute(`
+      SELECT repartidor_id FROM pedidos WHERE id = ?
+    `, [orderId]);
+
+    if (orderInfo.length > 0 && orderInfo[0].repartidor_id) {
+      await db.execute(`
+        INSERT INTO comisiones (repartidor_id, pedido_id, monto, estado, fecha_creacion)
+        VALUES (?, ?, 100.00, 'pendiente', NOW())
+      `, [orderInfo[0].repartidor_id, orderId]);
+    }
+
     res.json({
       success: true,
       message: 'Pedido marcado como entregado exitosamente'
@@ -852,13 +971,16 @@ router.post('/:id/mark-delivered', requireAuth, async (req, res) => {
 // Order chat
 router.get('/:id/chat', requireAuth, async (req, res) => {
   try {
-    const orderId = req.params.id;
+    const orderId = parseInt(req.params.id, 10);
+
     // Get order info
     const [orders] = await db.execute(`
       SELECT p.id, p.numero_pedido, p.cliente_id, p.restaurante_id, p.estado,
-             r.nombre as restaurante_nombre, r.imagen_logo as restaurante_logo
+             r.nombre as restaurante_nombre, r.imagen_logo as restaurante_logo,
+             u.nombre as cliente_nombre, u.apellido as cliente_apellido
       FROM pedidos p
       JOIN restaurantes r ON p.restaurante_id = r.id
+      JOIN usuarios u ON p.cliente_id = u.id
       WHERE p.id = ? AND (p.cliente_id = ? OR r.usuario_id = ?)
     `, [orderId, req.session.user.id, req.session.user.id]);
 
@@ -883,11 +1005,26 @@ router.get('/:id/chat', requireAuth, async (req, res) => {
         }
     }
 
-    res.render('admin/order-chat', {
+    // Get chat messages for initial render (opcional, ya que Socket.IO los cargará)
+    let messages = [];
+    try {
+      const [messagesResult] = await db.execute(`
+        SELECT mp.*, u.nombre as remitente_nombre
+        FROM mensajes_pedido mp
+        LEFT JOIN usuarios u ON mp.remitente_id = u.id AND mp.remitente_tipo = 'cliente'
+        WHERE mp.pedido_id = ?
+        ORDER BY mp.fecha_envio ASC
+      `, [orderId]);
+      messages = messagesResult || [];
+    } catch (msgError) {
+      console.warn('No se pudieron cargar mensajes iniciales:', msgError);
+    }
+
+    res.render('orders/chat', {
       title: `Chat Pedido #${order.numero_pedido} - A la Mesa`,
       order,
-      user: req.session.user,
-      script: '<script src="/js/dashboard-orders-chat.js"></script>'
+      messages, // Pasar mensajes para compatibilidad, aunque Socket.IO los recargará
+      user: req.session.user
     });
 
   } catch (error) {
@@ -898,6 +1035,173 @@ router.get('/:id/chat', requireAuth, async (req, res) => {
       error: process.env.NODE_ENV === 'development' ? error : {},
       user: req.session.user || null
     });
+  }
+});
+
+// Endpoint para verificar coordenadas del repartidor
+router.get('/:id/driver-coordinates', requireAuth, async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.id, 10);
+
+    // Verificar que el pedido existe y pertenece al usuario
+    const [orders] = await db.execute(
+      'SELECT p.repartidor_id, p.estado, d.current_latitude, d.current_longitude FROM pedidos p LEFT JOIN drivers d ON p.repartidor_id = d.user_id WHERE p.id = ? AND p.cliente_id = ?',
+      [orderId, req.session.user.id]
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json({ success: false, message: 'Pedido no encontrado' });
+    }
+
+    const order = orders[0];
+
+
+
+    res.json({
+      success: true,
+      driverId: order.repartidor_id,
+      estado: order.estado,
+      coordinates: {
+        latitude: order.current_latitude,
+        longitude: order.current_longitude
+      },
+      hasCoordinates: !!(order.current_latitude && order.current_longitude)
+    });
+
+  } catch (error) {
+    console.error('Error verificando coordenadas del repartidor:', error);
+    res.status(500).json({ success: false, message: 'Error interno del servidor' });
+  }
+});
+
+// Endpoint para calcular rutas
+router.get('/:orderId/route', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { startLat, startLng, endLat, endLng } = req.query;
+
+
+
+        if (!startLat || !startLng || !endLat || !endLng) {
+            return res.status(400).json({ success: false, message: 'Faltan parámetros de coordenadas' });
+        }
+
+        // Usar OSRM (Open Source Routing Machine) - API gratuita y confiable
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson&steps=false`;
+
+        const response = await fetch(osrmUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'A-la-Mesa-Delivery-App/1.0'
+            }
+        });
+
+        if (!response.ok) {
+            console.error('❌ Error en respuesta OSRM:', response.status, response.statusText);
+            throw new Error(`OSRM API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.routes && data.routes[0] && data.routes[0].geometry && data.routes[0].geometry.coordinates) {
+            // Extraer coordenadas de la ruta
+            const coordinates = data.routes[0].geometry.coordinates;
+            // OSRM devuelve [lng, lat], convertir a [lat, lng] para Leaflet
+            const routeCoordinates = coordinates.map(coord => [coord[1], coord[0]]);
+
+            res.json({
+                success: true,
+                route: routeCoordinates,
+                distance: data.routes[0].distance,
+                duration: data.routes[0].duration
+            });
+        } else {
+            console.warn('⚠️ OSRM no devolvió ruta válida, usando fallback');
+            // Fallback a línea recta si no hay ruta
+            res.json({
+                success: true,
+                route: [[parseFloat(startLat), parseFloat(startLng)], [parseFloat(endLat), parseFloat(endLng)]],
+                fallback: true
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error calculando ruta:', error);
+
+        // Fallback a línea recta en caso de error
+        const fallbackRoute = [
+            [parseFloat(req.query.startLat || startLat), parseFloat(req.query.startLng || startLng)],
+            [parseFloat(req.query.endLat || endLat), parseFloat(req.query.endLng || endLng)]
+        ];
+
+
+
+        res.json({
+            success: true,
+            route: fallbackRoute,
+            fallback: true,
+            error: error.message
+        });
+    }
+});
+
+// Endpoint para calificar el servicio de delivery
+router.post('/:id/rate-delivery', requireAuth, async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.id, 10);
+    const { rating, comentario } = req.body;
+
+    // Verificar que el pedido existe y pertenece al usuario
+    const [orders] = await db.execute(
+      'SELECT id, estado, restaurante_id FROM pedidos WHERE id = ? AND cliente_id = ?',
+      [orderId, req.session.user.id]
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json({ success: false, message: 'Pedido no encontrado' });
+    }
+
+    const order = orders[0];
+
+    // Verificar que el pedido esté entregado
+    if (order.estado !== 'entregado') {
+      return res.status(400).json({ success: false, message: 'Solo puedes calificar pedidos entregados' });
+    }
+
+    // Verificar que la calificación sea válida
+    const ratingNum = parseInt(rating);
+    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+      return res.status(400).json({ success: false, message: 'La calificación debe ser entre 1 y 5' });
+    }
+
+    // Verificar si ya existe una calificación para este pedido
+    const [existingRating] = await db.execute(
+      'SELECT id FROM calificaciones WHERE pedido_id = ? AND cliente_id = ?',
+      [orderId, req.session.user.id]
+    );
+
+    if (existingRating.length > 0) {
+      // Actualizar calificación existente
+      await db.execute(
+        'UPDATE calificaciones SET calificacion_repartidor = ?, comentario_repartidor = ?, fecha_resena = NOW() WHERE pedido_id = ? AND cliente_id = ?',
+        [ratingNum, comentario || null, orderId, req.session.user.id]
+      );
+    } else {
+      // Crear nueva calificación
+      await db.execute(
+        'INSERT INTO calificaciones (pedido_id, cliente_id, restaurante_id, calificacion_repartidor, comentario_repartidor, fecha_resena) VALUES (?, ?, ?, ?, ?, NOW())',
+        [orderId, req.session.user.id, order.restaurante_id, ratingNum, comentario || null]
+      );
+    }
+
+    res.json({
+      success: true,
+      message: '¡Gracias por tu calificación! Ayudas a mejorar nuestro servicio.'
+    });
+
+  } catch (error) {
+    console.error('Error calificando delivery:', error);
+    res.status(500).json({ success: false, message: 'Error interno del servidor' });
   }
 });
 

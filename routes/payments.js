@@ -14,12 +14,11 @@ const requireAuth = (req, res, next) => {
 
 // Create payment preference
 router.post('/create-preference', requireAuth, async (req, res) => {
-    console.log('POST /create-preference received.');
-    console.log('Request body:', req.body);
+    // Log removed for security - payment creation request received
     try {
         const { orderId } = req.body;
         const userId = req.session.user.id;
-        console.log('Creating preference for orderId:', orderId, 'by userId:', userId);
+
 
         // Get order details to find the restaurant_id
         const [orders] = await db.execute(`
@@ -36,14 +35,8 @@ router.post('/create-preference', requireAuth, async (req, res) => {
             });
         }
         const order = orders[0];
-        console.log('Restaurant Mercado Pago credentials for order', orderId, ':', {
-            mp_access_token: order.mp_access_token ? '[REDACTED]' : 'N/A',
-            mp_user_id: order.mp_user_id
-        });
-
         // Check if restaurant has Mercado Pago credentials
         if (!order.mp_access_token || !order.mp_user_id) {
-            console.log('Restaurant does not have Mercado Pago credentials configured.');
             return res.status(400).json({ success: false, message: 'El restaurante no tiene configurado Mercado Pago para recibir pagos.' });
         }
 
@@ -51,7 +44,6 @@ router.post('/create-preference', requireAuth, async (req, res) => {
         mercadopago.configure({
             access_token: order.mp_access_token
         });
-        console.log('Mercado Pago configured with restaurant access token.');
 
         // Get order items
         const [items] = await db.execute(`
@@ -70,7 +62,6 @@ router.post('/create-preference', requireAuth, async (req, res) => {
 
         // Calculate application fee (10% commission)
         const applicationFee = parseFloat((order.total * 0.10).toFixed(2));
-        console.log('Calculated applicationFee:', applicationFee);
 
         // Create preference
         const preference = {
@@ -101,7 +92,7 @@ router.post('/create-preference', requireAuth, async (req, res) => {
             // The restaurant's Mercado Pago User ID to receive the payment
             collector_id: order.mp_user_id
         };
-        console.log('Mercado Pago preference object created with sponsor_id:', process.env.MP_PLATFORM_USER_ID, 'and collector_id:', order.mp_user_id);
+
 
         const result = await mercadopago.preferences.create(preference);
         res.json({ success: true, preferenceId: result.body.id });
@@ -114,30 +105,24 @@ router.post('/create-preference', requireAuth, async (req, res) => {
 
 // Payment success page
 router.get('/success', async (req, res) => {
-    console.log('--- PAYMENT SUCCESS ROUTE HIT ---');
-    console.log('Query params:', req.query);
-    console.log('Payment success page loaded', req.query);
     try {
         const { collection_id, collection_status, payment_id, status, external_reference } = req.query;
-        
+
         if (external_reference) {
-            console.log(`Updating order ${external_reference} with status ${collection_status || status}`);
             const paymentStatus = collection_status || status;
             // Update order status
             if (paymentStatus === 'approved') {
-                const [updateResult] = await db.execute(`
-                    UPDATE pedidos 
+                await db.execute(`
+                    UPDATE pedidos
                     SET estado_pago = ?, mp_payment_id = ?, fecha_pago = NOW(), estado = 'confirmado'
                     WHERE id = ?
                 `, [paymentStatus, payment_id || collection_id, external_reference]);
-                console.log('Update result for approved status:', updateResult);
             } else {
-                const [updateResult] = await db.execute(`
-                    UPDATE pedidos 
+                await db.execute(`
+                    UPDATE pedidos
                     SET estado_pago = ?, mp_payment_id = ?, fecha_pago = NOW()
                     WHERE id = ?
                 `, [paymentStatus, payment_id || collection_id, external_reference]);
-                console.log('Update result for other status:', updateResult);
             }
         }
 
@@ -354,17 +339,13 @@ router.post('/test-payment', requireAuth, async (req, res) => {
 });
 
 router.get('/public-key/:restaurantId', async (req, res) => {
-    console.log('GET /public-key/:restaurantId received.');
     try {
         const { restaurantId } = req.params;
-        console.log('Fetching public key for restaurantId:', restaurantId);
         const [rows] = await db.execute('SELECT mp_public_key FROM restaurantes WHERE id = ?', [restaurantId]);
 
         if (rows.length === 0 || !rows[0].mp_public_key) {
-            console.error(`No se encontró la clave pública para el restaurante ${restaurantId}.`);
             return res.status(404).json({ error: 'No se encontró la clave pública para este restaurante.' });
         }
-        console.log('Returning public key:', rows[0].mp_public_key ? '[REDACTED]' : 'N/A');
         res.json({ publicKey: rows[0].mp_public_key });
     } catch (error) {
         console.error('Error al obtener la clave pública:', error);

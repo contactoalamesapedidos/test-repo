@@ -39,14 +39,16 @@ function editProduct(productId) {
 function fillProductForm(product) {
     const form = document.getElementById('productForm');
     if (!form) return;
-    
+
     form.querySelector('#nombre').value = product.nombre || '';
     form.querySelector('#descripcion').value = product.descripcion || '';
     form.querySelector('#precio').value = product.precio || '';
+    form.querySelector('#precio_descuento').value = product.precio_descuento || '';
     form.querySelector('#categoria_id').value = product.categoria_id || '';
     form.querySelector('#ingredientes').value = product.ingredientes || '';
     form.querySelector('#disponible').checked = product.disponible || false;
-    
+    form.querySelector('#destacado').checked = product.destacado || false;
+
     // Manejar imagen
     const imagePreview = document.getElementById('imagePreview');
     if (product.imagen && imagePreview) {
@@ -60,16 +62,16 @@ function fillProductForm(product) {
 // Mostrar modal del producto
 function showProductModal(title, productId = null) {
     console.log('🎭 Abriendo modal:', { title, productId });
-    
+
     const modal = document.getElementById('productModal');
-    const modalTitle = modal?.querySelector('.modal-title');
+    const modalTitle = document.getElementById('modalTitle');
     const form = document.getElementById('productForm');
-    
+
     if (modalTitle) modalTitle.textContent = title;
     if (form) {
         form.dataset.productId = productId || '';
     }
-    
+
     if (modal && !modal.classList.contains('show')) {
         const bootstrapModal = new bootstrap.Modal(modal);
         bootstrapModal.show();
@@ -150,36 +152,40 @@ function handleImagePreview(e) {
 function setupProductForm() {
     const form = document.getElementById('productForm');
     if (!form) return;
-    
+
     // Verificar si ya se configuró este formulario
     if (form.dataset.configured === 'true') {
         console.log('⚠️ Formulario ya configurado, saltando configuración adicional');
         return;
     }
-    
+
     console.log('🔧 Configurando formulario de producto...');
     form.dataset.configured = 'true';
-    
-    let isSubmitting = false;
-    
-    form.addEventListener('submit', async function(e) {
+
+    // Remover event listeners anteriores para evitar duplicados
+    const oldSubmitHandler = form.dataset.submitHandler;
+    if (oldSubmitHandler) {
+        form.removeEventListener('submit', window[oldSubmitHandler]);
+    }
+
+    // Crear nueva función de manejo de submit
+    const submitHandler = async function(e) {
         e.preventDefault();
-        
+
         console.log('🔄 Evento submit detectado');
-        console.log('Estado isSubmitting:', isSubmitting);
-        
-        if (isSubmitting) {
+
+        if (form.dataset.isSubmitting === 'true') {
             console.log('❌ Formulario ya se está enviando, ignorando envío adicional');
             return false;
         }
-        
+
         if (!validateProductForm()) return false;
-        
-        isSubmitting = true;
+
+        form.dataset.isSubmitting = 'true';
         const submitBtn = form.querySelector('button[type="submit"]');
         const spinner = document.getElementById('productSpinner');
         const btnText = document.getElementById('productBtnText');
-        
+
         // Deshabilitar el botón inmediatamente
         if (submitBtn) {
             submitBtn.disabled = true;
@@ -187,29 +193,29 @@ function setupProductForm() {
         }
         if (spinner) spinner.classList.remove('d-none');
         if (btnText) btnText.textContent = 'Guardando...';
-        
+
         try {
             const formData = new FormData(form);
             const productId = form.dataset.productId;
-            
+
             const url = productId ? `/dashboard/products/edit/${productId}` : '/dashboard/products/add';
             const method = 'POST';
-            
+
             console.log('Enviando formulario a:', url);
-            
+
             const response = await fetch(url, {
                 method: method,
                 body: formData
             });
-            
+
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('Error response:', errorText);
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 showToast(data.message, 'success');
                 const modal = document.getElementById('productModal');
@@ -225,7 +231,7 @@ function setupProductForm() {
             console.error('Error:', error);
             showToast('Error al guardar el producto', 'danger');
         } finally {
-            isSubmitting = false;
+            form.dataset.isSubmitting = 'false';
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.style.opacity = '1';
@@ -233,7 +239,15 @@ function setupProductForm() {
             if (spinner) spinner.classList.add('d-none');
             if (btnText) btnText.textContent = 'Guardar Producto';
         }
-    });
+    };
+
+    // Guardar referencia a la función para poder removerla después
+    const handlerName = 'productSubmitHandler_' + Date.now();
+    window[handlerName] = submitHandler;
+    form.dataset.submitHandler = handlerName;
+
+    // Agregar el event listener
+    form.addEventListener('submit', submitHandler);
 }
 
 // Validar formulario de producto

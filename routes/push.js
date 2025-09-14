@@ -5,10 +5,28 @@ const { vapidKeys, webpush } = require('../config/vapid');
 
 // Middleware para verificar autenticación
 function requireAuth(req, res, next) {
+    console.log('[AUTH] Verificando autenticación...');
+    console.log('[AUTH] Session exists:', !!req.session);
+    console.log('[AUTH] Session user exists:', !!(req.session && req.session.user));
+    console.log('[AUTH] Session user:', req.session && req.session.user ? req.session.user : 'NULL');
+    console.log('[AUTH] Headers:', JSON.stringify(req.headers, null, 2));
+
     if (req.session && req.session.user) {
+        console.log('[AUTH] ✅ Usuario autenticado:', req.session.user.id);
         next();
     } else {
-        res.status(401).json({ success: false, message: 'No autorizado' });
+        console.log('[AUTH] ❌ Usuario no autenticado');
+        res.status(401).json({
+            success: false,
+            message: 'No autorizado - sesión no encontrada',
+            debug: {
+                hasSession: !!req.session,
+                hasUser: !!(req.session && req.session.user),
+                origin: req.headers.origin,
+                host: req.headers.host,
+                userAgent: req.headers['user-agent']
+            }
+        });
     }
 }
 
@@ -23,11 +41,12 @@ router.post('/subscribe', requireAuth, async (req, res) => {
     try {
         const { subscription, userId, userType } = req.body;
         
-        console.log('=== SUSCRIPCIÓN PUSH RECIBIDA ===');
-        console.log('userId:', userId);
-        console.log('userType:', userType);
-        console.log('subscription type:', typeof subscription);
-        console.log('subscription:', subscription);
+        // Log de suscripción push (solo en desarrollo)
+        if (process.env.NODE_ENV === 'development') {
+            console.log('=== SUSCRIPCIÓN PUSH RECIBIDA ===');
+            console.log('userId:', userId);
+            console.log('userType:', userType);
+        }
         
         if (!subscription || !userId) {
             return res.status(400).json({
@@ -130,49 +149,78 @@ router.post('/unsubscribe', requireAuth, async (req, res) => {
 async function sendNotificationToUser(userId, notificationData) {
     try {
         console.log('[PUSH] [sendNotificationToUser] Buscando suscripción para usuario', userId, 'con datos:', notificationData);
+
+        // Verificar configuración VAPID
+        if (!vapidKeys || !vapidKeys.publicKey || !vapidKeys.privateKey) {
+            console.error('[PUSH] ❌ Claves VAPID no configuradas');
+            return false;
+        }
+
         // Obtener la suscripción push del usuario
         const [rows] = await db.execute('SELECT * FROM push_subscriptions WHERE usuario_id = ?', [userId]);
         if (rows.length === 0) {
-            console.log(`[PUSH] No hay suscripción push para el usuario ${userId}`);
+            console.log(`[PUSH] ⚠️ No hay suscripción push para el usuario ${userId}`);
             return false;
         }
+
+        console.log(`[PUSH] 📋 Encontradas ${rows.length} suscripciones para usuario ${userId}`);
         let anySuccess = false;
+
         for (const row of rows) {
             let subscription = row.subscription_data;
             if (typeof subscription === 'string') {
                 try {
                     subscription = JSON.parse(subscription);
                 } catch (e) {
-                    console.error('[PUSH] Error parseando la suscripción push (id=' + row.id + '):', e);
+                    console.error('[PUSH] ❌ Error parseando la suscripción push (id=' + row.id + '):', e);
                     continue;
                 }
             }
+
             if (!subscription || !subscription.endpoint) {
-                console.error('[PUSH] Suscripción inválida (id=' + row.id + ') para usuario', userId, subscription);
+                console.error('[PUSH] ❌ Suscripción inválida (id=' + row.id + ') para usuario', userId, subscription);
                 continue;
             }
+
             try {
-                console.log('[PUSH] Enviando notificación push al usuario', userId, 'suscripción id=', row.id);
-                await webpush.sendNotification(subscription, JSON.stringify(notificationData));
-                console.log('[PUSH] Notificación enviada correctamente al usuario', userId, 'suscripción id=', row.id);
+                console.log('[PUSH] 📤 Enviando notificación push al usuario', userId, 'suscripción id=', row.id);
+                console.log('[PUSH] 📝 Payload:', JSON.stringify(notificationData));
+                console.log('[PUSH] 🔗 Endpoint:', subscription.endpoint.substring(0, 50) + '...');
+
+                const result = await webpush.sendNotification(subscription, JSON.stringify(notificationData));
+                console.log('[PUSH] ✅ Resultado del envío:', result);
+                console.log('[PUSH] 🎉 Notificación enviada correctamente al usuario', userId, 'suscripción id=', row.id);
                 anySuccess = true;
             } catch (error) {
+                console.error('[PUSH] ❌ Error enviando notificación push al usuario', userId, 'suscripción id=', row.id);
+
+                if (error.statusCode) {
+                    console.error('[PUSH] 📊 Código de estado HTTP:', error.statusCode);
+                }
+
                 if (error.statusCode === 410) {
-                    console.log('[PUSH] La suscripción ha expirado o no es válida. Eliminándola de la BD. id=', row.id);
+                    console.log('[PUSH] 🗑️ La suscripción ha expirado o no es válida. Eliminándola de la BD. id=', row.id);
                     try {
                         await db.execute('DELETE FROM push_subscriptions WHERE id = ?', [row.id]);
-                        console.log('[PUSH] Suscripción eliminada de la BD (id=', row.id, ') para el usuario:', userId);
+                        console.log('[PUSH] ✅ Suscripción eliminada de la BD (id=', row.id, ') para el usuario:', userId);
                     } catch (dbError) {
-                        console.error('[PUSH] Error eliminando la suscripción de la BD (id=' + row.id + '):', dbError);
+                        console.error('[PUSH] ❌ Error eliminando la suscripción de la BD (id=' + row.id + '):', dbError);
                     }
+                } else if (error.statusCode === 400) {
+                    console.error('[PUSH] ❌ Error 400 - Payload inválido o suscripción malformada');
+                } else if (error.statusCode === 413) {
+                    console.error('[PUSH] ❌ Error 413 - Payload demasiado grande');
                 } else {
-                    console.error('[PUSH] Error enviando notificación push al usuario', userId, 'suscripción id=', row.id, error);
+                    console.error('[PUSH] ❌ Error desconocido:', error.message);
                 }
             }
         }
+
+        console.log(`[PUSH] 📊 Resultado final para usuario ${userId}:`, anySuccess ? '✅ ÉXITO' : '❌ FALLÓ');
         return anySuccess;
     } catch (error) {
-        console.error('[PUSH] Error general en sendNotificationToUser para usuario', userId, error);
+        console.error('[PUSH] ❌ Error general en sendNotificationToUser para usuario', userId, error);
+        console.error('[PUSH] 📋 Stack trace:', error.stack);
         return false;
     }
 }
@@ -223,9 +271,10 @@ async function sendNotificationToRestaurant(restaurantId, notificationData) {
             image: productoImagen ? productoImagen : undefined,
             tag: pedido ? `pedido-${pedido.id}` : undefined,
             requireInteraction: true,
+            silent: false,
             actions: [
-                { action: 'view', title: 'Ver pedido', icon: '/images/eye.png' },
-                { action: 'close', title: 'Cerrar', icon: '/images/close.png' }
+                { action: 'view', title: 'Ver pedido' },
+                { action: 'close', title: 'Cerrar' }
             ],
             vibrate: [200, 100, 200, 100, 200],
             data: {
@@ -320,8 +369,8 @@ async function sendOrderStatusNotification(userId, pedidoId, nuevoEstado) {
             tag: pedido ? `pedido-${pedido.id}` : undefined,
             requireInteraction: true,
             actions: [
-                { action: 'view', title: 'Ver pedido', icon: '/images/eye.png' },
-                { action: 'close', title: 'Cerrar', icon: '/images/close.png' }
+                { action: 'view', title: 'Ver pedido' },
+                { action: 'close', title: 'Cerrar' }
             ],
             vibrate: [100, 50, 200, 50, 100],
             data: {
@@ -337,39 +386,488 @@ async function sendOrderStatusNotification(userId, pedidoId, nuevoEstado) {
     }
 }
 
-// Endpoint de prueba para notificación push a restaurante
-router.post('/test-restaurant', requireAuth, async (req, res) => {
+async function sendNotificationToDriver(driverId, notificationData) {
     try {
-        // Obtener el restaurante asociado al usuario actual
-        const [restaurants] = await db.execute('SELECT id FROM restaurantes WHERE usuario_id = ?', [req.session.user.id]);
-        if (restaurants.length === 0) {
-            return res.status(404).json({ success: false, message: 'No tienes restaurante asociado' });
+        console.log(`[PUSH] [sendNotificationToDriver] Buscando usuario para driver ${driverId}`);
+        const [drivers] = await db.execute('SELECT user_id FROM drivers WHERE id = ?', [driverId]);
+        if (drivers.length === 0) {
+            console.log(`[PUSH] No se encontró usuario para el driver ${driverId}`);
+            return false;
         }
-        const restaurantId = restaurants[0].id;
-        // Datos de prueba
-        const notificationData = {
-            title: 'Prueba de notificación push',
-            body: '¡Esto es una notificación real enviada desde el backend!',
-            url: '/dashboard/orders'
-        };
-        const ok = await router.sendNotificationToRestaurant(restaurantId, notificationData);
-        if (ok) {
-            return res.json({ success: true, message: 'Notificación enviada correctamente al restaurante' });
-        } else {
-            return res.status(500).json({ success: false, message: 'No se pudo enviar la notificación al restaurante' });
-        }
+        const userId = drivers[0].user_id;
+        return await sendNotificationToUser(userId, notificationData);
     } catch (error) {
-        console.error('[PUSH] Error en /test-restaurant:', error);
-        return res.status(500).json({ success: false, message: 'Error interno al enviar la notificación' });
+        console.error(`[PUSH] Error enviando notificación push al driver ${driverId}`, error);
+        return false;
+    }
+}
+
+// Endpoint para verificar estado de notificaciones push
+router.get('/status', requireAuth, async (req, res) => {
+    try {
+        console.log('[PUSH] [status] Verificando estado de notificaciones para usuario:', req.session.user.id);
+
+        // Verificar suscripciones
+        const [subscriptions] = await db.execute('SELECT id, subscription_data, fecha_creacion FROM push_subscriptions WHERE usuario_id = ?', [req.session.user.id]);
+        console.log('[PUSH] [status] Suscripciones encontradas:', subscriptions.length);
+
+        // Verificar restaurante
+        const [restaurants] = await db.execute('SELECT id, nombre FROM restaurantes WHERE usuario_id = ?', [req.session.user.id]);
+        console.log('[PUSH] [status] Restaurantes encontrados:', restaurants.length);
+
+        // Verificar preferencias de usuario
+        const [userPrefs] = await db.execute('SELECT recibir_notificaciones FROM usuarios WHERE id = ?', [req.session.user.id]);
+        const hasPushPreference = userPrefs.length > 0 && userPrefs[0].recibir_notificaciones;
+        console.log('[PUSH] [status] Preferencia de notificaciones:', hasPushPreference);
+
+        return res.json({
+            success: true,
+            userId: req.session.user.id,
+            userType: req.session.user.tipo_usuario,
+            hasSubscriptions: subscriptions.length > 0,
+            subscriptionCount: subscriptions.length,
+            hasRestaurant: restaurants.length > 0,
+            restaurantId: restaurants.length > 0 ? restaurants[0].id : null,
+            restaurantName: restaurants.length > 0 ? restaurants[0].nombre : null,
+            hasPushPreference: hasPushPreference,
+            subscriptions: subscriptions.map(sub => ({
+                id: sub.id,
+                fecha_creacion: sub.fecha_creacion,
+                endpoint: sub.subscription_data ? (typeof sub.subscription_data === 'string' ? JSON.parse(sub.subscription_data).endpoint : sub.subscription_data.endpoint) : null
+            })),
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('[PUSH] [status] Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error verificando estado: ' + error.message
+        });
     }
 });
 
-// Exportar funciones para uso en otras rutas
-module.exports = router;
+// Endpoint de prueba para notificación push a restaurante
+router.post('/test-restaurant', requireAuth, async (req, res) => {
+    try {
+        console.log('[PUSH] [test-restaurant] === INICIO TEST RESTAURANT ===');
+        console.log('[PUSH] [test-restaurant] Headers:', JSON.stringify(req.headers, null, 2));
+        console.log('[PUSH] [test-restaurant] Session:', req.session ? 'EXISTS' : 'NULL');
+        console.log('[PUSH] [test-restaurant] Session User:', req.session && req.session.user ? req.session.user : 'NULL');
+        console.log('[PUSH] [test-restaurant] Usuario ID:', req.session.user.id);
+        console.log('[PUSH] [test-restaurant] Usuario tipo:', req.session.user.tipo_usuario);
+        console.log('[PUSH] [test-restaurant] Origin:', req.headers.origin);
+        console.log('[PUSH] [test-restaurant] Host:', req.headers.host);
+        console.log('[PUSH] [test-restaurant] User-Agent:', req.headers['user-agent']);
 
-// También exportar las funciones como propiedades del router para uso en otras rutas
-router.sendNewOrderNotification = sendNewOrderNotification;
-router.sendOrderStatusNotification = sendOrderStatusNotification;
-router.sendNotificationToUser = sendNotificationToUser;
-router.sendNotificationToRestaurant = sendNotificationToRestaurant; 
-router.sendNotificationToRestaurant = sendNotificationToRestaurant;
+        // Obtener el restaurante asociado al usuario actual
+        const [restaurants] = await db.execute('SELECT id, nombre FROM restaurantes WHERE usuario_id = ?', [req.session.user.id]);
+        console.log('[PUSH] [test-restaurant] Restaurantes encontrados:', restaurants.length);
+
+        if (restaurants.length === 0) {
+            console.log('[PUSH] [test-restaurant] No se encontró restaurante para usuario:', req.session.user.id);
+            return res.status(404).json({
+                success: false,
+                message: 'No tienes restaurante asociado. Solo los propietarios de restaurantes pueden probar las notificaciones.',
+                userId: req.session.user.id,
+                userType: req.session.user.tipo_usuario
+            });
+        }
+        const restaurantId = restaurants[0].id;
+        const restaurantName = restaurants[0].nombre;
+        console.log('[PUSH] [test-restaurant] Restaurante encontrado:', restaurantId, restaurantName);
+
+        // Verificar si el usuario tiene suscripción push
+        const [subscriptions] = await db.execute('SELECT id, subscription_data FROM push_subscriptions WHERE usuario_id = ?', [req.session.user.id]);
+        console.log('[PUSH] [test-restaurant] Suscripciones encontradas:', subscriptions.length);
+
+        if (subscriptions.length === 0) {
+            console.log('[PUSH] [test-restaurant] No hay suscripción push para usuario:', req.session.user.id);
+
+            // Intentar crear una suscripción push automáticamente si el usuario tiene la preferencia activada
+            const [userPrefs] = await db.execute('SELECT recibir_notificaciones FROM usuarios WHERE id = ?', [req.session.user.id]);
+            const hasPushPreference = userPrefs.length > 0 && userPrefs[0].recibir_notificaciones;
+
+            if (hasPushPreference) {
+                console.log('[PUSH] [test-restaurant] Usuario tiene preferencia activada, intentando crear suscripción...');
+                return res.status(400).json({
+                    success: false,
+                    message: 'Tienes las notificaciones activadas pero no hay suscripción push. Actualiza la página y vuelve a activar el switch de notificaciones.',
+                    userId: req.session.user.id,
+                    restaurantId: restaurantId,
+                    restaurantName: restaurantName,
+                    needsResubscribe: true
+                });
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: 'No tienes suscripción push activa. Ve a Configuración > Notificaciones y habilita las notificaciones push.',
+                    userId: req.session.user.id,
+                    restaurantId: restaurantId,
+                    restaurantName: restaurantName
+                });
+            }
+        }
+
+        console.log('[PUSH] [test-restaurant] Suscripción encontrada, enviando notificación de prueba...');
+
+        // Datos de prueba
+        const notificationData = {
+            title: `🔔 Prueba - ${restaurantName}`,
+            body: '¡Esto es una notificación real enviada desde el backend! Si la ves, las notificaciones funcionan correctamente.',
+            url: '/dashboard/orders',
+            orderId: null // No hay pedido específico para esta prueba
+        };
+
+        const ok = await sendNotificationToRestaurant(restaurantId, notificationData);
+
+        if (ok) {
+            console.log('[PUSH] [test-restaurant] Notificación enviada exitosamente');
+            return res.json({
+                success: true,
+                message: '✅ Notificación de prueba enviada correctamente. Deberías recibirla en breve.',
+                subscriptionCount: subscriptions.length,
+                restaurantId: restaurantId,
+                restaurantName: restaurantName
+            });
+        } else {
+            console.log('[PUSH] [test-restaurant] Falló el envío de la notificación');
+            return res.status(500).json({
+                success: false,
+                message: '❌ No se pudo enviar la notificación. Revisa la consola del navegador y el service worker.',
+                restaurantId: restaurantId,
+                subscriptionCount: subscriptions.length
+            });
+        }
+    } catch (error) {
+        console.error('[PUSH] Error en /test-restaurant:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error interno al enviar la notificación: ' + error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+});
+
+// Endpoint temporal para testing sin autenticación (SOLO PARA DESARROLLO)
+if (process.env.NODE_ENV !== 'production') {
+    router.post('/test-restaurant-debug', async (req, res) => {
+        try {
+            console.log('[DEBUG] === TEST RESTAURANT DEBUG (SIN AUTH) ===');
+            console.log('[DEBUG] Headers:', JSON.stringify(req.headers, null, 2));
+            console.log('[DEBUG] Body:', JSON.stringify(req.body, null, 2));
+
+            // Usar un usuario hardcodeado para testing (cambiar según necesidad)
+            const testUserId = req.body.userId || 1; // Usuario de prueba
+            console.log('[DEBUG] Usando usuario de prueba:', testUserId);
+
+            // Obtener el restaurante asociado al usuario de prueba
+            const [restaurants] = await db.execute('SELECT id, nombre FROM restaurantes WHERE usuario_id = ?', [testUserId]);
+            console.log('[DEBUG] Restaurantes encontrados:', restaurants.length);
+
+            if (restaurants.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'No se encontró restaurante para el usuario de prueba',
+                    testUserId: testUserId
+                });
+            }
+
+            const restaurantId = restaurants[0].id;
+            const restaurantName = restaurants[0].nombre;
+
+            // Verificar suscripciones
+            const [subscriptions] = await db.execute('SELECT id, subscription_data FROM push_subscriptions WHERE usuario_id = ?', [testUserId]);
+            console.log('[DEBUG] Suscripciones encontradas:', subscriptions.length);
+
+            if (subscriptions.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'No hay suscripción push para el usuario de prueba',
+                    testUserId: testUserId,
+                    restaurantId: restaurantId
+                });
+            }
+
+            // Datos de prueba
+            const notificationData = {
+                title: `🔔 DEBUG - ${restaurantName}`,
+                body: `Test desde ngrok - ${new Date().toLocaleTimeString()}`,
+                url: '/dashboard/orders',
+                orderId: null
+            };
+
+            console.log('[DEBUG] Enviando notificación de prueba...');
+            const ok = await sendNotificationToRestaurant(restaurantId, notificationData);
+
+            return res.json({
+                success: ok,
+                message: ok ? '✅ Notificación enviada' : '❌ Falló el envío',
+                testUserId: testUserId,
+                restaurantId: restaurantId,
+                restaurantName: restaurantName,
+                subscriptionCount: subscriptions.length,
+                timestamp: new Date().toISOString()
+            });
+
+        } catch (error) {
+            console.error('[DEBUG] Error:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Error en debug: ' + error.message,
+                stack: error.stack
+            });
+        }
+    });
+
+    // Endpoint para enviar notificación de prueba inmediata
+router.post('/test-immediate', requireAuth, async (req, res) => {
+    try {
+        console.log('[PUSH] [test-immediate] Enviando notificación inmediata de prueba');
+
+        const notificationData = {
+            title: '🔔 TEST INMEDIATO',
+            body: `Test enviado a las ${new Date().toLocaleTimeString()}`,
+            icon: '/images/logo-a-la-mesa.png',
+            badge: '/images/logo-a-la-mesa.png',
+            requireInteraction: true,
+            silent: false,
+            actions: [
+                { action: 'view', title: 'Ver' },
+                { action: 'close', title: 'Cerrar' }
+            ],
+            vibrate: [200, 100, 200, 100, 200],
+            data: {
+                url: '/dashboard/orders',
+                test: true
+            }
+        };
+
+        const ok = await sendNotificationToUser(req.session.user.id, notificationData);
+
+        return res.json({
+            success: ok,
+            message: ok ? '✅ Notificación enviada inmediatamente' : '❌ Falló el envío inmediato',
+            userId: req.session.user.id,
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('[PUSH] [test-immediate] Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error en test inmediato: ' + error.message
+        });
+    }
+});
+
+    // Endpoint de debug directo para probar notificaciones sin validaciones
+    router.post('/debug-send', async (req, res) => {
+        try {
+            console.log('[DEBUG-SEND] === DEBUG SEND DIRECT ===');
+            console.log('[DEBUG-SEND] Body:', JSON.stringify(req.body, null, 2));
+
+            const { userId, title, body, url } = req.body;
+
+            if (!userId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'userId es requerido'
+                });
+            }
+
+            // Verificar suscripciones del usuario
+            const [subscriptions] = await db.execute('SELECT id, subscription_data FROM push_subscriptions WHERE usuario_id = ?', [userId]);
+            console.log('[DEBUG-SEND] Suscripciones encontradas:', subscriptions.length);
+
+            if (subscriptions.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'No hay suscripciones para este usuario',
+                    userId: userId,
+                    suggestion: 'El usuario debe activar las notificaciones push desde su navegador'
+                });
+            }
+
+            // Mostrar detalles de las suscripciones
+            console.log('[DEBUG-SEND] Detalles de suscripciones:');
+            subscriptions.forEach((sub, index) => {
+                console.log(`[DEBUG-SEND] Suscripción ${index + 1}:`, {
+                    id: sub.id,
+                    data: sub.subscription_data
+                });
+            });
+
+            // Datos de la notificación
+            const notificationData = {
+                title: title || '🔔 Debug Notification',
+                body: body || `Debug test - ${new Date().toLocaleTimeString()}`,
+                icon: '/images/logo-a-la-mesa.png',
+                badge: '/images/logo-a-la-mesa.png',
+                requireInteraction: true,
+                silent: false,
+                actions: [
+                    { action: 'view', title: 'Ver' },
+                    { action: 'close', title: 'Cerrar' }
+                ],
+                vibrate: [200, 100, 200],
+                data: {
+                    url: url || '/dashboard/orders'
+                }
+            };
+
+            console.log('[DEBUG-SEND] Enviando notificación...');
+            const ok = await sendNotificationToUser(userId, notificationData);
+
+            return res.json({
+                success: ok,
+                message: ok ? '✅ Notificación enviada exitosamente' : '❌ Falló el envío',
+                userId: userId,
+                subscriptionCount: subscriptions.length,
+                notificationData: notificationData,
+                timestamp: new Date().toISOString(),
+                debug: {
+                    vapidConfigured: !!(vapidKeys && vapidKeys.publicKey),
+                    webpushConfigured: !!webpush
+                }
+            });
+
+        } catch (error) {
+            console.error('[DEBUG-SEND] Error:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Error interno: ' + error.message,
+                stack: error.stack,
+                debug: {
+                    vapidConfigured: !!(vapidKeys && vapidKeys.publicKey),
+                    webpushConfigured: !!webpush
+                }
+            });
+        }
+    });
+
+    // Endpoint para verificar todas las suscripciones
+    router.get('/debug-subscriptions', async (req, res) => {
+        try {
+            console.log('[DEBUG-SUBS] === VERIFICANDO SUSCRIPCIONES ===');
+
+            const [allSubscriptions] = await db.execute(`
+                SELECT ps.id, ps.usuario_id, ps.tipo_usuario, ps.fecha_creacion,
+                       u.nombre, u.apellido, u.email
+                FROM push_subscriptions ps
+                LEFT JOIN usuarios u ON ps.usuario_id = u.id
+                ORDER BY ps.fecha_creacion DESC
+                LIMIT 20
+            `);
+
+            console.log('[DEBUG-SUBS] Total de suscripciones:', allSubscriptions.length);
+
+            // También verificar si hay usuarios con preferencias de notificaciones activadas
+            const [usersWithPrefs] = await db.execute(`
+                SELECT u.id, u.nombre, u.apellido, u.email, u.recibir_notificaciones
+                FROM usuarios u
+                WHERE u.recibir_notificaciones = 1
+                ORDER BY u.id
+                LIMIT 10
+            `);
+
+            return res.json({
+                success: true,
+                totalSubscriptions: allSubscriptions.length,
+                subscriptions: allSubscriptions,
+                usersWithPushEnabled: usersWithPrefs,
+                totalUsersWithPush: usersWithPrefs.length,
+                timestamp: new Date().toISOString()
+            });
+
+        } catch (error) {
+            console.error('[DEBUG-SUBS] Error:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Error verificando suscripciones: ' + error.message
+            });
+        }
+    });
+
+    // Endpoint simple para verificar estado de un usuario específico
+    router.get('/debug-user/:userId', async (req, res) => {
+        try {
+            const userId = parseInt(req.params.userId);
+
+            console.log('[DEBUG-USER] === VERIFICANDO USUARIO ===');
+            console.log('[DEBUG-USER] UserId:', userId);
+
+            // Verificar usuario
+            const [users] = await db.execute(
+                'SELECT id, nombre, apellido, email, recibir_notificaciones FROM usuarios WHERE id = ?',
+                [userId]
+            );
+
+            if (users.length === 0) {
+                return res.json({
+                    success: false,
+                    message: 'Usuario no encontrado',
+                    userId: userId
+                });
+            }
+
+            const user = users[0];
+
+            // Verificar suscripciones
+            const [subscriptions] = await db.execute(
+                'SELECT id, tipo_usuario, fecha_creacion FROM push_subscriptions WHERE usuario_id = ?',
+                [userId]
+            );
+
+            // Verificar restaurante si es propietario
+            const [restaurants] = await db.execute(
+                'SELECT id, nombre FROM restaurantes WHERE usuario_id = ?',
+                [userId]
+            );
+
+            return res.json({
+                success: true,
+                user: {
+                    id: user.id,
+                    nombre: user.nombre,
+                    apellido: user.apellido,
+                    email: user.email,
+                    recibir_notificaciones: user.recibir_notificaciones
+                },
+                subscriptions: subscriptions,
+                subscriptionCount: subscriptions.length,
+                restaurants: restaurants,
+                restaurantCount: restaurants.length,
+                hasActiveSubscription: subscriptions.length > 0,
+                hasPushPreference: user.recibir_notificaciones === 1,
+                timestamp: new Date().toISOString()
+            });
+
+        } catch (error) {
+            console.error('[DEBUG-USER] Error:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Error verificando usuario: ' + error.message
+            });
+        }
+    });
+
+    // Página de debug completa
+    router.get('/debug', (req, res) => {
+        console.log('[DEBUG-PAGE] Accediendo a página de debug de notificaciones push');
+        res.render('push-debug', {
+            title: 'Debug Notificaciones Push - A la Mesa',
+            user: req.session && req.session.user ? req.session.user : null
+        });
+    });
+}
+
+// Exportar el router y las funciones por separado
+module.exports = {
+    router,
+    sendNewOrderNotification,
+    sendOrderStatusNotification,
+    sendNotificationToUser,
+    sendNotificationToRestaurant,
+    sendNotificationToDriver
+};

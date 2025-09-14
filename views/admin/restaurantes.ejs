@@ -1,5 +1,4 @@
-<%- include('../partials/header') %>
-
+<div class="admin-layout">
     <%- include('partials/sidebar', { activePage: 'restaurantes' }) %>
 
     <!-- Main Content -->
@@ -67,16 +66,26 @@
             <!-- Category Carousel Filter -->
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
-                    <h5 class="card-title mb-3">Filtrar por Categoría</h5>
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-filter me-2"></i>Filtrar por Categoría
+                    </h5>
                     <div class="category-carousel-container">
                         <div class="category-carousel">
                             <a href="/admin/restaurantes?search=<%= encodeURIComponent(filtros.search || '') %>&estado=<%= encodeURIComponent(filtros.estado || '') %>&categoria=" class="category-item <%= (filtros.categoria === '' || typeof filtros.categoria === 'undefined') ? 'active' : '' %>">
-                                <img src="/images/defaults/category.jpg" alt="Todas" class="category-img">
+                                <div class="category-icon-wrapper">
+                                    <i class="fas fa-th-large category-icon"></i>
+                                </div>
                                 <span class="category-name">Todas</span>
                             </a>
-                            <% categorias.forEach(cat => { %>
+                            <%
+                            // Sort categories alphabetically for better UX
+                            const sortedCategorias = categorias.slice().sort((a, b) => a.nombre.localeCompare(b.nombre));
+                            %>
+                            <% sortedCategorias.forEach(cat => { %>
                                 <a href="/admin/restaurantes?search=<%= encodeURIComponent(filtros.search || '') %>&estado=<%= encodeURIComponent(filtros.estado || '') %>&categoria=<%= encodeURIComponent(cat.id) %>" class="category-item <%= filtros.categoria == cat.id ? 'active' : '' %>">
-                                    <img src="<%= (typeof getCategoryImagePath === 'function') ? getCategoryImagePath(cat.nombre) : '/images/defaults/category.jpg' %>" alt="<%= cat.nombre %>" class="category-img" onerror="this.src='/images/defaults/category.jpg'">
+                                    <div class="category-icon-wrapper">
+                                        <img src="<%= CategoryIcons.getCategoryImagePath(cat.nombre) %>" alt="<%= cat.nombre %>" class="category-img" onerror="this.src='/images/defaults/category.jpg'">
+                                    </div>
                                     <span class="category-name"><%= cat.nombre %></span>
                                 </a>
                             <% }); %>
@@ -134,8 +143,8 @@
                                             </td>
                                             <td>
                                                 <div class="d-flex align-items-center">
-                                                    <img src="/uploads/<%= restaurants[i].imagen_logo || 'no-image.png' %>" 
-                                                         alt="<%= restaurants[i].nombre %>" 
+                                                    <img src="<%= (restaurants[i].imagen_logo && restaurants[i].imagen_logo.trim()) ? '/uploads/' + restaurants[i].imagen_logo : '/images/no-image.png' %>"
+                                                         alt="<%= restaurants[i].nombre %>"
                                                          class="rounded me-2" width="40" height="40"
                                                          onerror="this.src='/images/no-image.png'">
                                                     <div>
@@ -230,8 +239,8 @@
                                     <div class="card shadow-sm">
                                         <div class="card-body">
                                             <div class="d-flex align-items-center mb-2">
-                                                <img src="/uploads/<%= restaurant.imagen_logo || 'no-image.png' %>" 
-                                                     alt="<%= restaurant.nombre %>" 
+                                                <img src="<%= (restaurant.imagen_logo && restaurant.imagen_logo.trim()) ? '/uploads/' + restaurant.imagen_logo : '/images/no-image.png' %>"
+                                                     alt="<%= restaurant.nombre %>"
                                                      class="rounded me-2" width="50" height="50"
                                                      onerror="this.src='/images/no-image.png'">
                                                 <div>
@@ -324,16 +333,16 @@
 
 <% if (user && user.tipo_usuario === 'admin') { %>
 <nav class="admin-mobile-nav admin-mobile-nav-main d-md-none d-lg-none d-xl-none">
-  <a href="/admin" class="admin-mobile-nav-item <%= currentPath === '/admin' ? 'active' : '' %>"><i class="fas fa-chart-bar"></i><span>Dashboard</span></a>
-  <a href="/admin/restaurantes" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/restaurantes') ? 'active' : '' %>"><i class="fas fa-store"></i><span>Restaurantes</span></a>
-  <a href="/admin/cobros" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/cobros') ? 'active' : '' %>"><i class="fas fa-money-bill-wave"></i><span>Cobros</span></a>
-  <a href="/admin/productos" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/productos') ? 'active' : '' %>"><i class="fas fa-utensils"></i><span>Productos</span></a>
+  <a href="/admin" class="admin-mobile-nav-item <%= path === '/admin' ? 'active' : '' %>"><i class="fas fa-chart-bar"></i><span>Dashboard</span></a>
+  <a href="/admin/restaurantes" class="admin-mobile-nav-item <%= path.startsWith('/admin/restaurantes') ? 'active' : '' %>"><i class="fas fa-store"></i><span>Restaurantes</span></a>
+  <a href="/admin/cobros" class="admin-mobile-nav-item <%= path.startsWith('/admin/cobros') ? 'active' : '' %>"><i class="fas fa-money-bill-wave"></i><span>Cobros</span></a>
+  <a href="/admin/productos" class="admin-mobile-nav-item <%= path.startsWith('/admin/productos') ? 'active' : '' %>"><i class="fas fa-utensils"></i><span>Productos</span></a>
 </nav>
 <nav class="admin-mobile-nav admin-mobile-nav-secondary d-md-none d-lg-none d-xl-none">
-  <a href="/admin/comprobantes" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/comprobantes') ? 'active' : '' %>"><i class="fas fa-receipt"></i><span>Comprobantes</span></a>
-  <a href="/admin/usuarios" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/usuarios') ? 'active' : '' %>"><i class="fas fa-users"></i><span>Usuarios</span></a>
-  <a href="/admin/reportes" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/reportes') ? 'active' : '' %>"><i class="fas fa-chart-line"></i><span>Reportes</span></a>
-  <a href="/admin/configuracion" class="admin-mobile-nav-item <%= currentPath.startsWith('/admin/configuracion') ? 'active' : '' %>"><i class="fas fa-cog"></i><span>Config</span></a>
+  <a href="/admin/comprobantes" class="admin-mobile-nav-item <%= path.startsWith('/admin/comprobantes') ? 'active' : '' %>"><i class="fas fa-receipt"></i><span>Comprobantes</span></a>
+  <a href="/admin/usuarios" class="admin-mobile-nav-item <%= path.startsWith('/admin/usuarios') ? 'active' : '' %>"><i class="fas fa-users"></i><span>Usuarios</span></a>
+  <a href="/admin/reportes" class="admin-mobile-nav-item <%= path.startsWith('/admin/reportes') ? 'active' : '' %>"><i class="fas fa-chart-line"></i><span>Reportes</span></a>
+  <a href="/admin/configuracion" class="admin-mobile-nav-item <%= path.startsWith('/admin/configuracion') ? 'active' : '' %>"><i class="fas fa-cog"></i><span>Config</span></a>
 </nav>
 <% } %>
 

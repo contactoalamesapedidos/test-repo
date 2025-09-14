@@ -1,15 +1,13 @@
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header text-center" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white;">
-                    <h3 class="mb-0">Registro de Repartidor</h3>
-                </div>
-                <div class="card-body p-4">
                     <form id="registerDriverForm">
-                        <div class="mb-3">
-                            <label for="nombre_completo" class="form-label">Nombre Completo</label>
-                            <input type="text" class="form-control" id="nombre_completo" name="nombre_completo" required>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="nombre" class="form-label">Nombre</label>
+                                <input type="text" class="form-control" id="nombre" name="nombre" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="apellido" class="form-label">Apellido</label>
+                                <input type="text" class="form-control" id="apellido" name="apellido" required>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
@@ -33,6 +31,29 @@
                                 <option value="otro">Otro</option>
                             </select>
                         </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Tipo de Registro</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="registration_type" id="typeIndependent" value="independent" checked>
+                                    <label class="form-check-label" for="typeIndependent">Repartidor Independiente</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="registration_type" id="typeRestaurant" value="restaurant">
+                                    <label class="form-check-label" for="typeRestaurant">Repartidor para un Restaurante Existente</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="restaurantSelection" class="mb-3" style="display: none;">
+                            <label for="restaurant_id" class="form-label">Selecciona un Restaurante</label>
+                            <select class="form-select" id="restaurant_id" name="restaurant_id">
+                                <option value="">Cargando restaurantes...</option>
+                            </select>
+                            <small class="form-text text-muted">Selecciona el restaurante al que deseas afiliarte.</small>
+                        </div>
+
                         <button type="submit" class="btn w-100" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white;">Registrarse</button>
                     </form>
                     <div class="mt-3 text-center">
@@ -47,30 +68,136 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const registerDriverForm = document.getElementById('registerDriverForm');
+        const typeIndependent = document.getElementById('typeIndependent');
+        const typeRestaurant = document.getElementById('typeRestaurant');
+        const restaurantSelection = document.getElementById('restaurantSelection');
+        const restaurantIdSelect = document.getElementById('restaurant_id');
+
+        const fetchRestaurantsAndPopulateSelect = async () => {
+            try {
+                restaurantIdSelect.innerHTML = '<option value="">Cargando restaurantes...</option>';
+                const response = await fetch('/api/restaurants/names');
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`No se pudieron cargar los restaurantes. Estado: ${response.status}. Respuesta: ${errorText}`);
+                }
+                const restaurants = await response.json();
+                
+                if (restaurants.length === 0) {
+                    restaurantIdSelect.innerHTML = '<option value="">No hay restaurantes disponibles</option>';
+                    return;
+                }
+
+                restaurantIdSelect.innerHTML = '<option value="">Selecciona un restaurante...</option>';
+                restaurants.forEach(restaurant => {
+                    const option = document.createElement('option');
+                    option.value = restaurant.id;
+                    option.textContent = restaurant.nombre;
+                    restaurantIdSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error al cargar restaurantes:', error);
+                restaurantIdSelect.innerHTML = `<option value="">Error: ${error.message}</option>`;
+            }
+        };
+
+        const toggleRestaurantSelection = () => {
+            if (typeRestaurant.checked) {
+                restaurantSelection.style.display = 'block';
+                restaurantIdSelect.setAttribute('required', 'required');
+                fetchRestaurantsAndPopulateSelect(); // Fetch and populate when shown
+            } else {
+                restaurantSelection.style.display = 'none';
+                restaurantIdSelect.removeAttribute('required');
+                restaurantIdSelect.value = ''; // Clear value when hidden
+            }
+        };
+
+        typeIndependent.addEventListener('change', toggleRestaurantSelection);
+        typeRestaurant.addEventListener('change', toggleRestaurantSelection);
+
+        // Initial call to set correct state on page load
+        toggleRestaurantSelection();
+
         if (registerDriverForm) {
             registerDriverForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const formData = new FormData(registerDriverForm);
-                const data = Object.fromEntries(formData.entries());
-
+                
+                // Mostrar indicador de carga
+                const submitButton = registerDriverForm.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.innerHTML;
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Registrando...';
+                
                 try {
+                    const formData = new FormData(registerDriverForm);
+                    
+                    // Validar campos requeridos
+                    const nombre = formData.get('nombre');
+                    const apellido = formData.get('apellido');
+                    const email = formData.get('email');
+                    const password = formData.get('password');
+                    const vehicleType = formData.get('vehicle_type');
+                    const registrationType = formData.get('registration_type');
+                    let restaurantId = null;
+
+                    if (registrationType === 'restaurant') {
+                        restaurantId = formData.get('restaurant_id');
+                        if (!restaurantId) {
+                            throw new Error('Por favor selecciona un restaurante.');
+                        }
+                    }
+                    
+                    if (!nombre || !apellido || !email || !password || !vehicleType) {
+                        throw new Error('Por favor completa todos los campos requeridos');
+                    }
+                    
+                    // Crear un objeto con los datos del formulario
+                    const formDataObj = {
+                        nombre: nombre,
+                        apellido: apellido,
+                        email: email,
+                        password: password,
+                        telefono: formData.get('telefono') || '',
+                        vehicle_type: vehicleType,
+                        registration_type: registrationType,
+                        restaurant_id: restaurantId // Send restaurant_id instead of name
+                    };
+                    
                     const response = await fetch('/auth/register-driver', {
                         method: 'POST',
+                        body: JSON.stringify(formDataObj),
                         headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(data)
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
                     });
-                    const result = await response.json();
-                    if (result.success) {
-                        alert(result.message);
-                        window.location.href = '/auth/login'; // Redirigir al login después del registro exitoso
+                    
+                    // Manejar la respuesta
+                    let responseData;
+                    const contentType = response.headers.get('content-type');
+                    
+                    if (contentType && contentType.includes('application/json')) {
+                        responseData = await response.json();
                     } else {
-                        alert(result.message);
+                        const text = await response.text();
+                        throw new Error('Respuesta inválida del servidor: ' + text);
                     }
+                    
+                    if (response.ok) {
+                        alert(responseData.message || '¡Registro exitoso! Ahora puedes iniciar sesión.');
+                        window.location.href = '/auth/login';
+                    } else {
+                        throw new Error(responseData.message || 'Error en el registro');
+                    }
+                    
                 } catch (error) {
-                    console.error('Error registering driver:', error);
-                    alert('Error al registrar repartidor. Inténtalo de nuevo.');
+                    console.error('Error registrando repartidor:', error);
+                    alert(error.message || 'Error al registrar. Por favor, inténtalo de nuevo.');
+                } finally {
+                    // Restaurar el botón
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonText;
                 }
             });
         }

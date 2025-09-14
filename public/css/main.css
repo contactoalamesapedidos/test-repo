@@ -1,0 +1,180 @@
+/* Archivo CSS principal optimizado para A la Mesa */
+/* Importa todas las dependencias de manera organizada */
+
+/* 1. Variables CSS centralizadas */
+@import url('variables.css');
+
+/* 2. Utilidades CSS consolidadas */
+@import url('utilities.css');
+
+/* 3. Estilos específicos de componentes */
+@import url('style.css');
+@import url('admin.css');
+@import url('cart.css');
+@import url('dashboard-orders.css');
+@import url('carousel-home.css');
+@import url('common-styles.css');
+
+/* ===== OPTIMIZACIONES DE CARGA ===== */
+
+/* Carga condicional de estilos específicos según la página */
+.page-admin {
+    /* Estilos específicos para páginas de admin */
+}
+
+.page-dashboard {
+    /* Estilos específicos para dashboard de restaurantes */
+}
+
+.page-cart {
+    /* Estilos específicos para carrito */
+}
+
+.page-orders {
+    /* Estilos específicos para pedidos */
+}
+
+/* ===== OPTIMIZACIONES DE RENDIMIENTO ===== */
+
+/* Minimizar repaints y reflows */
+* {
+    box-sizing: border-box;
+}
+
+/* Optimizar animaciones */
+.animated {
+    will-change: transform;
+    backface-visibility: hidden;
+}
+
+/* Optimizar imágenes */
+img {
+    max-width: 100%;
+    height: auto;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+/* ===== MEDIA QUERIES OPTIMIZADAS ===== */
+
+/* Mobile First Approach */
+@media (max-width: 575.98px) {
+    /* Estilos para móviles pequeños */
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+}
+
+@media (min-width: 576px) and (max-width: 767.98px) {
+    /* Estilos para móviles grandes y tablets pequeñas */
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+    /* Estilos para tablets */
+}
+
+@media (min-width: 992px) and (max-width: 1199.98px) {
+    /* Estilos para desktops pequeños */
+}
+
+@media (min-width: 1200px) {
+    /* Estilos para desktops grandes */
+}
+
+/* ===== OPTIMIZACIONES DE ACCESIBILIDAD ===== */
+
+/* Focus visible para navegación por teclado */
+*:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Reducir movimiento para usuarios con preferencias */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms;
+        animation-iteration-count: 1;
+        transition-duration: 0.01ms;
+        scroll-behavior: auto;
+    }
+}
+
+/* Modo de alto contraste */
+@media (prefers-contrast: high) {
+    .border {
+        border: 2px solid;
+    }
+}
+
+/* ===== OPTIMIZACIONES DE IMPRESIÓN ===== */
+
+@media print {
+    .no-print {
+        display: none;
+    }
+
+    .print-break-before {
+        page-break-before: always;
+    }
+
+    .print-break-after {
+        page-break-after: always;
+    }
+}
+
+/* ===== RESET Y NORMALIZE ===== */
+
+/* Reset básico para consistencia */
+html {
+    line-height: 1.15;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: 'Roboto', sans-serif;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #212529;
+    background-color: #fff;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== UTILIDADES FINALES ===== */
+
+/* Clase para ocultar elementos visualmente pero mantenerlos accesibles */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Clase para mostrar elementos ocultos con sr-only */
+.sr-only:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: inherit;
+    margin: inherit;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+}
+
+/* Utilidad para debugging (remover en producción) */
+.debug {
+    border: 1px solid red;
+}
+
+/* ===== FIN DEL ARCHIVO ===== */

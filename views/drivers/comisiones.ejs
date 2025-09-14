@@ -1,0 +1,71 @@
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <div class="col-md-3">
+            <%- include('sidebar', { activePage: 'comisiones' }) %>
+        </div>
+        <div class="col-md-9">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body text-center">
+                    <h5 class="text-muted">Saldo Pendiente de Comisiones</h5>
+                    <h2 class="display-4 fw-bold text-success">$<%= saldoPendiente.toFixed(2) %></h2>
+                    <p class="text-muted">Este es el monto de comisiones generadas por los envíos que has realizado.</p>
+                                        <% if (saldoPendiente > 0) { %>
+                        <form action="/repartidores/comisiones/pagar" method="POST" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="comprobante" class="form-label">Subir Comprobante de Pago</label>
+                                <input type="file" class="form-control" id="comprobante" name="comprobante" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Solicitar Pago</button>
+                        </form>
+                    <% } else { %>
+                        <button class="btn btn-secondary" disabled>Sin comisiones pendientes</button>
+                    <% } %>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Historial de Comisiones</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Pedido #</th>
+                                    <th>Restaurante</th>
+                                    <th>Cliente</th>
+                                    <th>Monto</th>
+                                    <th>Estado</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (comisiones && comisiones.length > 0) { %>
+                                    <% comisiones.forEach(comision => { %>
+                                        <tr>
+                                            <td><%= comision.pedido_id %></td>
+                                            <td><%= comision.restaurante_nombre %></td>
+                                            <td><%= comision.cliente_nombre %></td>
+                                            <td>$<%= comision.monto %></td>
+                                            <td>
+                                                <span class="badge bg-<%= comision.estado === 'pagada' ? 'success' : 'warning' %>">
+                                                    <%= comision.estado %>
+                                                </span>
+                                            </td>
+                                            <td><%= new Date(comision.fecha_creacion).toLocaleDateString('es-AR') %></td>
+                                        </tr>
+                                    <% }); %>
+                                <% } else { %>
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4 text-muted">No tienes comisiones registradas.</td>
+                                    </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

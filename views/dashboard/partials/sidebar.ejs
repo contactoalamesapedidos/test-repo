@@ -1,5 +1,11 @@
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-0">
+        <!-- Logo y Banner del Dashboard -->
+        <div class="text-center p-3 border-bottom bg-light">
+            <img src="/images/logo-a-la-mesa.png" alt="A la Mesa" class="img-fluid mb-2" style="max-height: 50px;" onerror="this.src='/images/logo.jpeg'">
+            <h6 class="text-muted mb-0">Panel de Restaurante</h6>
+        </div>
+
     <div class="list-group list-group-flush d-none d-md-block dashboard-sidebar-mobile-hide">
             <a href="/dashboard" class="list-group-item list-group-item-action <%= activePage === 'dashboard' ? 'active' : '' %>">
                 <i class="fas fa-home me-2"></i> Dashboard
@@ -13,11 +19,20 @@
             
             <a href="/dashboard/orders" class="list-group-item list-group-item-action <%= activePage === 'pedidos' ? 'active' : '' %>">
                 <i class="fas fa-shopping-cart me-2"></i> Pedidos
+                <% if (typeof pedidos_no_entregados !== 'undefined' && pedidos_no_entregados > 0) { %>
+                    <span class="badge bg-danger ms-2"><%= pedidos_no_entregados %></span>
+                <% } %>
             </a>
             <a href="/dashboard/pagos" class="list-group-item list-group-item-action <%= activePage === 'pagos' ? 'active' : '' %>">
                 <i class="fas fa-money-bill-wave me-2"></i> Pagos
             </a>
             
+            <a href="/dashboard/drivers" class="list-group-item list-group-item-action <%= activePage === 'conductores' ? 'active' : '' %>">
+                <i class="fas fa-motorcycle me-2"></i> Repartidores
+            </a>
+            <a href="/dashboard/driver-requests" class="list-group-item list-group-item-action <%= activePage === 'driver-requests' ? 'active' : '' %>">
+                <i class="fas fa-user-plus me-2"></i> Solicitudes de Repartidores
+            </a>
             <a href="/dashboard/settings" class="list-group-item list-group-item-action <%= activePage === 'configuracion' ? 'active' : '' %>">
                 <i class="fas fa-cog me-2"></i> Configuración
             </a>

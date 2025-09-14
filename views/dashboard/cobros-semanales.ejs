@@ -1,0 +1,110 @@
+<%- include('partials/sidebar', { activePage: 'cobros' }) %>
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="mb-0">Mis Cobros Semanales</h1>
+            </div>
+
+            <% if (cobros && cobros.length > 0) { %>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Período</th>
+                                        <th>Ventas Brutas</th>
+                                        <th>Comisión (10%)</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% cobros.forEach(cobro => { %>
+                                        <tr>
+                                            <td><%= cobro.id %></td>
+                                            <td><%= new Date(cobro.semana_inicio).toLocaleDateString() %> - <%= new Date(cobro.semana_fin).toLocaleDateString() %></td>
+                                            <td>$<%= Number(cobro.ventas_brutas || 0).toFixed(2) %></td>
+                                            <td>$<%= Number(cobro.monto_comision || 0).toFixed(2) %></td>
+                                            <td>
+                                                <span class="badge bg-<%= cobro.estado === 'pagado' ? 'success' : (cobro.estado === 'vencido' ? 'danger' : 'warning') %>">
+                                                    <%= cobro.estado %>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <% if (cobro.estado === 'pendiente' || cobro.estado === 'vencido') { %>
+                                                    <% if (mercadopagoUrl) { %>
+                                                        <a href="<%= mercadopagoUrl %>" target="_blank" class="btn btn-primary btn-sm mb-1">
+                                                            <i class="fas fa-dollar-sign me-1"></i> Pagar con MP
+                                                        </a>
+                                                    <% } %>
+                                                    <button class="btn btn-info btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#uploadModal" data-cobro-id="<%= cobro.id %>">
+                                                        <i class="fas fa-upload me-1"></i> Subir Comprobante
+                                                    </button>
+                                                <% } else { %>
+                                                    <span class="text-muted">No hay acciones pendientes</span>
+                                                <% } %>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            <% } else { %>
+                <div class="alert alert-info">
+                    No tienes cobros de comisiones generados hasta el momento.
+                </div>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para subir comprobante -->
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="uploadModalLabel">Subir Comprobante de Pago</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="uploadForm" action="/dashboard/cobros/upload-comprobante" method="POST" enctype="multipart/form-data">
+        <div class="modal-body">
+          <input type="hidden" id="cobroId" name="cobroId">
+          <div class="mb-3">
+            <label for="comprobanteFile" class="form-label">Selecciona el archivo (JPG, PNG, PDF)</label>
+            <input class="form-control" type="file" id="comprobanteFile" name="comprobante" accept=".jpg,.jpeg,.png,.pdf" required>
+          </div>
+           <div class="mb-3">
+                <label for="montoPagado" class="form-label">Monto Pagado</label>
+                <input type="number" class="form-control" id="montoPagado" name="montoPagado" step="0.01" required>
+            </div>
+            <div class="mb-3">
+                <label for="fechaPagoDeclarada" class="form-label">Fecha de Pago</label>
+                <input type="date" class="form-control" id="fechaPagoDeclarada" name="fecha_pago_declarada" required>
+            </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Subir</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var uploadModal = document.getElementById('uploadModal');
+    uploadModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var cobroId = button.getAttribute('data-cobro-id');
+        var modalCobroIdInput = uploadModal.querySelector('#cobroId');
+        modalCobroIdInput.value = cobroId;
+    });
+});
+</script>

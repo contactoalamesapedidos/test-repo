@@ -3,7 +3,7 @@
         <!-- Cart Items -->
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                <div class="card-header text-white primary-gradient-bg">
                     <h5 class="mb-0">
                         <i class="fas fa-shopping-cart me-2"></i>
                         Tu Carrito
@@ -31,8 +31,7 @@
                                 <div class="cart-item d-flex align-items-start mb-3 p-3 border rounded">
                                     <img src="<%= item.imagen ? (item.imagen.startsWith('/') ? item.imagen : '/uploads/' + item.imagen) : '/images/defaults/product.jpeg' %>"
                                          alt="<%= item.name %>" 
-                                         class="rounded me-3 flex-shrink-0" width="80" height="80"
-                                         style="object-fit: cover;"
+                                         class="rounded me-3 flex-shrink-0 object-fit-cover" width="80" height="80"
                                          onerror="this.onerror=null;this.src='/images/defaults/product.jpeg';">
                                     
                                     <div class="flex-grow-1 min-w-0">
@@ -75,7 +74,7 @@
                             <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
                             <h5>Tu carrito está vacío</h5>
                             <p class="text-muted">Agrega productos de tus restaurantes favoritos</p>
-                            <a href="/search" class="btn mt-3" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">
+                            <a href="/search" class="btn mt-3 btn-primary-gradient">
                                 <i class="fas fa-utensils me-2"></i>
                                 Ver Restaurantes
                             </a>
@@ -88,7 +87,7 @@
         <!-- Order Summary -->
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm">
-                <div class="card-header text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                <div class="card-header text-white primary-gradient-bg">
                     <h5 class="mb-0">
                         <i class="fas fa-receipt me-2"></i>
                         Resumen del Pedido
@@ -110,7 +109,7 @@
                             <strong class="fs-5 text-orange">$<%= total.toFixed(2) %></strong>
                         </div>
                         
-                        <a href="/orders/checkout" class="btn w-100 mb-3 proceed-checkout-btn" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">
+                        <a href="/orders/checkout" class="btn w-100 mb-3 proceed-checkout-btn btn-primary-gradient">
                             <i class="fas fa-credit-card me-2"></i>
                             Proceder al Pago
                         </a>

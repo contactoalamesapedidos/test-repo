@@ -2,11 +2,31 @@
   Parcial para la tarjeta de restaurante.
   Recibe: `restaurant` object.
 %>
-<div class="col-lg-4 col-md-6 mb-4 restaurant-card-wrapper">
+<div class="col-lg-2 col-md-6 mb-4 restaurant-card-wrapper">
     <div class="card h-100 restaurant-card-v2">
         <div class="card-img-container">
             <a href="/restaurants/<%= restaurant.id %>">
-                <img src="<%= restaurant.imagen_banner ? '/uploads/' + restaurant.imagen_banner : (restaurant.imagen_logo ? '/uploads/' + restaurant.imagen_logo : '/images/defaults/restaurant-banner-default.jpg') %>"
+                <%
+                  let imgSrc = '/images/defaults/restaurant-banner-default.jpg';
+                  if (restaurant.imagen_banner && restaurant.imagen_banner.trim()) {
+                    if (restaurant.imagen_banner.startsWith('http')) {
+                      imgSrc = restaurant.imagen_banner;
+                    } else if (restaurant.imagen_banner.startsWith('/uploads/')) {
+                      imgSrc = restaurant.imagen_banner;
+                    } else {
+                      imgSrc = '/uploads/' + restaurant.imagen_banner;
+                    }
+                  } else if (restaurant.imagen_logo && restaurant.imagen_logo.trim()) {
+                    if (restaurant.imagen_logo.startsWith('http')) {
+                      imgSrc = restaurant.imagen_logo;
+                    } else if (restaurant.imagen_logo.startsWith('/uploads/')) {
+                      imgSrc = restaurant.imagen_logo;
+                    } else {
+                      imgSrc = '/uploads/' + restaurant.imagen_logo;
+                    }
+                  }
+                %>
+                <img src="<%= imgSrc %>"
                      class="card-img-top" alt="<%= restaurant.nombre %>"
                      onerror="this.onerror=null;this.src='/images/defaults/restaurant-banner-default.jpg';">
             </a>
@@ -16,50 +36,65 @@
                     <%= restaurant.abierto ? 'Abierto' : 'Cerrado' %>
                 </span>
             <% } %>
-        </div>
 
-        <div class="card-body">
-            <h5 class="card-title"><%= restaurant.nombre %></h5>
-            <p class="card-text text-muted"><%= restaurant.descripcion ? restaurant.descripcion.substring(0, 40) + '...' : '' %></p>
+            <div class="restaurant-card-overlay-content">
+                <p class="card-text text-white"><%= restaurant.descripcion ? restaurant.descripcion.substring(0, 40) + '...' : '' %></p>
 
-            <div class="info-row">
-                <div class="info-item main-category">
-                    <i class="fas fa-utensils"></i>
-                    <span><%= restaurant.categorias ? restaurant.categorias.split(',')[0] : 'General' %></span>
-                </div>
-                <div class="info-item rating">
-                    <% const rating = parseFloat(restaurant.calificacion_promedio) || 0; %>
-                    <% for (let i = 1; i <= 5; i++) { %>
-                        <i class="fas fa-star <%= i <= rating ? 'text-warning' : 'text-muted-light' %>"></i>
-                    <% } %>
-                    <span>(<%= rating.toFixed(1) %>)</span>
-                </div>
-            </div>
-
-            <% if (restaurant.categorias_productos && restaurant.categorias_productos.trim()) { %>
                 <div class="info-row">
-                    <div class="info-item product-tags">
-                        <i class="fas fa-tag"></i>
-                        <span><%= restaurant.categorias_productos.split(',').slice(0, 3).join(' • ') %></span>
+                    <div class="info-item main-category text-white">
+                        <i class="fas fa-utensils"></i>
+                        <span><%= restaurant.categorias ? restaurant.categorias.split(',')[0] : 'General' %></span>
+                    </div>
+                    <div class="info-item rating text-white">
+                        <% const rating = parseFloat(restaurant.calificacion_promedio) || 0; %>
+                        <% for (let i = 1; i <= 5; i++) { %>
+                            <i class="fas fa-star <%= i <= rating ? 'text-warning' : 'text-muted-light' %>"></i>
+                        <% } %>
+                        <span>(<%= rating.toFixed(1) %>)</span>
                     </div>
                 </div>
-            <% } %>
 
-            <div class="info-row delivery-info">
-                <div class="info-item">
-                    <i class="fas fa-clock"></i>
-                    <span><%= restaurant.tiempo_entrega_min || '30' %>-<%= restaurant.tiempo_entrega_max || '45' %> min</span>
-                </div>
-                <div class="info-item">
-                    <i class="fas fa-truck"></i>
-                    <span><%= parseFloat(restaurant.costo_delivery) > 0 ? `Envío ${parseFloat(restaurant.costo_delivery).toFixed(2)}` : 'Envío Gratis' %></span>
+                <% if (restaurant.categorias_productos && restaurant.categorias_productos.trim()) { %>
+                    <div class="info-row">
+                        <div class="info-item product-tags text-white">
+                            <i class="fas fa-tag"></i>
+                            <span><%= restaurant.categorias_productos.split(',').slice(0, 3).join(' • ') %></span>
+                        </div>
+                    </div>
+                <% } %>
+
+                <div class="info-row delivery-info text-white">
+                    <div class="info-item">
+                        <i class="fas fa-clock"></i>
+                        <span><%= restaurant.tiempo_entrega_min || '30' %>-<%= restaurant.tiempo_entrega_max || '45' %> min</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-truck"></i>
+                        <span><%= parseFloat(restaurant.costo_delivery) > 0 ? `Envío ${parseFloat(restaurant.costo_delivery).toFixed(2)}` : 'Envío Gratis' %></span>
+                    </div>
                 </div>
             </div>
+
+            <%
+              let logoSrc = '/images/defaults/restaurant-logo-default.png';
+              if (restaurant.imagen_logo && restaurant.imagen_logo.trim()) {
+                if (restaurant.imagen_logo.startsWith('http')) {
+                  logoSrc = restaurant.imagen_logo;
+                } else if (restaurant.imagen_logo.startsWith('/uploads/')) {
+                  logoSrc = restaurant.imagen_logo;
+                } else {
+                  logoSrc = '/uploads/' + restaurant.imagen_logo;
+                }
+              }
+            %>
+            <img src="<%= logoSrc %>"
+                 class="restaurant-logo-overlay" alt="<%= restaurant.nombre %> Logo"
+                 onerror="this.onerror=null;this.src='/images/defaults/restaurant-logo-default.png';">
         </div>
 
-        <div class="card-footer">
-            <a href="/restaurants/<%= restaurant.id %>" class="btn btn-primary w-100">
-                <i class="fas fa-shopping-cart"></i>
+        <div class="card-footer text-center">
+            <h5 class="card-title-footer mb-0"><%= restaurant.nombre %></h5>
+            <a href="/restaurants/<%= restaurant.id %>" class="btn btn-primary">
                 Ver Menú (<%= restaurant.total_productos || 0 %> productos)
             </a>
         </div>
@@ -68,6 +103,20 @@
 
 <% if (typeof includeStyles === 'undefined' || (includeStyles === true)) { %>
     <style>
+    .restaurant-card-wrapper {
+        width: 350px;
+        max-width: 100%;
+    }
+
+    /* Responsive width for mobile devices */
+    @media (max-width: 768px) {
+        .restaurant-card-wrapper {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            margin-left: calc(-50vw + 50%) !important; /* Center the card */
+        }
+    }
+
     .restaurant-card-v2 {
         border-radius: 15px;
         border: 1px solid #e9ecef;
@@ -79,40 +128,120 @@
         box-shadow: 0 8px 25px rgba(0,0,0,0.1);
     }
     .restaurant-card-v2 .card-img-container {
-        height: 180px;
+        height: 220px; /* Increased height to accommodate content */
         position: relative;
         overflow: hidden;
         border-top-left-radius: 15px;
         border-top-right-radius: 15px;
+        display: flex; /* Use flexbox for content positioning */
+        align-items: flex-end; /* Align content to the bottom */
+        justify-content: flex-end; /* Center content horizontally */
+        padding: 15px; /* Padding for content */
+        background-color: #f8f9fa; /* Fallback background */
+    }
+    .restaurant-card-v2 .card-img-top {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 1; /* Ensure image is behind overlay content */
     }
     .restaurant-card-v2 .badge-status {
         position: absolute;
         top: 12px;
         right: 12px;
+        z-index: 3; /* Ensure badge is above overlay */
     }
-    .restaurant-card-v2 .card-body {
-        padding: 1rem;
+    .restaurant-card-v2 .restaurant-card-overlay-content {
+        position: relative;
+        z-index: 2; /* Ensure content is above image but below badge */
+        width: 70%;
+        background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%); /* Dark overlay */
+        padding-top: 50px; /* Space for content to appear from bottom */
+        padding-bottom: 15px; /* Reduced padding as title moved */
+        margin-bottom: 0; /* Remove negative margin */
+        margin-left: 20%;
+    }
+    .restaurant-card-v2 .card-title {
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+        font-size: 1.3rem;
+    }
+    .restaurant-card-v2 .card-text {
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    .restaurant-card-v2 .info-row {
         display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.25rem;
     }
-    .restaurant-card-v2 .card-title { font-weight: 700; color: #343a40; }
-    .restaurant-card-v2 .info-row { display: flex; justify-content: space-between; align-items: center; }
-    .restaurant-card-v2 .info-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; color: #6c757d; }
-    .restaurant-card-v2 .info-item i { color: #ff6b35; }
-    .restaurant-card-v2 .rating .text-muted-light { color: #d4d4d4; }
-    .restaurant-card-v2 .product-tags i { color: #6c757d; }
-    .restaurant-card-v2 .delivery-info i { color: #198754; }
+    .restaurant-card-v2 .info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.8); /* Lighter text for overlay */
+    }
+    .restaurant-card-v2 .info-item i {
+        color: #ffc107; /* Accent color for icons */
+    }
+    .restaurant-card-v2 .rating .text-muted-light {
+        color: rgba(255,255,255,0.4);
+    }
+    .restaurant-card-v2 .product-tags i {
+        color: rgba(255,255,255,0.6);
+    }
+    .restaurant-card-v2 .delivery-info i {
+        color: #28a745; /* Green for delivery info */
+    }
+    .restaurant-card-v2 .restaurant-logo-overlay {
+        position: absolute;
+        bottom: 20px; /* Adjusted to show more of the icon */
+        left: 15px; /* Adjust as needed */
+        width: 80px; /* Slightly larger */
+        height: 80px;
+        border-radius: 8px; /* Square with slight rounding */
+        border: 3px solid white; /* White border around the logo */
+        object-fit: cover;
+        z-index: 4; /* Ensure logo is on top */
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
     .restaurant-card-v2 .card-footer {
-        background-color: transparent;
-        border-top: none;
-        padding: 0 1rem 1rem 1rem;
+        background-color: #fff; /* White background for footer */
+        border-top: 1px solid #eee;
+        padding: 1rem; /* Reset padding */
+        text-align: left; /* Align content to left */
+        position: relative; /* Needed for z-index to work correctly with overlapping logo */
+        z-index: 5; /* Ensure footer is above the logo */
+        display: flex; /* Make it a flex container */
+        align-items: center; /* Vertically align items */
+        justify-content: flex-end; /* Push button to the right */
+        min-height: 80px; /* Ensure enough space for logo overlap */
+    }
+    .restaurant-card-v2 .card-title-footer {
+        font-weight: 700;
+        color: #343a40;
+        font-size: 1.2rem; /* Slightly smaller than banner title */
+        flex-grow: 1; /* Allow title to take available space */
+        text-align: left;
     }
     .restaurant-card-v2 .btn-primary {
         background-color: #ff6600;
         border-color: #ff6600;
         font-weight: 600;
+        padding: 0.6rem 1.5rem;
+        border-radius: 8px;
+        /* No w-75 here, let flexbox handle width */
+        margin-left: auto; /* Push button to the right */
+    }
+    .restaurant-card-v2 .btn-primary:hover {
+        background-color: #e65c00;
+        border-color: #e65c00;
     }
     </style>
     <% includeStyles = false; %>
-<% } %> 
+<% } %>

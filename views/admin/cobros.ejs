@@ -1,4 +1,4 @@
-<!-- CSS para vista móvil -->
+ <!-- CSS para vista móvil -->
 <link href="/css/cobros-mobile.css" rel="stylesheet">
 
 <div class="container-fluid py-4">
@@ -12,6 +12,9 @@
                 <div class="d-flex gap-2">
                     <button id="btnGenerarCobros" class="btn btn-warning">
                         <i class="fas fa-magic me-2"></i>Generar Cobros Semanales
+                    </button>
+                    <button id="btnCobrarRestaurante" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#modalCobrarRestaurante">
+                        <i class="fas fa-store me-2"></i>Cobrar Restaurante Específico
                     </button>
                     <a href="/admin/pagos-semanales" class="btn btn-outline-primary">
                         <i class="fas fa-calendar-week me-2"></i>Ver Tabla Semanal
@@ -69,7 +72,18 @@
                             </div>
                             <div class="col-md-3">
                                 <label for="semana" class="form-label">Semana</label>
-                                <input type="week" class="form-control" id="semana" name="semana" value="<%= filtros.semana %>">
+                                <select class="form-select" id="semana" name="semana">
+                                    <option value="">Todas las semanas</option>
+                                    <% for (let i = 0; i < 52; i++) { %>
+                                        <% const weekNumber = i + 1; %>
+                                        <% const year = new Date().getFullYear(); %>
+                                        <% const weekValue = `${year}-W${weekNumber.toString().padStart(2, '0')}`; %>
+                                        <option value="<%= weekValue %>" <%= filtros.semana === weekValue ? 'selected' : '' %>>
+                                            Semana <%= weekNumber %> (<%= year %>)
+                                        </option>
+                                    <% } %>
+                                </select>
+                                <div class="form-text">Selecciona una semana específica para filtrar cobros</div>
                             </div>
                             <div class="col-md-2 d-flex align-items-end">
                                 <button class="btn btn-primary w-100">Filtrar</button>
@@ -109,7 +123,10 @@
                                             </span>
                                         </td>
                                         <td>
-                                            <a href="/admin/cobros/<%= cobro.id %>" class="btn btn-sm btn-info">Ver Detalles</a>
+                                            <a href="/admin/cobros/<%= cobro.id %>" class="btn btn-sm btn-info me-1">Ver Detalles</a>
+                                            <button class="btn btn-sm btn-danger" onclick="eliminarCobro(<%= cobro.id %>)">
+                                                <i class="fas fa-trash"></i> Eliminar
+                                            </button>
                                         </td>
                                     </tr>
                                 <% }); %>
@@ -149,9 +166,12 @@
                             </div>
                         </div>
                         <div class="cobro-card-footer">
-                            <a href="/admin/cobros/<%= cobro.id %>" class="btn btn-ver-detalles">
+                            <a href="/admin/cobros/<%= cobro.id %>" class="btn btn-ver-detalles me-2">
                                 <i class="fas fa-eye me-2"></i>Ver Detalles
                             </a>
+                            <button class="btn btn-eliminar" onclick="eliminarCobro(<%= cobro.id %>)">
+                                <i class="fas fa-trash me-2"></i>Eliminar
+                            </button>
                         </div>
                     </div>
                 <% }); %>
@@ -180,39 +200,62 @@
                         <li>Considera pedidos en estados: <strong>entregado, en_camino, listo, pendiente, confirmado, preparando</strong></li>
                         <li>Establece fecha de vencimiento en <strong>7 días</strong></li>
                         <li>Envía emails automáticos a cada restaurante</li>
-                        <li><strong>Nota:</strong> Solo se generan cobros para restaurantes que tengan pedidos en la semana</li>
+                        <li><strong>Nota:</strong> Solo se generan cobros para restaurantes que tengan pedidos en el período seleccionado</li>
                     </ul>
                 </div>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card border-info">
-                            <div class="card-header bg-info text-white">
-                                <h6 class="mb-0"><i class="fas fa-calendar me-2"></i>Período de la Semana</h6>
+
+                <form id="formGenerarCobrosAutomatico">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="fas fa-calendar me-2"></i>Seleccionar Período</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="semanaAutomatico" class="form-label">Seleccionar Semana *</label>
+                                        <select class="form-select" id="semanaAutomatico" name="semana" required>
+                                            <option value="">Selecciona una semana...</option>
+                                            <% for (let i = 0; i < 52; i++) { %>
+                                                <% const weekNumber = i + 1; %>
+                                                <% const year = new Date().getFullYear(); %>
+                                                <% const weekValue = `${year}-W${weekNumber.toString().padStart(2, '0')}`; %>
+                                                <option value="<%= weekValue %>">
+                                                    Semana <%= weekNumber %> (<%= year %>)
+                                                </option>
+                                            <% } %>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="fechaInicioAutomatico" class="form-label">Fecha Inicio *</label>
+                                        <input type="date" class="form-control" id="fechaInicioAutomatico" name="fecha_inicio" required readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="fechaFinAutomatico" class="form-label">Fecha Fin *</label>
+                                        <input type="date" class="form-control" id="fechaFinAutomatico" name="fecha_fin" required readonly>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnUsarSemanaActual">
+                                        <i class="fas fa-calendar-week me-1"></i>Usar Semana Actual
+                                    </button>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div id="periodoSemana">
-                                    <p class="mb-1"><strong>Desde:</strong> <span id="fechaInicio"></span></p>
-                                    <p class="mb-0"><strong>Hasta:</strong> <span id="fechaFin"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0"><i class="fas fa-store me-2"></i>Restaurantes a Procesar</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="infoRestaurantes">
+                                        <p class="mb-1"><strong>Total:</strong> <span id="totalRestaurantes">Todos los activos</span> restaurantes</p>
+                                        <p class="mb-0"><strong>Estado:</strong> <span class="badge bg-success">Activos y Verificados</span></p>
+                                        <p class="mb-0"><strong>Criterio:</strong> Solo restaurantes con pedidos en el período</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="card border-success">
-                            <div class="card-header bg-success text-white">
-                                <h6 class="mb-0"><i class="fas fa-store me-2"></i>Restaurantes a Procesar</h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="infoRestaurantes">
-                                    <p class="mb-1"><strong>Total:</strong> <span id="totalRestaurantes">Todos los activos</span> restaurantes</p>
-                                    <p class="mb-0"><strong>Estado:</strong> <span class="badge bg-success">Activos y Verificados</span></p>
-                                    <p class="mb-0"><strong>Criterio:</strong> Solo restaurantes con pedidos en la semana</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                </form>
 
                 <div class="alert alert-warning">
                     <h6><i class="fas fa-exclamation-triangle me-2"></i>Importante</h6>
@@ -251,11 +294,100 @@
                 </div>
                 <p class="mb-2">Generando cobros semanales para todos los restaurantes...</p>
                 <p class="text-muted small">Esto puede tomar unos minutos. Por favor, no cierres esta ventana.</p>
-                
+
                 <div class="progress mt-3">
                     <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Cobrar Restaurante Específico -->
+<div class="modal fade" id="modalCobrarRestaurante" tabindex="-1" aria-labelledby="modalCobrarRestauranteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="modalCobrarRestauranteLabel">
+                    <i class="fas fa-store me-2"></i>Cobrar Restaurante Específico
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formCobrarRestaurante">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>¿Qué hace esta función?</h6>
+                        <ul class="mb-0">
+                            <li>Genera cobros semanales para <strong>un restaurante específico</strong></li>
+                            <li>Calcula comisiones del <strong>10%</strong> sobre ventas brutas</li>
+                            <li>Considera pedidos en estados: <strong>entregado, en_camino, listo, pendiente, confirmado, preparando</strong></li>
+                            <li>Establece fecha de vencimiento en <strong>7 días</strong></li>
+                            <li>Envía email automático al restaurante seleccionado</li>
+                            <li><strong>Nota:</strong> Solo se genera cobro si el restaurante tiene pedidos en la semana</li>
+                        </ul>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="restauranteSeleccionado" class="form-label">Seleccionar Restaurante *</label>
+                                <select class="form-select" id="restauranteSeleccionado" name="restaurante_id" required>
+                                    <option value="">Selecciona un restaurante...</option>
+                                    <% if (typeof restaurantes !== 'undefined' && restaurantes && restaurantes.length > 0) { %>
+                                        <% restaurantes.forEach(function(rest) { %>
+                                            <option value="<%= rest.id %>"><%= rest.nombre %></option>
+                                        <% }); %>
+                                    <% } %>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fechaInicioEspecifica" class="form-label">Fecha Inicio *</label>
+                                <input type="date" class="form-control" id="fechaInicioEspecifica" name="fecha_inicio" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fechaFinEspecifica" class="form-label">Fecha Fin *</label>
+                                <input type="date" class="form-control" id="fechaFinEspecifica" name="fecha_fin" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0"><i class="fas fa-calendar me-2"></i>Período Seleccionado</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="periodoSeleccionado">
+                                        <p class="mb-1"><strong>Desde:</strong> <span id="fechaInicioDisplay">-</span></p>
+                                        <p class="mb-0"><strong>Hasta:</strong> <span id="fechaFinDisplay">-</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle me-2"></i>Importante</h6>
+                        <p class="mb-0">
+                            Esta acción <strong>NO se puede deshacer</strong>. El cobro generado se creará en la base de datos
+                            y se enviará un email al restaurante. Asegúrate de que las fechas y el restaurante sean correctos.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-info" id="btnConfirmarCobrarRestaurante">
+                        <i class="fas fa-store me-2"></i>Generar Cobro
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -289,23 +421,143 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 
+    // Función para obtener fechas de una semana específica
+    function getWeekDates(weekValue) {
+        if (!weekValue) return null;
+
+        const [year, week] = weekValue.split('-W');
+        const weekNum = parseInt(week);
+
+        // Crear fecha del primer día de la semana (lunes)
+        const firstDayOfYear = new Date(year, 0, 1);
+        const daysToFirstMonday = (8 - firstDayOfYear.getDay()) % 7;
+        const firstMonday = new Date(year, 0, 1 + daysToFirstMonday);
+
+        // Calcular el lunes de la semana seleccionada
+        const monday = new Date(firstMonday);
+        monday.setDate(firstMonday.getDate() + (weekNum - 1) * 7);
+
+        // Calcular el domingo de la semana
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+
+        return {
+            inicio: monday.toISOString().split('T')[0],
+            fin: sunday.toISOString().split('T')[0]
+        };
+    }
+
+    // Función para actualizar fechas cuando cambia la semana
+    function updateDatesFromWeek(selectId, startDateId, endDateId) {
+        const select = document.getElementById(selectId);
+        const startInput = document.getElementById(startDateId);
+        const endInput = document.getElementById(endDateId);
+
+        select.addEventListener('change', function() {
+            const selectedValue = this.value;
+            if (selectedValue) {
+                const dates = getWeekDates(selectedValue);
+                if (dates) {
+                    startInput.value = dates.inicio;
+                    endInput.value = dates.fin;
+                }
+            } else {
+                startInput.value = '';
+                endInput.value = '';
+            }
+        });
+    }
+
     // Mostrar modal de confirmación
     btnGenerarCobros.addEventListener('click', function() {
-        const periodo = calcularPeriodoSemana();
-        document.getElementById('fechaInicio').textContent = periodo.inicio;
-        document.getElementById('fechaFin').textContent = periodo.fin;
-        
-        // Mostrar información básica primero
-        document.getElementById('totalRestaurantes').textContent = 'Calculando...';
-        
-        // Mostrar información estática por ahora
+        // Establecer semana actual por defecto
+        const semanaSelect = document.getElementById('semanaAutomatico');
+        const fechaInicioInput = document.getElementById('fechaInicioAutomatico');
+        const fechaFinInput = document.getElementById('fechaFinAutomatico');
+
+        // Calcular semana actual
+        const hoy = new Date();
+        const year = hoy.getFullYear();
+        const firstDayOfYear = new Date(year, 0, 1);
+        const daysToFirstMonday = (8 - firstDayOfYear.getDay()) % 7;
+        const firstMonday = new Date(year, 0, 1 + daysToFirstMonday);
+        const weekNumber = Math.ceil(((hoy - firstMonday) / 86400000) / 7) + 1;
+        const currentWeekValue = `${year}-W${weekNumber.toString().padStart(2, '0')}`;
+
+        semanaSelect.value = currentWeekValue;
+
+        // Actualizar fechas automáticamente
+        const dates = getWeekDates(currentWeekValue);
+        if (dates) {
+            fechaInicioInput.value = dates.inicio;
+            fechaFinInput.value = dates.fin;
+        }
+
+        // Mostrar información estática
         document.getElementById('totalRestaurantes').textContent = 'Todos los activos';
 
         modalGenerarCobros.show();
     });
 
+    // Configurar actualización automática de fechas para el selector de semana
+    updateDatesFromWeek('semanaAutomatico', 'fechaInicioAutomatico', 'fechaFinAutomatico');
+
+    // Botón para usar semana actual
+    document.getElementById('btnUsarSemanaActual').addEventListener('click', function() {
+        const semanaSelect = document.getElementById('semanaAutomatico');
+        const fechaInicioInput = document.getElementById('fechaInicioAutomatico');
+        const fechaFinInput = document.getElementById('fechaFinAutomatico');
+
+        // Calcular semana actual
+        const hoy = new Date();
+        const year = hoy.getFullYear();
+        const firstDayOfYear = new Date(year, 0, 1);
+        const daysToFirstMonday = (8 - firstDayOfYear.getDay()) % 7;
+        const firstMonday = new Date(year, 0, 1 + daysToFirstMonday);
+        const weekNumber = Math.ceil(((hoy - firstMonday) / 86400000) / 7) + 1;
+        const currentWeekValue = `${year}-W${weekNumber.toString().padStart(2, '0')}`;
+
+        // Seleccionar la semana actual en el selector
+        semanaSelect.value = currentWeekValue;
+
+        // Actualizar fechas automáticamente
+        const dates = getWeekDates(currentWeekValue);
+        if (dates) {
+            fechaInicioInput.value = dates.inicio;
+            fechaFinInput.value = dates.fin;
+        }
+    });
+
     // Confirmar generación de cobros
     btnConfirmarGenerar.addEventListener('click', function() {
+        // Obtener las fechas del formulario
+        const form = document.getElementById('formGenerarCobrosAutomatico');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        // Validar que las fechas sean válidas
+        if (!data.fecha_inicio || !data.fecha_fin) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Fechas Requeridas',
+                text: 'Debes seleccionar tanto la fecha de inicio como la fecha de fin.',
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: '#dc3545'
+            });
+            return;
+        }
+
+        if (new Date(data.fecha_inicio) >= new Date(data.fecha_fin)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Fechas Inválidas',
+                text: 'La fecha de inicio debe ser anterior a la fecha de fin.',
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: '#dc3545'
+            });
+            return;
+        }
+
         modalGenerarCobros.hide();
         modalProgreso.show();
 
@@ -313,17 +565,18 @@ document.addEventListener('DOMContentLoaded', function() {
         btnConfirmarGenerar.disabled = true;
         btnConfirmarGenerar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generando...';
 
-        // Llamar a la API para generar cobros
+        // Llamar a la API para generar cobros con las fechas seleccionadas
         fetch('/admin/cobros/generar-automatico', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            body: JSON.stringify(data)
         })
         .then(response => response.json())
         .then(data => {
             modalProgreso.hide();
-            
+
             if (data.success) {
                 // Mostrar mensaje de éxito
                 Swal.fire({
@@ -357,7 +610,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             modalProgreso.hide();
             console.error('Error:', error);
-            
+
             Swal.fire({
                 icon: 'error',
                 title: 'Error de Conexión',
@@ -373,4 +626,191 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// JavaScript para Cobrar Restaurante Específico
+document.addEventListener('DOMContentLoaded', function() {
+    const formCobrarRestaurante = document.getElementById('formCobrarRestaurante');
+    const btnConfirmarCobrarRestaurante = document.getElementById('btnConfirmarCobrarRestaurante');
+    const modalCobrarRestaurante = new bootstrap.Modal(document.getElementById('modalCobrarRestaurante'));
+    const fechaInicioInput = document.getElementById('fechaInicioEspecifica');
+    const fechaFinInput = document.getElementById('fechaFinEspecifica');
+    const fechaInicioDisplay = document.getElementById('fechaInicioDisplay');
+    const fechaFinDisplay = document.getElementById('fechaFinDisplay');
+
+    // Actualizar display de fechas cuando cambian
+    function actualizarDisplayFechas() {
+        const fechaInicio = fechaInicioInput.value;
+        const fechaFin = fechaFinInput.value;
+
+        if (fechaInicio) {
+            const fecha = new Date(fechaInicio);
+            fechaInicioDisplay.textContent = fecha.toLocaleDateString('es-AR');
+        } else {
+            fechaInicioDisplay.textContent = '-';
+        }
+
+        if (fechaFin) {
+            const fecha = new Date(fechaFin);
+            fechaFinDisplay.textContent = fecha.toLocaleDateString('es-AR');
+        } else {
+            fechaFinDisplay.textContent = '-';
+        }
+    }
+
+    fechaInicioInput.addEventListener('change', actualizarDisplayFechas);
+    fechaFinInput.addEventListener('change', actualizarDisplayFechas);
+
+    // Manejar envío del formulario
+    formCobrarRestaurante.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(formCobrarRestaurante);
+        const data = Object.fromEntries(formData.entries());
+
+        // Validar que las fechas sean válidas
+        if (new Date(data.fecha_inicio) >= new Date(data.fecha_fin)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Fechas Inválidas',
+                text: 'La fecha de inicio debe ser anterior a la fecha de fin.',
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: '#dc3545'
+            });
+            return;
+        }
+
+        // Deshabilitar botón durante el proceso
+        btnConfirmarCobrarRestaurante.disabled = true;
+        btnConfirmarCobrarRestaurante.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generando...';
+
+        // Llamar a la API para generar cobro específico
+        fetch('/admin/cobros/generar-especifico', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            modalCobrarRestaurante.hide();
+
+            if (data.success) {
+                // Mostrar mensaje de éxito
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Cobro Generado Exitosamente!',
+                    html: `
+                        <div class="text-start">
+                            <p><strong>Restaurante:</strong> ${data.data.restaurante_nombre}</p>
+                            <p><strong>Período:</strong> ${data.data.fecha_inicio} al ${data.data.fecha_fin}</p>
+                            <p><strong>Ventas brutas:</strong> $${data.data.ventas_brutas.toLocaleString()}</p>
+                            <p><strong>Comisión (10%):</strong> $${data.data.monto_comision.toLocaleString()}</p>
+                            <p><strong>Vencimiento:</strong> ${data.data.fecha_vencimiento}</p>
+                        </div>
+                    `,
+                    confirmButtonText: 'Perfecto',
+                    confirmButtonColor: '#28a745'
+                }).then(() => {
+                    // Recargar la página para mostrar el nuevo cobro
+                    window.location.reload();
+                });
+            } else {
+                // Mostrar mensaje de error
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al Generar Cobro',
+                    text: data.message,
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#dc3545'
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            modalCobrarRestaurante.hide();
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de Conexión',
+                text: 'Hubo un problema al conectar con el servidor. Por favor, intenta nuevamente.',
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: '#dc3545'
+            });
+        })
+        .finally(() => {
+            // Restaurar botón
+            btnConfirmarCobrarRestaurante.disabled = false;
+            btnConfirmarCobrarRestaurante.innerHTML = '<i class="fas fa-store me-2"></i>Generar Cobro';
+        });
+    });
+});
+
+// Función para eliminar cobro
+function eliminarCobro(cobroId) {
+    Swal.fire({
+        title: '¿Estás seguro?',
+        text: 'Esta acción eliminará permanentemente el cobro de comisión. Esta acción no se puede deshacer.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Eliminando...',
+                text: 'Por favor espera mientras se elimina el cobro.',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Hacer la petición DELETE
+            fetch(`/admin/cobros/${cobroId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Cobro Eliminado!',
+                        text: 'El cobro de comisión ha sido eliminado exitosamente.',
+                        confirmButtonText: 'Perfecto',
+                        confirmButtonColor: '#28a745'
+                    }).then(() => {
+                        // Recargar la página para actualizar la lista
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al Eliminar',
+                        text: data.message || 'Hubo un problema al eliminar el cobro.',
+                        confirmButtonText: 'Entendido',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de Conexión',
+                    text: 'Hubo un problema al conectar con el servidor. Por favor, intenta nuevamente.',
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#dc3545'
+                });
+            });
+        }
+    });
+}
 </script>

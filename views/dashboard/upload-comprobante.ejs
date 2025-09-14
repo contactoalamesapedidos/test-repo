@@ -1,0 +1,82 @@
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-3 col-lg-2">
+            <%- include('partials/sidebar', { activePage: 'pagos' }) %>
+        </div>
+
+        <div class="col-md-9 col-lg-10">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-upload me-2"></i>
+                    Subir Comprobante de Pago
+                </h2>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Comprobante para Cobro #<%= cobro.id %></h5>
+                </div>
+                <div class="card-body">
+                    <p>Por favor, sube el comprobante de pago para el cobro de la semana <strong><%= new Date(cobro.semana_inicio).toLocaleDateString('es-AR') %> - <%= new Date(cobro.semana_fin).toLocaleDateString('es-AR') %></strong> por un monto de <strong>$<%= cobro.monto_comision.toLocaleString() %></strong>.</p>
+                    
+                    <form id="uploadComprobanteForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="comprobanteFile" class="form-label">Seleccionar Archivo (JPG, PNG, PDF)</label>
+                            <input class="form-control" type="file" id="comprobanteFile" name="comprobante" accept="image/jpeg,image/png,application/pdf" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Subir Comprobante</button>
+                    </form>
+
+                    <div id="uploadMessage" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadForm = document.getElementById('uploadComprobanteForm');
+    const uploadMessage = document.getElementById('uploadMessage');
+    const cobroId = <%= cobro.id %>; // Get cobroId from EJS context
+
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(uploadForm);
+            const submitButton = uploadForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Subiendo...';
+            uploadMessage.innerHTML = ''; // Clear previous messages
+
+            try {
+                const response = await fetch(`/dashboard/cobros/${cobroId}/upload-comprobante`, {
+                    method: 'POST',
+                    body: formData // FormData handles Content-Type automatically
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    uploadMessage.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+                    // Optionally redirect or update UI
+                    setTimeout(() => {
+                        window.location.href = '/dashboard/pagos'; // Go back to payments list
+                    }, 2000);
+                } else {
+                    uploadMessage.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+                }
+            } catch (error) {
+                console.error('Error uploading comprobante:', error);
+                uploadMessage.innerHTML = `<div class="alert alert-danger">Error de conexión o servidor al subir el comprobante.</div>`;
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+            }
+        });
+    }
+});
+</script>

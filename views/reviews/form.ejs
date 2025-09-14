@@ -1,35 +1,41 @@
-// <%- include('../partials/header') %>
 
 <style>
 .review-bg {
-  background: #fff5ee;
+  background: #f8f9fa;
   border-radius: 18px;
-  box-shadow: 0 4px 24px rgba(255,107,53,0.08);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
   padding: 2rem 2.5rem;
   margin-bottom: 2rem;
+}
+.rating-stars {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 1rem 0;
 }
 .rating-stars .star-rating {
   font-size: 2.5rem;
   transition: color 0.2s, transform 0.2s;
+  cursor: pointer;
 }
 .rating-stars .star-rating:hover {
-  color: #ff6b35 !important;
+  color: #ffc107 !important;
   transform: scale(1.15);
 }
 .card-header.bg-white, .card-header {
-  background: #fff5ee !important;
+  background: #f8f9fa !important;
   border-bottom: none;
 }
 .card.shadow-sm {
   border-radius: 18px;
-  box-shadow: 0 4px 24px rgba(255,107,53,0.08);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
 }
 .card-body {
   padding: 2rem 2.5rem;
 }
 .form-control, textarea.form-control {
   border-radius: 10px;
-  border: 1px solid #ff6b35;
+  border: 1px solid #dee2e6;
   background: #fff;
   font-size: 1.1rem;
 }
@@ -37,29 +43,29 @@
   border-radius: 10px;
   font-weight: 600;
   font-size: 1.1rem;
-  box-shadow: 0 2px 8px rgba(255,107,53,0.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   transition: box-shadow 0.2s;
 }
 .btn[style*="linear-gradient"]:hover {
-  box-shadow: 0 4px 16px rgba(255,107,53,0.18);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
 }
 .restaurant-info {
-  background: #fff0e6 !important;
-  border: 1px solid #ff6b35;
+  background: #e9ecef !important;
+  border: 1px solid #dee2e6;
   border-radius: 12px;
 }
 .list-group-item {
   border: none;
-  border-bottom: 1px solid #ff6b35;
+  border-bottom: 1px solid #dee2e6;
   background: #fff;
 }
 .list-group-item:last-child {
   border-bottom: none;
 }
 .alert-warning {
-  background: #fff0e6;
-  border: 1px solid #ff6b35;
-  color: #ff6b35;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
   border-radius: 10px;
 }
 </style>
@@ -112,8 +118,8 @@
                         <div class="list-group list-group-flush">
                             <% items.forEach(item => { %>
                                 <div class="list-group-item d-flex align-items-center">
-                                    <img src="/uploads/<%= item.imagen || 'no-image.png' %>" 
-                                         alt="<%= item.nombre %>" 
+                                    <img src="/uploads/<%= item.imagen_url || item.imagen || 'no-image.png' %>"
+                                         alt="<%= item.nombre %>"
                                          class="rounded me-3" width="50" height="50"
                                          onerror="this.src='/images/no-image.png'">
                                     <div class="flex-grow-1">
@@ -152,9 +158,9 @@
                             <label class="form-label">Calificación del Restaurante</label>
                             <div class="rating-stars mb-2">
                                 <% for (let i = 1; i <= 5; i++) { %>
-                                    <i class="fas fa-star fa-2x star-rating" 
-                                       data-rating="<%= i %>" 
-                                       style="cursor: pointer; color: #ddd; margin-right: 5px;"></i>
+                                    <i class="fas fa-star fa-2x star-rating"
+                                       data-rating="<%= i %>"
+                                       style="cursor: pointer; color: #ddd;"></i>
                                 <% } %>
                             </div>
                             <small class="text-muted">Haz clic en las estrellas para calificar</small>
@@ -178,7 +184,7 @@
 
                         <!-- Submit Button -->
                         <div class="d-grid">
-                            <button type="submit" class="btn" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">Enviar Reseña</button>
+                            <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; border: none;">Enviar Reseña</button>
                         </div>
                     </form>
                 </div>
@@ -308,5 +314,3 @@ function showToast(message, type = 'info') {
     }, 5000);
 }
 </script>
-
-// <%- include('../partials/footer') %> 

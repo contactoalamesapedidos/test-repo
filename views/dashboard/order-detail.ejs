@@ -1,6 +1,6 @@
-<div class="container mt-4">
+<div class="container-fluid mt-4" style="max-width: 90%; margin: 0 auto;">
   <div class="row">
-    <div class="col-lg-8 mx-auto">
+    <div class="col-12">
       <div class="card border-0 shadow-sm mb-4">
         <div class="card-header text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
           <div class="d-flex justify-content-between align-items-center">
@@ -33,27 +33,36 @@
             <button type="button" class="btn-close btn-close-white" aria-label="Close" id="close-order-details"></button>
           </div>
         </div>
-        <div class="card-body">
+        <div class="card-body order-scroll" style="max-height: 70vh; overflow: scroll; overflow-x: auto; overflow-y: auto;">
           <div id="status-change-container" class="mt-4 d-flex gap-2">
             <!-- Dynamic status change button will be rendered here by JavaScript -->
           </div>
           <% if ((order.estado === 'confirmado' || order.estado === 'preparando' || order.estado === 'listo') && !order.repartidor_id) { %>
-            <div class="card mt-4 shadow-sm">
-              <div class="card-header bg-secondary text-white">Asignar Repartidor</div>
-              <div class="card-body">
-                <div class="mb-3">
-                  <label for="driverSelect" class="form-label">Seleccionar Repartidor Propio</label>
-                  <select class="form-select" id="driverSelect">
-                    <option value="">Cargando repartidores...</option>
-                  </select>
+            <div class="form-check form-switch mt-4">
+              <input class="form-check-input" type="checkbox" id="toggleDriverAssignment">
+              <label class="form-check-label" for="toggleDriverAssignment">Mostrar/Ocultar Asignación de Repartidor</label>
+            </div>
+            <div id="driverAssignmentSection" class="collapse show">
+              <div class="card mt-2 shadow-sm">
+                <div class="card-header bg-secondary text-white">Asignar Repartidor</div>
+                <div class="card-body">
+                  <div class="mb-3">
+                    <label for="driverSelect" class="form-label">Seleccionar Repartidor</label>
+                    <select class="form-select" id="driverSelect">
+                      <option value="">Selecciona un repartidor</option>
+                      <% drivers.forEach(driver => { %>
+                        <option value="<%= driver.id %>"><%= driver.nombre %> <%= driver.apellido %> (<%= driver.vehicle_type %> - <%= driver.status %>)</option>
+                      <% }); %>
+                    </select>
+                  </div>
+                  <button id="assignDriverBtn" class="btn btn-primary" data-order-id="<%= order.id %>" <%= drivers.length === 0 ? 'disabled' : '' %>>Asignar Repartidor</button>
+                  <p class="mt-2 text-muted">Selecciona un repartidor propio o privado disponible.</p>
+                  <hr>
+                  <button id="requestPrivateDriverBtn" class="btn btn-info w-100" data-order-id="<%= order.id %>">
+                    <i class="fas fa-motorcycle me-2"></i> Solicitar Repartidor Privado
+                  </button>
+                  <p class="mt-2 text-muted text-center">Si no tienes repartidores propios o están ocupados.</p>
                 </div>
-                <button id="assignDriverBtn" class="btn btn-primary" data-order-id="<%= order.id %>" disabled>Asignar Repartidor Propio</button>
-                <p class="mt-2 text-muted">Solo se muestran repartidores propios disponibles.</p>
-                <hr>
-                <button id="requestPrivateDriverBtn" class="btn btn-info w-100" data-order-id="<%= order.id %>">
-                  <i class="fas fa-motorcycle me-2"></i> Solicitar Repartidor Privado
-                </button>
-                <p class="mt-2 text-muted text-center">Si no tienes repartidores propios o están ocupados.</p>
               </div>
             </div>
           <% } else if (order.repartidor_id) { %>
@@ -243,35 +252,33 @@
 </div> 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const orderId = <%= order.id %>;
+  const orderId = '<%= order.id %>';
   const orderStatus = '<%= order.estado %>';
   const driverSelect = document.getElementById('driverSelect');
   const assignDriverBtn = document.getElementById('assignDriverBtn');
 
-  // Fetch available drivers if the order is ready for assignment
-  if (orderStatus === 'confirmado' || orderStatus === 'preparando' || orderStatus === 'listo') {
-    fetch('/dashboard/drivers/available')
-      .then(response => response.json())
-      .then(data => {
-        if (data.success && data.drivers.length > 0) {
-          driverSelect.innerHTML = '<option value="">Selecciona un repartidor</option>';
-          data.drivers.forEach(driver => {
-            const option = document.createElement('option');
-            option.value = driver.id;
-            option.textContent = `${driver.nombre} ${driver.apellido} (${driver.vehicle_type})`;
-            driverSelect.appendChild(option);
-          });
-          assignDriverBtn.disabled = false;
-        } else {
-          driverSelect.innerHTML = '<option value="">No hay repartidores disponibles</option>';
-          assignDriverBtn.disabled = true;
-        }
-      })
-      .catch(error => {
-        console.error('Error fetching available drivers:', error);
-        driverSelect.innerHTML = '<option value="">Error al cargar repartidores</option>';
-        assignDriverBtn.disabled = true;
-      });
+  // Toggle driver assignment section visibility
+  const toggleDriverAssignment = document.getElementById('toggleDriverAssignment');
+  const driverAssignmentSection = document.getElementById('driverAssignmentSection');
+
+  if (toggleDriverAssignment && driverAssignmentSection) {
+    toggleDriverAssignment.addEventListener('change', () => {
+      if (toggleDriverAssignment.checked) {
+        driverAssignmentSection.classList.add('show');
+      } else {
+        driverAssignmentSection.classList.remove('show');
+      }
+    });
+  }
+
+  // Populate driver select directly from EJS context
+  // No fetch needed here as drivers are passed directly to the template
+  if (driverSelect) {
+    // The options are already rendered by EJS, no need to re-populate here
+    // Just ensure the assign button is enabled if there are drivers
+    if (driverSelect.options.length > 1) { // >1 because of the "Selecciona un repartidor" option
+      assignDriverBtn.disabled = false;
+    }
   }
 
   // Assign driver button click handler
@@ -395,4 +402,3 @@ function showOrderLocation(lat, lng) {
   }, 300);
 }
 </script>
-

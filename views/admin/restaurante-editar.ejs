@@ -45,9 +45,9 @@
                                            value="<%= restaurante.usuario_apellido %>" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="email" class="form-label">Email del Propietario</label>
-                                    <input type="email" class="form-control" id="email" name="email" 
-                                           value="<%= restaurante.usuario_email %>" required>
+                                    <label for="email" class="form-label">Email del Propietario <small class="text-muted">(opcional)</small></label>
+                                    <input type="email" class="form-control" id="email" name="email"
+                                           value="<%= restaurante.usuario_email %>">
                                 </div>
                                 <div class="mb-3">
                                     <label for="telefono" class="form-label">Teléfono del Propietario</label>
@@ -73,15 +73,15 @@
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="restaurante_telefono" class="form-label">Teléfono del Restaurante</label>
-                                            <input type="tel" class="form-control" id="restaurante_telefono" name="restaurante_telefono" 
+                                            <input type="tel" class="form-control" id="restaurante_telefono" name="restaurante_telefono"
                                                    value="<%= restaurante.telefono %>">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label for="email_contacto" class="form-label">Email de Contacto</label>
-                                            <input type="email" class="form-control" id="email_contacto" name="email_contacto" 
-                                                   value="<%= restaurante.email_contacto %>" required>
+                                            <label for="email_contacto" class="form-label">Email de Contacto <small class="text-muted">(opcional)</small></label>
+                                            <input type="email" class="form-control" id="email_contacto" name="email_contacto"
+                                                   value="<%= restaurante.email_contacto %>">
                                         </div>
                                     </div>
                                 </div>
@@ -253,4 +253,4 @@ document.getElementById('editRestaurantForm').addEventListener('submit', functio
 });
 </script>
 
-<%- include('../partials/footer') %> 
+<%- include('../partials/footer') %>

@@ -1,0 +1,2156 @@
+<script data-user type="application/json">
+<%- JSON.stringify({
+    id: user.id,
+    tipo_usuario: user.tipo_usuario,
+    nombre: user.nombre,
+    email: user.email
+}) %>
+</script>
+<input type="hidden" id="driver-id" value="<%= user.id %>">
+<%- include('mobile-nav') %>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<style>
+    .info-card {
+        background-color: #f8f9fa;
+        border-left: 5px solid #007bff;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 5px;
+    }
+    .info-card h6 {
+        font-weight: bold;
+        color: #007bff;
+    }
+
+    /* Custom Toast Styles */
+    .custom-toast-container {
+        position: fixed;
+        z-index: 9999;
+        width: 400px;
+        max-width: 90vw;
+        pointer-events: none;
+    }
+
+    /* Desktop positioning */
+    @media (min-width: 768px) {
+        .custom-toast-container {
+            top: 20px;
+            right: 20px;
+        }
+    }
+
+    /* Mobile positioning */
+    @media (max-width: 767.98px) {
+        .custom-toast-container {
+            bottom: 80px; /* Above mobile nav */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90vw;
+            max-width: 400px;
+        }
+    }
+
+    .custom-toast-container .toast {
+        pointer-events: auto;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    /* Drag and Drop Styles */
+    .sortable-ghost {
+        opacity: 0.4;
+        background-color: #e9ecef;
+    }
+
+    .sortable-chosen {
+        background-color: #f8f9fa;
+    }
+
+    .sortable-drag {
+        transform: rotate(5deg);
+    }
+
+    .drag-handle {
+        transition: color 0.2s ease;
+    }
+
+    .drag-handle:hover {
+        color: #007bff !important;
+    }
+
+    .order-item {
+        transition: all 0.2s ease;
+    }
+
+    .order-item:hover .drag-handle {
+        color: #007bff !important;
+    }
+
+    /* Mobile Map Styles */
+    @media (max-width: 767.98px) {
+        .card-body p-0 {
+            padding: 0 !important;
+        }
+
+        #map {
+            height: 300px !important;
+            min-height: 250px;
+        }
+
+        .leaflet-control-container {
+            font-size: 12px;
+        }
+
+        .leaflet-popup-content-wrapper {
+            font-size: 14px;
+        }
+
+        .leaflet-popup-tip {
+            background-color: white;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        #map {
+            height: 250px !important;
+            min-height: 200px;
+        }
+
+        .card-body {
+            padding: 10px !important;
+        }
+
+        .card-header {
+            padding: 10px 15px !important;
+        }
+
+        .card-header h5 {
+            font-size: 1rem !important;
+        }
+    }
+</style>
+
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <!-- Sidebar del Repartidor - Hidden on mobile -->
+        <div class="col-md-3 d-none d-md-block">
+            <%- include('sidebar', { activePage: 'dashboard' }) %>
+        </div>
+
+        <!-- Contenido Principal -->
+        <div class="col-md-9">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0">Bienvenido, <%= driver.nombre %></h4>
+                        <p class="text-muted mb-0">
+                            <% if (driver.restaurante_nombre) { %>
+                                Repartidor de: <strong><%= driver.restaurante_nombre %></strong>
+                            <% } else { %>
+                                <strong>Repartidor Independiente</strong>
+                            <% } %>
+                        </p>
+                    </div>
+                    <div>
+                        <button id="status-toggle-btn" class="btn <%= driver.status === 'available' ? 'btn-success' : 'btn-danger' %>">
+                            <i class="fas fa-power-off me-2"></i>
+                            <span id="status-text"><%= driver.status === 'available' ? 'En Línea' : 'Fuera de Línea' %></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Panel -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Panel de Estadísticas</h5>
+                    <a href="/repartidores/estadisticas" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-chart-line me-1"></i>Ver Estadísticas Detalladas
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="info-card text-center h-100">
+                                <h6 class="mb-2">Pedidos Hoy</h6>
+                                <p class="mb-0 fs-3 fw-bold"><%= stats.pedidosHoy %></p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="info-card text-center h-100">
+                                <h6 class="mb-2">Ganancias del Día</h6>
+                                <p class="mb-0 fs-5 fw-bold">$<%= (typeof stats.gananciasHoy === 'number' ? stats.gananciasHoy : 0).toFixed(2) %></p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="info-card text-center h-100">
+                                <h6 class="mb-2">Reputación</h6>
+                                <p class="mb-0 fs-4 fw-bold"><%= stats.reputacion.toFixed(1) %> <i class="fas fa-star text-warning"></i></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información del Restaurante -->
+            <% if (driver.restaurante_id && driver.restaurante_lat && driver.restaurante_lng) { %>
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-store me-2"></i>Mi Restaurante</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6><%= driver.restaurante_nombre %></h6>
+                                <p class="text-muted mb-2"><%= driver.restaurante_direccion %></p>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-map-marker-alt text-danger me-2"></i>
+                                    <small class="text-muted">
+                                        Lat: <%= driver.restaurante_lat %>, Lng: <%= driver.restaurante_lng %>
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <button id="centerOnRestaurantBtn" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-search-location me-1"></i>Ver en Mapa
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <% } %>
+
+            <!-- Mapa de Entregas -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Mi Ubicación y Pedidos</h5>
+                    <button id="getLocationBtn" class="btn btn-primary btn-sm">
+                        <i class="fas fa-crosshairs me-1"></i>Mi Ubicación
+                    </button>
+                </div>
+                <div class="card-body p-0" style="height: 400px; position: relative;" id="map"></div>
+            </div>
+
+            <!-- Pedidos Asignados -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Mis Pedidos Asignados (<%= pedidos.length %>)</h5>
+                </div>
+                <div class="card-body">
+                    <% if (pedidos && pedidos.length > 0) { %>
+                        <div class="list-group sortable-list" id="orders-list">
+                            <% pedidos.forEach((pedido, index) => { %>
+                                <div class="list-group-item order-item" data-order-id="<%= pedido.id %>" data-order-index="<%= index %>">
+                                    <div class="d-flex align-items-center">
+                                        <div class="drag-handle me-3" style="cursor: grab; color: #6c757d;">
+                                            <i class="fas fa-grip-vertical"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h5 class="mb-1">Pedido #<%= pedido.numero_pedido %></h5>
+                                                <small><%= new Date(pedido.fecha_pedido).toLocaleString('es-AR') %></small>
+                                            </div>
+                                            <% if (pedido.items && pedido.items.length > 0) { %>
+                                                <div class="mb-2">
+                                                    <% pedido.items.slice(0, 2).forEach(item => { %>
+                                                        <small class="text-muted d-block">
+                                                            <i class="fas fa-utensils me-1"></i>
+                                                            <%= item.cantidad %>x <%= item.producto_nombre %>
+                                                        </small>
+                                                    <% }); %>
+                                                    <% if (pedido.items.length > 2) { %>
+                                                        <small class="text-muted">y <%= pedido.items.length - 2 %> producto(s) más...</small>
+                                                    <% } %>
+                                                </div>
+                                            <% } %>
+                                            <p class="mb-1"><strong>Cliente:</strong> <%= pedido.cliente_nombre %> <%= pedido.cliente_apellido %></p>
+                                            <p class="mb-1"><strong>Dirección:</strong> <%= pedido.direccion_entrega %></p>
+                                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                                <div>
+                                                    <span class="badge <%= pedido.estado_pago === 'pagado' ? 'bg-success' : 'bg-warning text-dark' %>" id="badge-<%= pedido.id %>">
+                                                        <i class="fas <%= pedido.estado_pago === 'pagado' ? 'fa-check-circle' : 'fa-dollar-sign' %> me-1"></i>
+                                                        <%= pedido.estado_pago === 'pagado' ? 'Pagado' : `Cobrar: $${pedido.total}` %>
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <button type="button" class="btn btn-sm btn-outline-info me-2" onclick="verDetallesPedido(<%= pedido.id %>)">
+                                                        <i class="fas fa-eye me-1"></i>Ver Detalles
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-primary" id="btn-entregar-<%= pedido.id %>" onclick="marcarComoEntregado(<%= pedido.id %>)">
+                                                        <i class="fas fa-check me-1"></i>Entregado
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        </div>
+                        <div class="mt-3 text-muted small">
+                            <i class="fas fa-arrows-alt me-1"></i>
+                            Arrastra los pedidos para reordenar tu ruta de entrega<br>
+                            <i class="fas fa-mouse-pointer me-1"></i>
+                            Haz clic en los marcadores del mapa para mover pedidos al final<br>
+                            <i class="fas fa-hand-pointer me-1"></i>
+                            Haz clic en cualquier lugar del mapa para mover la ubicación del repartidor
+                        </div>
+                    <% } else { %>
+                        <div class="text-center py-4">
+                            <i class="fas fa-box-open fa-2x text-muted mb-3"></i>
+                            <p class="text-muted">No tienes pedidos asignados en este momento.</p>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="/js/driver-gps-tracker.js"></script>
+<script>
+// Variables pasadas desde el servidor
+const driverData = <%- JSON.stringify({ userId: user.id, driver: driver, pedidos: pedidos || [] }) %>;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const socket = io();
+    const driverId = driverData.userId;
+    let driverMarker;
+    let map;
+
+    const driver = driverData.driver;
+    const pedidos = driverData.pedidos;
+    const mapContainer = document.getElementById('map');
+
+    // Variables globales para rutas (mover aquí para evitar errores de hoisting)
+    let currentRoutes = [];
+    let currentMarkers = [];
+
+    // Función para guardar el orden de pedidos en localStorage
+    function saveOrderToStorage(orderIds) {
+        const storageKey = `driver_${driverData.userId}_order`;
+        localStorage.setItem(storageKey, JSON.stringify(orderIds));
+        console.log('💾 Orden guardado en localStorage:', orderIds);
+    }
+
+    // Función para cargar el orden de pedidos desde localStorage
+    function loadOrderFromStorage() {
+        const storageKey = `driver_${driverData.userId}_order`;
+        const savedOrder = localStorage.getItem(storageKey);
+        if (savedOrder) {
+            try {
+                const orderIds = JSON.parse(savedOrder);
+                console.log('📂 Orden cargado desde localStorage:', orderIds);
+                return orderIds;
+            } catch (error) {
+                console.error('Error parsing saved order:', error);
+                return null;
+            }
+        }
+        return null;
+    }
+
+    // Función para aplicar el orden guardado a los pedidos
+    function applySavedOrder() {
+        const savedOrder = loadOrderFromStorage();
+        if (!savedOrder || savedOrder.length === 0) {
+            console.log('ℹ️ No hay orden guardado, usando orden original');
+            return driverData.pedidos;
+        }
+
+        // Reordenar los pedidos según el orden guardado
+        const orderedPedidos = [];
+        const remainingPedidos = [...driverData.pedidos];
+
+        // Primero agregar los pedidos en el orden guardado
+        savedOrder.forEach(orderId => {
+            const pedido = remainingPedidos.find(p => p.id == orderId);
+            if (pedido) {
+                orderedPedidos.push(pedido);
+                // Remover de la lista de restantes
+                const index = remainingPedidos.indexOf(pedido);
+                if (index > -1) {
+                    remainingPedidos.splice(index, 1);
+                }
+            }
+        });
+
+        // Agregar cualquier pedido nuevo que no esté en el orden guardado
+        orderedPedidos.push(...remainingPedidos);
+
+        console.log('📋 Pedidos reordenados según localStorage:', orderedPedidos.map(p => p.numero_pedido));
+        return orderedPedidos;
+    }
+
+    // Aplicar el orden guardado INMEDIATAMENTE al cargar la página
+    const savedOrder = applySavedOrder();
+    if (savedOrder && savedOrder.length > 0) {
+        // Actualizar el array de pedidos con el orden guardado
+        driverData.pedidos = savedOrder;
+        console.log('✅ Orden guardado aplicado al inicio');
+    }
+
+    // 1. Inicializar el mapa con coordenadas del repartidor
+    let initialCenter = [
+        driver.current_latitude || -34.6037,
+        driver.current_longitude || -58.3816
+    ]; // Default a Buenos Aires
+    map = L.map('map', {
+        center: initialCenter,
+        zoom: 14,
+        zoomControl: true,
+        scrollWheelZoom: true,
+        dragging: true, // Habilitar arrastre del mapa
+        touchZoom: true,
+        doubleClickZoom: true,
+        boxZoom: true,
+        keyboard: true,
+        keyboardPanDelta: 80
+    });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+
+    // Agregar funcionalidad de clic en el mapa para mover el repartidor
+    map.on('click', async function(e) {
+        const clickedCoords = [e.latlng.lat, e.latlng.lng];
+        console.log('🖱️ Clic en mapa - Moviendo repartidor a:', clickedCoords);
+
+        // Mover o crear marcador del repartidor
+        if (!driverMarker) {
+            driverMarker = createDriverMarker(clickedCoords[0], clickedCoords[1], '¡Aquí estoy! (Ubicación de prueba)')
+                .addTo(map);
+        } else {
+            driverMarker.setLatLng(clickedCoords);
+            driverMarker.setPopupContent('¡Aquí estoy! (Ubicación de prueba)');
+        }
+
+        // ENVIAR ACTUALIZACIÓN GPS AL SERVIDOR PARA QUE LLEGUE A LOS CLIENTES
+        try {
+            const response = await fetch('/repartidores/update-location', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    latitude: clickedCoords[0],
+                    longitude: clickedCoords[1]
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                console.log('✅ Ubicación enviada al servidor correctamente');
+            } else {
+                console.error('❌ Error enviando ubicación:', result.message);
+            }
+        } catch (error) {
+            console.error('❌ Error de red enviando ubicación:', error);
+        }
+
+        // Actualizar rutas desde la nueva ubicación usando el orden guardado
+        if (currentRoutes.length > 0) {
+            await updateRoutesInRealTime();
+        } else if (driverData.pedidos.length > 0) {
+            // Si no hay rutas aún, crearlas desde la nueva ubicación
+            await createInitialRoutesWithRealLocation(clickedCoords);
+        }
+
+        // Mostrar mensaje de confirmación
+        showToast('Ubicación del repartidor actualizada y enviada a clientes', 'success');
+    });
+
+    console.log('📍 Inicializando mapa con coordenadas del repartidor:', initialCenter);
+
+    // 2. Mostrar marcador del repartidor y marcador del restaurante si está disponible
+    if (driver.status === 'available') {
+        // Si está disponible, intentar obtener ubicación actual
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+                    const currentLatLng = [latitude, longitude];
+                    initialCenter = currentLatLng;
+                    map.setView(currentLatLng, 16);
+
+                    driverMarker = createDriverMarker(currentLatLng[0], currentLatLng[1], '¡Estoy aquí! (Ubicación actual)')
+                        .addTo(map);
+
+                    // Agregar marcador del restaurante automáticamente si tiene uno asignado
+                    addRestaurantMarkerToMap();
+
+                    // Crear rutas iniciales con ubicación REAL
+                    if (pedidos.length > 0) {
+                        createInitialRoutesWithRealLocation(currentLatLng);
+                    }
+
+                    // Iniciar seguimiento continuo
+                    startLocationTracking(null);
+                },
+                function(error) {
+                    console.warn('No se pudo obtener ubicación actual:', error);
+                    // Usar ubicación guardada como fallback
+                    if (driver.current_latitude && driver.current_longitude) {
+                        driverMarker = createDriverMarker(initialCenter[0], initialCenter[1], 'Mi última ubicación conocida')
+                            .addTo(map);
+
+                        // Agregar marcador del restaurante automáticamente si tiene uno asignado
+                        addRestaurantMarkerToMap();
+                    } else {
+                        // Si no hay ubicación guardada, usar ubicación por defecto
+                        driverMarker = createDriverMarker(initialCenter[0], initialCenter[1], 'Ubicación por defecto')
+                            .addTo(map);
+
+                        // Agregar marcador del restaurante automáticamente si tiene uno asignado
+                        addRestaurantMarkerToMap();
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 30000, maximumAge: 300000 }
+            );
+        } else {
+            // Fallback si no hay geolocalización
+            if (driver.current_latitude && driver.current_longitude) {
+                driverMarker = createDriverMarker(initialCenter[0], initialCenter[1], 'Mi última ubicación conocida')
+                    .addTo(map);
+
+                // Agregar marcador del restaurante automáticamente si tiene uno asignado
+                addRestaurantMarkerToMap();
+            } else {
+                // Si no hay ubicación guardada, usar ubicación por defecto
+                driverMarker = createDriverMarker(initialCenter[0], initialCenter[1], 'Ubicación por defecto')
+                    .addTo(map);
+
+                // Agregar marcador del restaurante automáticamente si tiene uno asignado
+                addRestaurantMarkerToMap();
+            }
+        }
+    } else {
+        // Si no está disponible, mostrar ubicación guardada si existe
+        if (driver.current_latitude && driver.current_longitude) {
+            driverMarker = L.marker(initialCenter).addTo(map).bindPopup('Mi última ubicación (Fuera de línea)');
+
+            // Agregar marcador del restaurante automáticamente si tiene uno asignado
+            addRestaurantMarkerToMap();
+        } else {
+            // Si no hay ubicación guardada, usar ubicación por defecto
+            driverMarker = L.marker(initialCenter).addTo(map).bindPopup('Ubicación por defecto (Fuera de línea)');
+
+            // Agregar marcador del restaurante automáticamente si tiene uno asignado
+            addRestaurantMarkerToMap();
+        }
+    }
+
+    // 3. Si hay pedidos, mostrar marcadores PERO esperar ubicación real para rutas
+    if (pedidos.length > 0) {
+        console.log('Mostrando', pedidos.length, 'pedidos en el mapa');
+        const bounds = [];
+        let markersAdded = 0;
+
+        // Solo mostrar marcadores inicialmente, NO rutas
+        pedidos.forEach((pedido, index) => {
+            console.log(`Procesando pedido ${pedido.numero_pedido}:`, {
+                restaurante_lat: pedido.restaurante_lat,
+                restaurante_lng: pedido.restaurante_lng,
+                cliente_lat: pedido.cliente_lat,
+                cliente_lng: pedido.cliente_lng
+            });
+
+            // Verificar si tenemos coordenadas válidas
+            const hasRestaurantCoords = (pedido.restaurante_lat && pedido.restaurante_lng &&
+                !isNaN(parseFloat(pedido.restaurante_lat)) && !isNaN(parseFloat(pedido.restaurante_lng)));
+            const hasClientCoords = (pedido.cliente_lat && pedido.cliente_lng &&
+                !isNaN(parseFloat(pedido.cliente_lat)) && !isNaN(parseFloat(pedido.cliente_lng)));
+
+            // Lógica mejorada: mostrar marcadores cuando tengamos al menos alguna coordenada
+            if (hasRestaurantCoords) {
+                // Caso 1: Restaurante tiene coordenadas
+                const restaurantLatLng = [parseFloat(pedido.restaurante_lat), parseFloat(pedido.restaurante_lng)];
+
+                // Crear marcador del restaurante con ícono personalizado
+                const restaurantIcon = L.divIcon({
+                    html: `
+                        <div style="
+                            background-color: #28a745;
+                            border: 2px solid #fff;
+                            border-radius: 50%;
+                            width: 30px;
+                            height: 30px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                        ">
+                            <span style="
+                                font-size: 16px;
+                                color: white;
+                            ">🏪</span>
+                        </div>
+                    `,
+                    className: 'custom-restaurant-marker',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30],
+                    popupAnchor: [0, -30]
+                });
+
+                const restaurantMarker = L.marker(restaurantLatLng, { icon: restaurantIcon })
+                    .addTo(map)
+                    .bindPopup('<div style="text-align: center; max-width: 200px;">' +
+                        '<img src="/uploads/' + (pedido.restaurante_logo || 'no-image.png') + '" ' +
+                             'alt="' + pedido.restaurante_nombre + '" ' +
+                             'style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;" ' +
+                             'onerror="this.src=\'/images/no-image.png\'">' +
+                        '<div>' +
+                            '<b>🏪 ' + pedido.restaurante_nombre + '</b><br>' +
+                            '<small>' + pedido.restaurante_direccion + '</small>' +
+                        '</div>' +
+                    '</div>');
+
+                // Agregar funcionalidad de clic para reordenar
+                restaurantMarker.on('click', function() {
+                    reorderRouteByClick(pedido.id, 'restaurant');
+                });
+
+                currentMarkers.push(restaurantMarker);
+                bounds.push(restaurantLatLng);
+                markersAdded++;
+
+                console.log(`✅ Agregado marcador restaurante para pedido ${pedido.numero_pedido}`);
+
+                // Si tenemos coordenadas del cliente, crear marcador
+                if (hasClientCoords) {
+                    const clientLatLng = [parseFloat(pedido.cliente_lat), parseFloat(pedido.cliente_lng)];
+
+                    const clientMarker = L.marker(clientLatLng, { icon: createClientIcon() })
+                        .addTo(map)
+                        .bindPopup(`<b>👤 Cliente:</b><br>${pedido.cliente_nombre} ${pedido.cliente_apellido}<br><small>Pedido #${pedido.numero_pedido}${pedido.usa_coordenadas_restaurante ? '<br><small style="color: orange;">(Ubicación aproximada)</small>' : ''}</small>`);
+
+                    // Agregar funcionalidad de clic para reordenar
+                    clientMarker.on('click', function() {
+                        reorderRouteByClick(pedido.id, 'client');
+                    });
+
+                    currentMarkers.push(clientMarker);
+                    bounds.push(clientLatLng);
+                    markersAdded++;
+
+                    console.log(`✅ Agregado marcador cliente para pedido ${pedido.numero_pedido}`);
+                    console.log(`✅ Pedido ${pedido.numero_pedido}: Mostrado restaurante + cliente`);
+                } else {
+                    console.log(`⚠️ Pedido ${pedido.numero_pedido}: Solo restaurante (sin coordenadas del cliente)`);
+                }
+            } else if (hasClientCoords) {
+                // Caso 2: Solo cliente tiene coordenadas (restaurante no tiene)
+                const clientLatLng = [parseFloat(pedido.cliente_lat), parseFloat(pedido.cliente_lng)];
+
+                const clientMarker = L.marker(clientLatLng, { icon: createClientIcon() })
+                    .addTo(map)
+                    .bindPopup(`<b>👤 Cliente:</b><br>${pedido.cliente_nombre} ${pedido.cliente_apellido}<br><small>Pedido #${pedido.numero_pedido}<br><small style="color: orange;">(Solo ubicación del cliente)</small></small>`);
+
+                currentMarkers.push(clientMarker);
+                bounds.push(clientLatLng);
+                markersAdded++;
+
+                console.log(`✅ Agregado marcador cliente para pedido ${pedido.numero_pedido}`);
+                console.log(`✅ Pedido ${pedido.numero_pedido}: Mostrado solo cliente (restaurante sin coordenadas)`);
+            } else {
+                console.warn(`❌ Pedido ${pedido.numero_pedido}: No hay coordenadas disponibles`);
+            }
+        });
+
+        console.log(`📊 Total marcadores agregados inicialmente: ${currentMarkers.length}`);
+
+        if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [50, 50] });
+            console.log(`📍 Mapa ajustado para mostrar ${markersAdded} marcadores`);
+        }
+
+        // Mostrar mensaje si no hay coordenadas válidas
+        if (markersAdded === 0) {
+            showToast('No se pudieron cargar las ubicaciones de los pedidos. Verifica que los restaurantes tengan coordenadas configuradas.', 'warning');
+            console.error('❌ No se pudieron mostrar marcadores para ningún pedido');
+        } else {
+            console.log(`✅ Se mostraron ${markersAdded} marcadores en el mapa`);
+        }
+
+        // NO iniciar seguimiento aún - esperar ubicación real
+        console.log('⏳ Esperando ubicación GPS real antes de crear rutas...');
+    } else {
+        console.log('ℹ️ No hay pedidos para mostrar en el mapa');
+        if (driver.status !== 'available') {
+            // Solo aplicar filtro gris si no hay pedidos Y no está disponible
+            mapContainer.querySelector('.leaflet-pane.leaflet-map-pane').style.filter = 'grayscale(100%)';
+        }
+    }
+
+
+    function startLocationTracking(orderId) {
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(async function(position) {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+                const driverLatLng = [latitude, longitude];
+
+                if (!driverMarker) {
+                    driverMarker = createDriverMarker(driverLatLng[0], driverLatLng[1], '¡Aquí estoy!')
+                        .addTo(map);
+                } else {
+                    driverMarker.setLatLng(driverLatLng);
+                }
+                map.panTo(driverLatLng);
+
+                // Actualizar rutas en tiempo real cuando el repartidor se mueva
+                if (currentRoutes.length > 0) {
+                    await updateRoutesInRealTime();
+                }
+
+                // Emitir ubicación al servidor
+                socket.emit('update-driver-location', {
+                    driverId,
+                    latitude,
+                    longitude,
+                    orderId
+                });
+
+            }, function(error) {
+                console.error('Error de geolocalización:', error);
+                // Mostrar mensaje de error pero continuar con coordenadas guardadas
+                showToast('Error obteniendo ubicación GPS. Usando ubicación guardada.', 'warning');
+
+                // Si hay coordenadas guardadas, crear marcador y continuar
+                if (driver.current_latitude && driver.current_longitude) {
+                    const savedCoords = [parseFloat(driver.current_latitude), parseFloat(driver.current_longitude)];
+
+                    // Validar que las coordenadas sean válidas
+                    if (!isNaN(savedCoords[0]) && !isNaN(savedCoords[1]) &&
+                        savedCoords[0] !== 0 && savedCoords[1] !== 0 &&
+                        savedCoords[0] >= -90 && savedCoords[0] <= 90 &&
+                        savedCoords[1] >= -180 && savedCoords[1] <= 180) {
+
+                        if (!driverMarker) {
+                            driverMarker = createDriverMarker(savedCoords[0], savedCoords[1], 'Ubicación guardada (GPS no disponible)')
+                                .addTo(map);
+                        }
+                        console.log('⚠️ Usando coordenadas guardadas por error de GPS:', savedCoords);
+                    } else {
+                        console.warn('⚠️ Coordenadas guardadas inválidas:', savedCoords);
+                    }
+                }
+            }, { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 });
+        }
+    }
+
+    // Función para ver detalles del pedido
+    window.verDetallesPedido = function(orderId) {
+        // Buscar el pedido en la lista de pedidos
+        const pedido = driverData.pedidos.find(p => p.id === orderId);
+        if (!pedido) {
+            showToast('Pedido no encontrado', 'error');
+            return;
+        }
+
+        // Crear modal con detalles del pedido
+        const modalHtml = `
+            <div class="modal fade" id="orderDetailsModal" tabindex="-1">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Detalles del Pedido #${pedido.numero_pedido}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Información del Cliente</h6>
+                                    <p><strong>Nombre:</strong> ${pedido.cliente_nombre} ${pedido.cliente_apellido}</p>
+                                    <p><strong>Dirección:</strong> ${pedido.direccion_entrega}</p>
+                                    <p><strong>Estado del Pago:</strong>
+                                        <span class="badge ${pedido.estado_pago === 'pagado' ? 'bg-success' : 'bg-warning text-dark'}">
+                                            ${pedido.estado_pago === 'pagado' ? 'Pagado' : `Cobrar: $${pedido.total}`}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Información del Restaurante</h6>
+                                    <p><strong>Restaurante:</strong> ${pedido.restaurante_nombre}</p>
+                                    <p><strong>Dirección:</strong> ${pedido.restaurante_direccion}</p>
+                                    <p><strong>Fecha del Pedido:</strong> ${new Date(pedido.fecha_pedido).toLocaleString('es-AR')}</p>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Productos del Pedido</h6>
+                                    <div class="list-group">
+                                        ${pedido.items && pedido.items.length > 0 ?
+                                            pedido.items.map(item => `
+                                                <div class="list-group-item d-flex align-items-center">
+                                                    <img src="${item.imagen ? (item.imagen.startsWith('/uploads/') ? item.imagen : '/uploads/' + item.imagen) : '/images/defaults/product.jpeg'}"
+                                                         alt="${item.producto_nombre || 'Producto'}"
+                                                         class="rounded me-3"
+                                                         width="60"
+                                                         height="60"
+                                                         style="object-fit: cover;"
+                                                         onerror="this.src='/images/defaults/product.jpeg'">
+                                                    <div class="flex-grow-1">
+                                                        <strong>${item.producto_nombre || 'Producto sin nombre'}</strong>
+                                                        <br>
+                                                        <small class="text-muted">Cantidad: ${item.cantidad || 0}</small>
+                                                        ${item.notas_especiales ? `<br><small class="text-info"><i class="fas fa-comment-alt me-1"></i>${item.notas_especiales}</small>` : ''}
+                                                    </div>
+                                                    <span class="badge bg-primary">$${(Number(item.precio_unitario || 0) * Number(item.cantidad || 0)).toFixed(2)}</span>
+                                                </div>
+                                            `).join('') :
+                                            '<div class="list-group-item text-center text-muted">No hay productos en este pedido</div>'
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Ubicación de Entrega</h6>
+                                    <div id="orderLocationMap" style="height: 250px; border-radius: 8px; border: 1px solid #ddd;"></div>
+                                    <p class="mt-2 text-muted small">
+                                        <i class="fas fa-map-marker-alt me-1"></i>
+                                        ${pedido.direccion_entrega}
+                                    </p>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Subtotal:</strong> $${pedido.subtotal}</p>
+                                    <p><strong>Envío:</strong> $${pedido.costo_delivery}</p>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <h5><strong>Total: $${pedido.total}</strong></h5>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Agregar modal al DOM
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Mostrar modal
+        const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+        modal.show();
+
+        // Inicializar mapa después de que el modal se muestre
+        document.getElementById('orderDetailsModal').addEventListener('shown.bs.modal', function() {
+            setTimeout(function() {
+                const mapDiv = document.getElementById('orderLocationMap');
+                if (mapDiv && pedido.cliente_lat && pedido.cliente_lng) {
+                    mapDiv.innerHTML = '';
+                    const orderMap = L.map('orderLocationMap').setView([pedido.cliente_lat, pedido.cliente_lng], 16);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '© OpenStreetMap',
+                        crossOrigin: true
+                    }).addTo(orderMap);
+
+                    // Agregar marcador en la ubicación del cliente (marcador clásico)
+                    L.marker([pedido.cliente_lat, pedido.cliente_lng])
+                        .addTo(orderMap)
+                        .bindPopup(`<b>👤 Ubicación de Entrega</b><br>${pedido.direccion_entrega}`);
+
+                    // Si también tenemos la ubicación del restaurante, mostrar la ruta
+                    if (pedido.restaurante_lat && pedido.restaurante_lng) {
+                        const restaurantIcon = new L.Icon.Default({
+                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34],
+                            shadowSize: [41, 41]
+                        });
+
+                        L.marker([pedido.restaurante_lat, pedido.restaurante_lng], { icon: restaurantIcon })
+                            .addTo(orderMap)
+                            .bindPopup(`<b>🏪 Restaurante</b><br>${pedido.restaurante_nombre}`);
+
+                        // Dibujar línea de ruta
+                        L.polyline([[pedido.restaurante_lat, pedido.restaurante_lng], [pedido.cliente_lat, pedido.cliente_lng]], {
+                            color: '#007bff',
+                            weight: 3,
+                            opacity: 0.8,
+                            dashArray: '10, 10'
+                        }).addTo(orderMap);
+
+                        // Ajustar vista para mostrar ambos puntos
+                        const bounds = L.latLngBounds([
+                            [pedido.restaurante_lat, pedido.restaurante_lng],
+                            [pedido.cliente_lat, pedido.cliente_lng]
+                        ]);
+                        orderMap.fitBounds(bounds, { padding: [20, 20] });
+                    }
+
+                    setTimeout(function() { orderMap.invalidateSize(); }, 300);
+                }
+            }, 300);
+        });
+
+        // Limpiar modal del DOM cuando se cierre
+        document.getElementById('orderDetailsModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+    };
+
+    // Función para marcar pedido como entregado
+    window.marcarComoEntregado = function(orderId) {
+        if (confirm('¿Estás seguro de que quieres marcar este pedido como entregado?')) {
+            const button = document.getElementById('btn-entregar-' + orderId);
+            const originalText = button.innerHTML;
+
+            // Deshabilitar botón y mostrar loading
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+
+            // Hacer la petición AJAX a la ruta correcta para repartidores
+            fetch('/repartidores/orders/' + orderId + '/status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'estado=entregado'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error en la respuesta del servidor');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ Pedido marcado como entregado:', orderId);
+
+                    // Actualizar el badge
+                    const badge = document.getElementById('badge-' + orderId);
+                    if (badge) {
+                        badge.className = 'badge bg-success';
+                        badge.innerHTML = '<i class="fas fa-check-circle me-1"></i>Entregado';
+                    }
+
+                    // Deshabilitar el botón
+                    button.disabled = true;
+                    button.className = 'btn btn-sm btn-success';
+                    button.innerHTML = '<i class="fas fa-check me-1"></i>Entregado';
+
+                    // Actualizar contador de pedidos en el header
+                    const headerText = document.querySelector('.card-header h5');
+                    if (headerText) {
+                        const currentCount = parseInt(headerText.textContent.match(/(\d+)/)[0]);
+                        const newCount = Math.max(0, currentCount - 1);
+                        headerText.innerHTML = headerText.innerHTML.replace(/\(\d+\)/, '(' + newCount + ')');
+                    }
+
+                    // Remover el pedido de la lista con animación
+                    const orderItem = document.getElementById('btn-entregar-' + orderId).closest('.list-group-item');
+                    if (orderItem) {
+                        orderItem.style.transition = 'all 0.3s ease';
+                        orderItem.style.opacity = '0';
+                        orderItem.style.transform = 'translateX(-100%)';
+
+                        setTimeout(() => {
+                            orderItem.remove();
+
+                            // Si no quedan pedidos, mostrar mensaje vacío
+                            const pedidosContainer = document.querySelector('.card-body .list-group');
+                            if (pedidosContainer && pedidosContainer.children.length === 0) {
+                                const emptyMessage = document.createElement('div');
+                                emptyMessage.className = 'text-center py-4';
+                                emptyMessage.innerHTML = `
+                                    <i class="fas fa-box-open fa-2x text-muted mb-3"></i>
+                                    <p class="text-muted">No tienes pedidos asignados en este momento.</p>
+                                `;
+                                pedidosContainer.parentNode.replaceChild(emptyMessage, pedidosContainer);
+                            }
+
+                            // Actualizar mapa si existe
+                            if (typeof updateMapWithNewOrder === 'function') {
+                                const remainingOrders = Array.from(document.querySelectorAll('#orders-list .list-group-item'))
+                                    .map(item => ({
+                                        id: item.getAttribute('data-order-id')
+                                    }));
+                                updateMapWithNewOrder(remainingOrders);
+                            }
+                        }, 300);
+                    }
+
+                    // Mostrar mensaje de éxito
+                    showToast('Pedido marcado como entregado correctamente', 'success');
+
+                } else {
+                    throw new Error(data.message || 'Error desconocido');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error al marcar pedido como entregado:', error);
+                // Restaurar botón
+                button.disabled = false;
+                button.innerHTML = originalText;
+                showToast('Error al marcar el pedido como entregado: ' + error.message, 'error');
+            });
+        }
+    };
+    
+    function createDriverIcon() {
+        return L.divIcon({
+            html: `
+                <div style="
+                    background-color: #ff6b35;
+                    border: 2px solid #fff;
+                    border-radius: 50% 50% 50% 0;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                    transform: rotate(-45deg);
+                ">
+                    <span style="
+                        font-size: 16px;
+                        color: white;
+                        transform: rotate(45deg);
+                    ">🏍️</span>
+                </div>
+            `,
+            className: 'custom-motorcycle-marker',
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+            popupAnchor: [0, -30]
+        });
+    }
+
+    // Función para crear marcador del repartidor sin el marcador estándar
+    function createDriverMarker(lat, lng, popupContent) {
+        // Crear el marcador con icono personalizado
+        const marker = L.marker([lat, lng], {
+            icon: createDriverIcon()
+        });
+
+        // Agregar popup si se proporciona contenido
+        if (popupContent) {
+            marker.bindPopup(popupContent);
+        }
+
+        // Ocultar el marcador estándar de Leaflet agregando CSS personalizado
+        marker.on('add', function() {
+            // Buscar y ocultar el div del marcador estándar
+            setTimeout(() => {
+                const markerElement = marker.getElement();
+                if (markerElement) {
+                    // Ocultar el div del marcador estándar
+                    const standardMarker = markerElement.querySelector('.leaflet-marker-icon:not(.custom-motorcycle-marker)');
+                    if (standardMarker) {
+                        standardMarker.style.display = 'none';
+                    }
+                    // También ocultar cualquier sombra estándar
+                    const shadow = markerElement.querySelector('.leaflet-marker-shadow');
+                    if (shadow) {
+                        shadow.style.display = 'none';
+                    }
+                }
+            }, 10);
+        });
+
+        return marker;
+    }
+
+    function createClientIcon() {
+        return new L.Icon({
+            iconUrl: 'https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/images/marker-icon.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41],
+            className: 'client-classic-marker'
+        });
+    }
+
+    // Lógica para el botón de cambio de estado (sin cambios)
+    const statusBtn = document.getElementById('status-toggle-btn');
+    if(statusBtn) {
+        statusBtn.addEventListener('click', async function() {
+            const currentStatus = this.classList.contains('btn-success') ? 'available' : 'offline';
+            const newStatus = currentStatus === 'available' ? 'offline' : 'available';
+            try {
+                const response = await fetch('/repartidores/status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    const statusText = document.getElementById('status-text');
+                    if (newStatus === 'available') {
+                        this.classList.replace('btn-danger', 'btn-success');
+                        statusText.textContent = 'En Línea';
+                    } else {
+                        this.classList.replace('btn-success', 'btn-danger');
+                        statusText.textContent = 'Fuera de Línea';
+                    }
+                } else {
+                    alert('Error al cambiar de estado: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error en la solicitud de cambio de estado:', error);
+                alert('Ocurrió un error de red.');
+            }
+        });
+    }
+
+    // Mobile Navigation JavaScript
+    const mobileNav = document.getElementById('mobileNav');
+    const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+    const mobileNavToggle = document.getElementById('mobileNavToggle');
+    const closeMobileNav = document.getElementById('closeMobileNav');
+
+    // Toggle mobile navigation
+    function toggleMobileNav() {
+        const isOpen = mobileNav && mobileNav.classList.contains('show');
+
+        if (isOpen) {
+            closeMobileNavigation();
+        } else {
+            openMobileNavigation();
+        }
+    }
+
+    function openMobileNavigation() {
+        if (mobileNav) {
+            mobileNav.classList.add('show');
+        }
+        if (mobileNavOverlay) {
+            mobileNavOverlay.style.display = 'block';
+        }
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMobileNavigation() {
+        if (mobileNav) {
+            mobileNav.classList.remove('show');
+        }
+        if (mobileNavOverlay) {
+            mobileNavOverlay.style.display = 'none';
+        }
+        document.body.style.overflow = '';
+    }
+
+    // Event listeners
+    if (mobileNavToggle) {
+        mobileNavToggle.addEventListener('click', toggleMobileNav);
+    }
+
+    if (closeMobileNav) {
+        closeMobileNav.addEventListener('click', closeMobileNavigation);
+    }
+
+    if (mobileNavOverlay) {
+        mobileNavOverlay.addEventListener('click', closeMobileNavigation);
+    }
+
+    // Close on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && mobileNav && mobileNav.classList.contains('show')) {
+            closeMobileNavigation();
+        }
+    });
+
+    // Close navigation when clicking on menu items
+    if (mobileNav) {
+        const menuItems = mobileNav.querySelectorAll('.mobile-nav-item');
+        menuItems.forEach(item => {
+            item.addEventListener('click', function() {
+                // Only close if it's not just a link click (let the browser handle navigation)
+                setTimeout(closeMobileNavigation, 100);
+            });
+        });
+    }
+
+    // Botón para centrar en el restaurante
+    const centerOnRestaurantBtn = document.getElementById('centerOnRestaurantBtn');
+    if (centerOnRestaurantBtn) {
+        centerOnRestaurantBtn.addEventListener('click', function() {
+            if (driver.restaurante_lat && driver.restaurante_lng) {
+                const restaurantCoords = [parseFloat(driver.restaurante_lat), parseFloat(driver.restaurante_lng)];
+
+                // Centrar mapa en el restaurante
+                map.setView(restaurantCoords, 16);
+
+                // Crear marcador del restaurante si no existe
+                let restaurantMarker = null;
+                currentMarkers.forEach(marker => {
+                    if (marker.options && marker.options.restaurantMarker) {
+                        restaurantMarker = marker;
+                    }
+                });
+
+                if (!restaurantMarker) {
+                    // Crear icono personalizado para el restaurante del repartidor
+                    const restaurantIcon = L.divIcon({
+                        html: `
+                            <div style="
+                                background-color: #28a745;
+                                border: 3px solid #fff;
+                                border-radius: 50%;
+                                width: 35px;
+                                height: 35px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+                            ">
+                                <span style="
+                                    font-size: 18px;
+                                    color: white;
+                                    font-weight: bold;
+                                ">🏪</span>
+                            </div>
+                        `,
+                        className: 'custom-restaurant-marker',
+                        iconSize: [35, 35],
+                        iconAnchor: [17.5, 35],
+                        popupAnchor: [0, -35]
+                    });
+
+                restaurantMarker = L.marker(restaurantCoords, {
+                    icon: restaurantIcon,
+                    restaurantMarker: true
+                })
+                .addTo(map)
+                .bindPopup('<div style="text-align: center; max-width: 200px;">' +
+                    '<img src="/uploads/' + (driver.restaurante_logo || 'no-image.png') + '" ' +
+                         'alt="' + driver.restaurante_nombre + '" ' +
+                         'style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;" ' +
+                         'onerror="this.src=\'/images/no-image.png\'">' +
+                    '<div>' +
+                        '<b>🏪 ' + driver.restaurante_nombre + '</b><br>' +
+                        '<small>' + driver.restaurante_direccion + '</small>' +
+                    '</div>' +
+                '</div>');
+
+                    currentMarkers.push(restaurantMarker);
+                }
+
+                // Abrir popup del marcador
+                restaurantMarker.openPopup();
+
+                // Mostrar mensaje de éxito
+                showToast('Mapa centrado en tu restaurante', 'success');
+            } else {
+                showToast('No hay coordenadas disponibles para el restaurante', 'warning');
+            }
+        });
+    }
+
+    // Botón para obtener ubicación actual
+    const getLocationBtn = document.getElementById('getLocationBtn');
+    if (getLocationBtn) {
+        getLocationBtn.addEventListener('click', function() {
+            if (navigator.geolocation) {
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Obteniendo...';
+                this.disabled = true;
+
+                navigator.geolocation.getCurrentPosition(
+                    async function(position) {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        const currentLatLng = [latitude, longitude];
+
+                        console.log('📍 Ubicación obtenida del navegador:', currentLatLng);
+
+                        // Actualizar vista del mapa
+                        map.setView(currentLatLng, 16);
+
+                        // Actualizar o crear marcador
+                        if (!driverMarker) {
+                            driverMarker = createDriverMarker(currentLatLng[0], currentLatLng[1], '¡Estoy aquí! (Ubicación actual)')
+                                .addTo(map);
+                        } else {
+                            driverMarker.setLatLng(currentLatLng);
+                            driverMarker.setPopupContent('¡Estoy aquí! (Ubicación actual)');
+                        }
+
+                        // ENVIAR ACTUALIZACIÓN AL SERVIDOR INMEDIATAMENTE
+                        try {
+                            console.log('📡 Enviando ubicación al servidor desde botón...');
+                            const response = await fetch('/repartidores/update-location', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    latitude: latitude,
+                                    longitude: longitude
+                                })
+                            });
+
+                            const result = await response.json();
+                            if (result.success) {
+                                console.log('✅ Ubicación enviada al servidor correctamente desde botón');
+                                showToast('Ubicación actualizada y enviada a clientes', 'success');
+                            } else {
+                                console.error('❌ Error enviando ubicación:', result.message);
+                                showToast('Error enviando ubicación al servidor', 'error');
+                            }
+                        } catch (error) {
+                            console.error('❌ Error de red enviando ubicación:', error);
+                            showToast('Error de conexión al enviar ubicación', 'error');
+                        }
+
+                        // Iniciar seguimiento si está disponible
+                        if (driver.status === 'available') {
+                            startLocationTracking(null);
+                        }
+
+                        // Restaurar botón
+                        getLocationBtn.innerHTML = '<i class="fas fa-crosshairs me-1"></i>Mi Ubicación';
+                        getLocationBtn.disabled = false;
+                    },
+                    function(error) {
+                        console.error('Error obteniendo ubicación:', error);
+                        getLocationBtn.innerHTML = '<i class="fas fa-crosshairs me-1"></i>Mi Ubicación';
+                        getLocationBtn.disabled = false;
+                        showToast('Error al obtener ubicación. Verifica permisos.', 'error');
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 300000
+                    }
+                );
+            } else {
+                showToast('Geolocalización no soportada en este navegador.', 'error');
+            }
+        });
+    }
+
+    // Intentar obtener ubicación automáticamente al cargar la página
+    if (navigator.geolocation && driver.status === 'available') {
+        console.log('🚀 Intentando obtener ubicación automática al cargar dashboard...');
+        navigator.geolocation.getCurrentPosition(
+            async function(position) {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+
+                console.log('📍 Ubicación automática obtenida:', { latitude, longitude });
+
+                // Enviar al servidor inmediatamente
+                try {
+                    const response = await fetch('/repartidores/update-location', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            latitude: latitude,
+                            longitude: longitude
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        console.log('✅ Ubicación automática enviada al servidor correctamente');
+
+                        // Actualizar marcador en el mapa
+                        const currentLatLng = [latitude, longitude];
+                        if (!driverMarker) {
+                            driverMarker = createDriverMarker(currentLatLng[0], currentLatLng[1], '¡Estoy aquí! (Ubicación automática)')
+                                .addTo(map);
+                        } else {
+                            driverMarker.setLatLng(currentLatLng);
+                            driverMarker.setPopupContent('¡Estoy aquí! (Ubicación automática)');
+                        }
+
+                        // Iniciar seguimiento continuo
+                        startLocationTracking(null);
+                    }
+                } catch (error) {
+                    console.error('❌ Error enviando ubicación automática:', error);
+                }
+            },
+            function(error) {
+                console.warn('No se pudo obtener ubicación automática:', error);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 300000
+            }
+        );
+    }
+
+    // Función para mostrar toasts
+    function showToast(message, type) {
+        // Crear toast container si no existe
+        let toastContainer = document.querySelector('.custom-toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'custom-toast-container';
+            document.body.appendChild(toastContainer);
+        }
+
+        // Crear toast
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
+            </div>
+        `;
+
+        toastContainer.appendChild(toast);
+
+        // Auto-remover después de 3 segundos
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 3000);
+    }
+
+    // Función para guardar el orden de pedidos en localStorage
+    function saveOrderToStorage(orderIds) {
+        const storageKey = `driver_${driverData.userId}_order`;
+        localStorage.setItem(storageKey, JSON.stringify(orderIds));
+        console.log('💾 Orden guardado en localStorage:', orderIds);
+    }
+
+    // Función para cargar el orden de pedidos desde localStorage
+    function loadOrderFromStorage() {
+        const storageKey = `driver_${driverData.userId}_order`;
+        const savedOrder = localStorage.getItem(storageKey);
+        if (savedOrder) {
+            try {
+                const orderIds = JSON.parse(savedOrder);
+                console.log('📂 Orden cargado desde localStorage:', orderIds);
+                return orderIds;
+            } catch (error) {
+                console.error('Error parsing saved order:', error);
+                return null;
+            }
+        }
+        return null;
+    }
+
+    // Función para aplicar el orden guardado a los pedidos
+    function applySavedOrder() {
+        const savedOrder = loadOrderFromStorage();
+        if (!savedOrder || savedOrder.length === 0) {
+            console.log('ℹ️ No hay orden guardado, usando orden original');
+            return driverData.pedidos;
+        }
+
+        // Reordenar los pedidos según el orden guardado
+        const orderedPedidos = [];
+        const remainingPedidos = [...driverData.pedidos];
+
+        // Primero agregar los pedidos en el orden guardado
+        savedOrder.forEach(orderId => {
+            const pedido = remainingPedidos.find(p => p.id == orderId);
+            if (pedido) {
+                orderedPedidos.push(pedido);
+                // Remover de la lista de restantes
+                const index = remainingPedidos.indexOf(pedido);
+                if (index > -1) {
+                    remainingPedidos.splice(index, 1);
+                }
+            }
+        });
+
+        // Agregar cualquier pedido nuevo que no esté en el orden guardado
+        orderedPedidos.push(...remainingPedidos);
+
+        console.log('📋 Pedidos reordenados según localStorage:', orderedPedidos.map(p => p.numero_pedido));
+        return orderedPedidos;
+    }
+
+    // Aplicar el orden guardado al inicializar y reordenar el DOM
+    const initialSavedOrder = applySavedOrder();
+    if (initialSavedOrder && initialSavedOrder.length > 0) {
+        // Actualizar el array de pedidos con el orden guardado
+        driverData.pedidos = initialSavedOrder;
+
+        // Reordenar los elementos del DOM según el orden guardado
+        const ordersList = document.getElementById('orders-list');
+        if (ordersList) {
+            const orderItems = Array.from(ordersList.children);
+            const reorderedItems = [];
+
+            // Primero agregar los elementos en el orden guardado
+            initialSavedOrder.forEach(pedido => {
+                const item = orderItems.find(item => item.getAttribute('data-order-id') == pedido.id);
+                if (item) {
+                    reorderedItems.push(item);
+                }
+            });
+
+            // Agregar cualquier elemento nuevo que no esté en el orden guardado
+            orderItems.forEach(item => {
+                if (!reorderedItems.includes(item)) {
+                    reorderedItems.push(item);
+                }
+            });
+
+            // Reordenar el DOM
+            ordersList.innerHTML = '';
+            reorderedItems.forEach((item, index) => {
+                item.setAttribute('data-order-index', index);
+                ordersList.appendChild(item);
+            });
+
+            console.log('📋 DOM reordenado según localStorage');
+        }
+    }
+
+    // Inicializar drag and drop para reordenar pedidos
+    const ordersList = document.getElementById('orders-list');
+    if (ordersList) {
+        new Sortable(ordersList, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            onEnd: async function(evt) {
+                const orderItems = Array.from(ordersList.children);
+                const newOrder = orderItems.map((item, index) => {
+                    const orderId = item.getAttribute('data-order-id');
+                    return { id: orderId, newIndex: index };
+                });
+
+                // Guardar el nuevo orden en localStorage
+                const orderIds = newOrder.map(item => item.id);
+                saveOrderToStorage(orderIds);
+
+                // Actualizar el mapa con el nuevo orden
+                await updateMapWithNewOrder(newOrder);
+
+                // Mostrar mensaje de confirmación
+                showToast('Orden de pedidos actualizado', 'success');
+            }
+        });
+    }
+
+
+
+    // Función para obtener ruta real por calles usando OSRM (Open Source Routing Machine)
+    async function getRouteFromAPI(startCoords, endCoords) {
+        try {
+            console.log('🌐 Solicitando ruta desde OSRM API...');
+            console.log('📍 Inicio:', startCoords, 'Destino:', endCoords);
+
+            // Usar OSRM API gratuita (servidor público)
+            const apiUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords[1]},${startCoords[0]};${endCoords[1]},${endCoords[0]}?overview=full&geometries=geojson`;
+            console.log('🔗 URL de API:', apiUrl);
+
+            const response = await fetch(apiUrl);
+
+            console.log('📡 Respuesta de API - Status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Error de API:', response.status, response.statusText, errorText);
+                throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('📦 Datos recibidos de API:', data);
+
+            if (data.routes && data.routes[0] && data.routes[0].geometry && data.routes[0].geometry.coordinates) {
+                // OSRM devuelve coordenadas en formato [lng, lat], convertir a [lat, lng]
+                const coordinates = data.routes[0].geometry.coordinates;
+                const routePoints = coordinates.map(coord => [coord[1], coord[0]]); // Convertir lng,lat a lat,lng
+
+                console.log('✅ Ruta obtenida con', routePoints.length, 'puntos');
+                console.log('📍 Puntos de ruta:', routePoints);
+                return routePoints;
+            } else {
+                console.warn('⚠️ Respuesta de API sin coordenadas válidas:', data);
+                throw new Error('Respuesta de API sin coordenadas válidas');
+            }
+        } catch (error) {
+            console.error('❌ Error obteniendo ruta de la API:', error);
+            console.log('🔄 Usando fallback: línea recta entre puntos');
+
+            // Mostrar mensaje al usuario
+            showToast('Usando ruta directa (API no disponible)', 'warning');
+
+            // Fallback: línea recta si la API falla
+            return [startCoords, endCoords];
+        }
+    }
+
+    // Función para decodificar polylines de GraphHopper
+    function decodePolyline(encoded) {
+        const points = [];
+        let index = 0, lat = 0, lng = 0;
+
+        while (index < encoded.length) {
+            let b, shift = 0, result = 0;
+            do {
+                b = encoded.charCodeAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            const deltaLat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+            lat += deltaLat;
+
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charCodeAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            const deltaLng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+            lng += deltaLng;
+
+            points.push([lat * 1e-5, lng * 1e-5]);
+        }
+
+        return points;
+    }
+
+    // Función para crear rutas iniciales con ubicación REAL del conductor
+    async function createInitialRoutesWithRealLocation(driverCoords) {
+        console.log('🚀 Creando rutas iniciales con ubicación REAL del conductor:', driverCoords);
+
+        if (!pedidos || pedidos.length === 0) {
+            console.log('ℹ️ No hay pedidos para crear rutas');
+            return;
+        }
+
+        // Limpiar rutas existentes antes de crear nuevas
+        currentRoutes.forEach(route => {
+            if (route.line) {
+                map.removeLayer(route.line);
+            }
+        });
+        currentRoutes = [];
+
+        // Crear rutas secuenciales: Repartidor → Pedido 1 → Pedido 2 → ...
+        let currentPosition = driverCoords;
+
+        for (let i = 0; i < pedidos.length; i++) {
+            const pedido = pedidos[i];
+            let destinationCoords = null;
+
+            if (pedido.cliente_lat && pedido.cliente_lng) {
+                destinationCoords = [parseFloat(pedido.cliente_lat), parseFloat(pedido.cliente_lng)];
+            } else if (pedido.restaurante_lat && pedido.restaurante_lng) {
+                destinationCoords = [parseFloat(pedido.restaurante_lat), parseFloat(pedido.restaurante_lng)];
+            }
+
+            if (destinationCoords) {
+                try {
+                    console.log(`Creando ruta desde ${currentPosition} hasta ${destinationCoords} para pedido ${pedido.numero_pedido}`);
+
+                    // Obtener ruta real por calles
+                    const routeCoordinates = await getRouteFromAPI(currentPosition, destinationCoords);
+
+                    // Crear línea de ruta real
+                    const routeLine = L.polyline(routeCoordinates, {
+                        color: '#007bff', // Azul para rutas del repartidor
+                        weight: 4,
+                        opacity: 0.9,
+                        dashArray: '10, 10'
+                    }).addTo(map);
+
+                    // Agregar tooltip con información de la ruta
+                    routeLine.bindTooltip(`🚗 Ruta a Pedido #${pedido.numero_pedido}`, {
+                        permanent: false,
+                        direction: 'center'
+                    });
+
+                    // Guardar referencia a la ruta
+                    currentRoutes.push({
+                        pedidoId: pedido.id,
+                        line: routeLine,
+                        destination: destinationCoords
+                    });
+
+                    console.log(`✅ Ruta inicial creada desde repartidor hasta Pedido ${pedido.numero_pedido}`);
+
+                    // Actualizar posición actual para la siguiente ruta
+                    currentPosition = destinationCoords;
+
+                } catch (error) {
+                    console.error(`Error creando ruta inicial para pedido ${pedido.numero_pedido}:`, error);
+                    // Fallback: línea recta si la API falla
+                    const driverRouteLine = L.polyline([currentPosition, destinationCoords], {
+                        color: '#007bff',
+                        weight: 4,
+                        opacity: 0.9,
+                        dashArray: '10, 10'
+                    }).addTo(map);
+
+                    driverRouteLine.bindTooltip(`🚗 Ruta a Pedido #${pedido.numero_pedido}`, {
+                        permanent: false,
+                        direction: 'center'
+                    });
+
+                    currentRoutes.push({
+                        pedidoId: pedido.id,
+                        line: driverRouteLine,
+                        destination: destinationCoords
+                    });
+
+                    // Actualizar posición actual para la siguiente ruta
+                    currentPosition = destinationCoords;
+                }
+            } else {
+                console.log(`⚠️ No se pudieron crear coordenadas para pedido ${pedido.numero_pedido}`);
+            }
+        }
+
+        console.log('✅ Rutas iniciales creadas exitosamente');
+        showToast('Rutas calculadas correctamente', 'success');
+    }
+
+    // Función para actualizar rutas en tiempo real
+    async function updateRoutesInRealTime() {
+        if (currentRoutes.length === 0) return;
+
+        console.log('🔄 Actualizando rutas en tiempo real...');
+
+        // Obtener ubicación actual del repartidor - PRIORIDAD al marcador actual
+        let currentDriverCoords = null;
+
+        if (driverMarker) {
+            const driverLatLng = driverMarker.getLatLng();
+            currentDriverCoords = [driverLatLng.lat, driverLatLng.lng];
+            console.log('✅ Usando ubicación ACTUAL del marcador del repartidor:', currentDriverCoords);
+        } else {
+            console.log('❌ No hay marcador del repartidor disponible');
+            return;
+        }
+
+        if (!currentDriverCoords || currentDriverCoords[0] === 0 || currentDriverCoords[1] === 0) {
+            console.log('⚠️ Coordenadas del repartidor inválidas:', currentDriverCoords);
+            return;
+        }
+
+        // Limpiar rutas existentes
+        currentRoutes.forEach(route => {
+            if (route.line) {
+                map.removeLayer(route.line);
+            }
+        });
+        currentRoutes = [];
+
+        // Recrear rutas secuenciales desde la ubicación actual
+        const pedidos = driverData.pedidos;
+        let currentPosition = currentDriverCoords;
+
+        // Usar for...of para poder usar await
+        for (const pedido of pedidos) {
+            let destinationCoords = null;
+
+            if (pedido.cliente_lat && pedido.cliente_lng) {
+                destinationCoords = [parseFloat(pedido.cliente_lat), parseFloat(pedido.cliente_lng)];
+            } else if (pedido.restaurante_lat && pedido.restaurante_lng) {
+                destinationCoords = [parseFloat(pedido.restaurante_lat), parseFloat(pedido.restaurante_lng)];
+            }
+
+            if (destinationCoords) {
+                try {
+                    // Obtener ruta real por calles
+                    const routeCoordinates = await getRouteFromAPI(currentPosition, destinationCoords);
+
+                    // Crear línea de ruta real
+                    const routeLine = L.polyline(routeCoordinates, {
+                        color: '#007bff', // Azul para rutas del repartidor
+                        weight: 4,
+                        opacity: 0.9,
+                        dashArray: '10, 10'
+                    }).addTo(map);
+
+                    // Agregar tooltip con información de la ruta
+                    routeLine.bindTooltip(`🚗 Ruta a Pedido #${pedido.numero_pedido}`, {
+                        permanent: false,
+                        direction: 'center'
+                    });
+
+                    // Guardar referencia a la ruta
+                    currentRoutes.push({
+                        pedidoId: pedido.id,
+                        line: routeLine,
+                        destination: destinationCoords
+                    });
+
+                    console.log(`✅ Ruta actualizada para Pedido ${pedido.numero_pedido}`);
+
+                    // Actualizar posición actual para la siguiente ruta
+                    currentPosition = destinationCoords;
+
+                } catch (error) {
+                    console.error(`Error actualizando ruta para pedido ${pedido.numero_pedido}:`, error);
+                    // Fallback: línea recta si la API falla
+                    const routeLine = L.polyline([currentPosition, destinationCoords], {
+                        color: '#007bff',
+                        weight: 4,
+                        opacity: 0.9,
+                        dashArray: '10, 10'
+                    }).addTo(map);
+
+                    routeLine.bindTooltip(`🚗 Ruta a Pedido #${pedido.numero_pedido}`, {
+                        permanent: false,
+                        direction: 'center'
+                    });
+
+                    currentRoutes.push({
+                        pedidoId: pedido.id,
+                        line: routeLine,
+                        destination: destinationCoords
+                    });
+
+                    // Actualizar posición actual para la siguiente ruta
+                    currentPosition = destinationCoords;
+                }
+            }
+        }
+    }
+
+    // Función para actualizar el mapa con el nuevo orden de pedidos
+    async function updateMapWithNewOrder(newOrder) {
+        console.log('🔄 Actualizando mapa con nuevo orden de pedidos:', newOrder);
+
+        // Limpiar solo marcadores de pedidos y rutas existentes (NO el marcador del repartidor)
+        currentMarkers.forEach(marker => {
+            if (marker !== driverMarker) {
+                map.removeLayer(marker);
+            }
+        });
+        currentRoutes.forEach(route => {
+            if (route.line) {
+                map.removeLayer(route.line);
+            }
+        });
+
+        // Limpiar arrays de referencias
+        currentRoutes = [];
+        currentMarkers = [];
+
+        // Asegurarse de que el marcador del repartidor esté en el mapa
+        if (driverMarker && !map.hasLayer(driverMarker)) {
+            driverMarker.addTo(map);
+        }
+
+        // Usar el orden pasado como parámetro para obtener los pedidos
+        const reorderedPedidos = newOrder.map(orderItem => {
+            return driverData.pedidos.find(p => p.id == orderItem.id);
+        }).filter(p => p); // Filtrar pedidos válidos
+
+        console.log('📋 Pedidos reordenados para el mapa:', reorderedPedidos.map(p => p.numero_pedido));
+
+        // Agregar marcadores para los pedidos reordenados
+        const bounds = [];
+        let markersAdded = 0;
+
+        reorderedPedidos.forEach((pedido, index) => {
+            // Verificar si tenemos coordenadas válidas
+            const hasRestaurantCoords = pedido.restaurante_lat && pedido.restaurante_lng;
+            const hasClientCoords = pedido.cliente_lat && pedido.cliente_lng;
+
+            // Lógica mejorada: mostrar marcadores cuando tengamos al menos alguna coordenada
+            if (hasRestaurantCoords) {
+                // Caso 1: Restaurante tiene coordenadas
+                const restaurantLatLng = [parseFloat(pedido.restaurante_lat), parseFloat(pedido.restaurante_lng)];
+
+                // Crear marcador del restaurante
+                const restaurantIcon = new L.Icon.Default({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                });
+
+                const restaurantMarker = L.marker(restaurantLatLng, { icon: restaurantIcon })
+                    .addTo(map)
+                    .bindPopup(`<b>🏪 Restaurante:</b><br>${pedido.restaurante_nombre}<br><small>${pedido.restaurante_direccion}</small>`);
+
+                currentMarkers.push(restaurantMarker);
+                bounds.push(restaurantLatLng);
+                markersAdded++;
+
+                // Si tenemos coordenadas del cliente, crear marcador
+                if (hasClientCoords) {
+                    const clientLatLng = [parseFloat(pedido.cliente_lat), parseFloat(pedido.cliente_lng)];
+
+                    const clientMarker = L.marker(clientLatLng, { icon: createClientIcon() })
+                        .addTo(map)
+                        .bindPopup(`<b>👤 Cliente:</b><br>${pedido.cliente_nombre} ${pedido.cliente_apellido}<br><small>Pedido #${pedido.numero_pedido}${pedido.usa_coordenadas_restaurante ? '<br><small style="color: orange;">(Ubicación aproximada)</small>' : ''}</small>`);
+
+                    currentMarkers.push(clientMarker);
+                    bounds.push(clientLatLng);
+                    markersAdded++;
+
+                    console.log(`✅ Pedido ${pedido.numero_pedido}: Mostrado restaurante + cliente`);
+                } else {
+                    console.log(`⚠️ Pedido ${pedido.numero_pedido}: Solo restaurante (sin coordenadas del cliente)`);
+                }
+            } else if (hasClientCoords) {
+                // Caso 2: Solo cliente tiene coordenadas (restaurante no tiene)
+                const clientLatLng = [parseFloat(pedido.cliente_lat), parseFloat(pedido.cliente_lng)];
+
+                const clientMarker = L.marker(clientLatLng, { icon: createClientIcon() })
+                    .addTo(map)
+                    .bindPopup(`<b>👤 Cliente:</b><br>${pedido.cliente_nombre} ${pedido.cliente_apellido}<br><small>Pedido #${pedido.numero_pedido}<br><small style="color: orange;">(Solo ubicación del cliente)</small></small>`);
+
+                currentMarkers.push(clientMarker);
+                bounds.push(clientLatLng);
+                markersAdded++;
+
+                console.log(`✅ Pedido ${pedido.numero_pedido}: Mostrado solo cliente (restaurante sin coordenadas)`);
+            } else {
+                console.warn(`❌ Pedido ${pedido.numero_pedido}: No hay coordenadas disponibles`);
+            }
+        });
+
+        // Crear rutas desde el repartidor hasta cada punto de entrega
+        if (markersAdded > 0) {
+            console.log('Creando rutas desde el repartidor hasta los puntos de entrega...');
+
+            // Priorizar ubicación actual del repartidor, luego la guardada en BD
+            let driverCoords = null;
+
+            if (driverMarker) {
+                // Usar ubicación actual del marcador si existe
+                const driverLatLng = driverMarker.getLatLng();
+                driverCoords = [driverLatLng.lat, driverLatLng.lng];
+                console.log('✅ Usando ubicación actual del marcador del repartidor:', driverCoords);
+            } else if (driver.current_latitude && driver.current_longitude) {
+                // Usar ubicación guardada en BD como fallback
+                driverCoords = [parseFloat(driver.current_latitude), parseFloat(driver.current_longitude)];
+                console.log('⚠️ Usando ubicación guardada del repartidor (no hay marcador):', driverCoords);
+            } else {
+                // Último fallback: ubicación inicial del mapa
+                driverCoords = initialCenter;
+                console.log('❌ Usando ubicación inicial del mapa (no hay datos del repartidor):', driverCoords);
+            }
+
+            // Crear rutas secuenciales desde el repartidor hasta cada punto de entrega
+            let currentPosition = driverCoords;
+
+            console.log('🚗 Creando rutas en orden:', reorderedPedidos.map(p => `Pedido #${p.numero_pedido}`));
+
+            // Usar for...of para poder usar await
+            for (const pedido of reorderedPedidos) {
+                let destinationCoords = null;
+
+                if (pedido.cliente_lat && pedido.cliente_lng) {
+                    // Priorizar coordenadas del cliente
+                    destinationCoords = [parseFloat(pedido.cliente_lat), parseFloat(pedido.cliente_lng)];
+                } else if (pedido.restaurante_lat && pedido.restaurante_lng) {
+                    // Usar coordenadas del restaurante como fallback
+                    destinationCoords = [parseFloat(pedido.restaurante_lat), parseFloat(pedido.restaurante_lng)];
+                }
+
+                if (destinationCoords) {
+                    try {
+                        console.log(`Creando ruta desde ${currentPosition} hasta ${destinationCoords} para pedido ${pedido.numero_pedido}`);
+
+                        // Obtener ruta real por calles
+                        const routeCoordinates = await getRouteFromAPI(currentPosition, destinationCoords);
+
+                        // Crear línea de ruta real
+                        const driverRouteLine = L.polyline(routeCoordinates, {
+                            color: '#007bff', // Azul para rutas del repartidor
+                            weight: 4,
+                            opacity: 0.9,
+                            dashArray: '10, 10'
+                        }).addTo(map);
+
+                        // Agregar tooltip con información de la ruta
+                        driverRouteLine.bindTooltip(`🚗 Ruta a Pedido #${pedido.numero_pedido}`, {
+                            permanent: false,
+                            direction: 'center'
+                        });
+
+                        // Guardar referencia a la ruta
+                        currentRoutes.push({
+                            pedidoId: pedido.id,
+                            line: driverRouteLine,
+                            destination: destinationCoords
+                        });
+
+                        console.log(`✅ Ruta creada desde repartidor hasta Pedido ${pedido.numero_pedido}`);
+
+                        // Actualizar posición actual para la siguiente ruta
+                        currentPosition = destinationCoords;
+
+                    } catch (error) {
+                        console.error(`Error creando ruta para pedido ${pedido.numero_pedido}:`, error);
+                        // Fallback: línea recta si la API falla
+                        const driverRouteLine = L.polyline([currentPosition, destinationCoords], {
+                            color: '#007bff',
+                            weight: 4,
+                            opacity: 0.9,
+                            dashArray: '10, 10'
+                        }).addTo(map);
+
+                        driverRouteLine.bindTooltip(`🚗 Ruta a Pedido #${pedido.numero_pedido}`, {
+                            permanent: false,
+                            direction: 'center'
+                        });
+
+                        currentRoutes.push({
+                            pedidoId: pedido.id,
+                            line: driverRouteLine,
+                            destination: destinationCoords
+                        });
+
+                        // Actualizar posición actual para la siguiente ruta
+                        currentPosition = destinationCoords;
+                    }
+                } else {
+                    console.log(`⚠️ No se pudieron crear coordenadas para pedido ${pedido.numero_pedido}`);
+                }
+            }
+
+            console.log('✅ Todas las rutas del mapa actualizadas según el nuevo orden');
+        }
+
+        if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+    }
+
+    // Función para agregar marcador del restaurante automáticamente
+    function addRestaurantMarkerToMap() {
+        if (driver.restaurante_lat && driver.restaurante_lng && driver.restaurante_nombre) {
+            const restaurantCoords = [parseFloat(driver.restaurante_lat), parseFloat(driver.restaurante_lng)];
+
+            // Verificar si ya existe un marcador del restaurante
+            let restaurantMarker = null;
+            currentMarkers.forEach(function(marker) {
+                if (marker.options && marker.options.restaurantMarker) {
+                    restaurantMarker = marker;
+                }
+            });
+
+            if (!restaurantMarker) {
+                // Crear icono personalizado para el restaurante del repartidor usando emoji
+                const restaurantIcon = L.divIcon({
+                    html: `
+                        <div style="
+                            background-color: #28a745;
+                            border: 3px solid #fff;
+                            border-radius: 50%;
+                            width: 35px;
+                            height: 35px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+                        ">
+                            <span style="
+                                font-size: 18px;
+                                color: white;
+                                font-weight: bold;
+                            ">🏪</span>
+                        </div>
+                    `,
+                    className: 'custom-restaurant-marker',
+                    iconSize: [35, 35],
+                    iconAnchor: [17.5, 35],
+                    popupAnchor: [0, -35]
+                });
+
+                restaurantMarker = L.marker(restaurantCoords, {
+                    icon: restaurantIcon,
+                    restaurantMarker: true
+                })
+                .addTo(map)
+                .bindPopup(
+                    '<div style="text-align: center; max-width: 250px;">' +
+                        '<h6 style="margin: 0 0 8px 0; color: #28a745;">🏪 Mi Restaurante</h6>' +
+                        '<strong>' + driver.restaurante_nombre + '</strong><br>' +
+                        '<small style="color: #666;">' + driver.restaurante_direccion + '</small><br>' +
+                        '<small style="color: #999;">Lat: ' + driver.restaurante_lat + ', Lng: ' + driver.restaurante_lng + '</small>' +
+                    '</div>'
+                );
+
+                currentMarkers.push(restaurantMarker);
+                console.log('✅ Marcador del restaurante agregado automáticamente al mapa');
+            }
+        }
+    }
+
+    // Función para reordenar ruta haciendo clic en marcadores
+    async function reorderRouteByClick(orderId, type) {
+        console.log(`🖱️ Clic en marcador ${type} para pedido ${orderId}`);
+
+        // Buscar el pedido en la lista
+        const pedido = driverData.pedidos.find(p => p.id == orderId);
+        if (!pedido) {
+            console.error('Pedido no encontrado:', orderId);
+            return;
+        }
+
+        // Obtener la lista actual de pedidos
+        const currentOrder = Array.from(document.querySelectorAll('#orders-list .order-item'))
+            .map(item => ({
+                id: item.getAttribute('data-order-id'),
+                element: item
+            }));
+
+        // Encontrar el índice del pedido clickeado
+        const clickedIndex = currentOrder.findIndex(item => item.id == orderId);
+
+        if (clickedIndex === -1) {
+            console.error('Pedido no encontrado en la lista visual');
+            return;
+        }
+
+        // Si ya está al final, no hacer nada
+        if (clickedIndex === currentOrder.length - 1) {
+            showToast('Este pedido ya está al final de la ruta', 'info');
+            return;
+        }
+
+        // Crear nuevo orden: mover el pedido clickeado al final
+        const newOrder = [
+            ...currentOrder.slice(0, clickedIndex),
+            ...currentOrder.slice(clickedIndex + 1),
+            currentOrder[clickedIndex]
+        ];
+
+        // Actualizar la lista visual
+        const ordersList = document.getElementById('orders-list');
+        ordersList.innerHTML = '';
+
+        newOrder.forEach((item, index) => {
+            item.element.setAttribute('data-order-index', index);
+            ordersList.appendChild(item.element);
+        });
+
+        // Actualizar el mapa con el nuevo orden
+        const orderData = newOrder.map((item, index) => ({
+            id: item.id,
+            newIndex: index
+        }));
+
+        await updateMapWithNewOrder(orderData);
+
+        // Mostrar mensaje de confirmación
+        showToast(`Pedido #${pedido.numero_pedido} movido al final de la ruta`, 'success');
+
+        console.log(`✅ Pedido ${pedido.numero_pedido} movido al final de la ruta`);
+    }
+});
+</script>
+
+<%- include('../partials/footer') %>

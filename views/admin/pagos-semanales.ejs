@@ -1,265 +1,194 @@
-<%- include('partials/sidebar') %>
-
-<!-- CSS específico para la tabla semanal -->
-<link rel="stylesheet" href="/css/admin-pagos-semanales.css">
-
-<div class="main-content">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-0">
-                <i class="fas fa-calendar-week me-2"></i>
-                Tabla Semanal de Pagos
-            </h1>
-            <p class="text-muted mb-0">Resumen anual de pagos y comisiones por restaurante</p>
-        </div>
-        <div class="d-flex align-items-center gap-3">
-            <a href="/admin/cobros" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Volver a Cobros
-            </a>
-            <a href="/admin/pagos-semanales/export?year=<%= year %>" class="btn btn-success">
-                <i class="fas fa-download me-2"></i>Exportar
-            </a>
-        </div>
-    </div>
-
-    <!-- Filtros -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <form method="GET" action="/admin/pagos-semanales" class="row g-3">
-                <div class="col-md-4">
-                    <label for="year" class="form-label">Año</label>
-                    <select class="form-select" id="year" name="year">
-                        <% for(let y = new Date().getFullYear(); y >= 2020; y--) { %>
-                            <option value="<%= y %>" <%= year == y ? 'selected' : '' %>><%= y %></option>
-                        <% } %>
-                    </select>
+<div class="admin-layout">
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <%- include('partials/sidebar', { activePage: 'pagos-semanales' }) %>
+        
+        <!-- Main Content -->
+        <div class="flex-grow-1 d-flex flex-column" style="min-height: 100vh;">
+            <!-- Top Bar -->
+            <div class="admin-topbar bg-white shadow-sm px-4 py-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-week me-2"></i>
+                        Tabla Semanal de Pagos
+                    </h5>
+                    <small class="text-muted">Resumen anual de pagos y comisiones</small>
                 </div>
-                <div class="col-md-6">
-                    <label for="restaurante" class="form-label">Restaurante</label>
-                    <select class="form-select" id="restaurante" name="restaurante">
-                        <option value="">Todos los restaurantes</option>
-                        <% restaurantes.forEach(rest => { %>
-                            <option value="<%= rest.id %>" <%= filtros.restaurante == rest.id ? 'selected' : '' %>>
-                                <%= rest.nombre %>
-                            </option>
-                        <% }) %>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">&nbsp;</label>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-filter me-2"></i>Filtrar
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Resumen Anual -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <div class="text-success mb-2">
-                        <i class="fas fa-check-circle fa-2x"></i>
-                    </div>
-                    <h4 class="mb-1">$<%= resumen.total_pagado.toLocaleString() %></h4>
-                    <p class="text-muted mb-0">Total Pagado</p>
+                <div class="d-flex align-items-center">
+                    <span class="me-3">
+                        <i class="fas fa-user-shield me-1"></i>
+                        <%= user.nombre %> <%= user.apellido %>
+                    </span>
+                    <a href="/auth/logout" class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
+                    </a>
                 </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <div class="text-warning mb-2">
-                        <i class="fas fa-clock fa-2x"></i>
-                    </div>
-                    <h4 class="mb-1">$<%= resumen.total_pendiente.toLocaleString() %></h4>
-                    <p class="text-muted mb-0">Total Pendiente</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <div class="text-info mb-2">
-                        <i class="fas fa-calculator fa-2x"></i>
-                    </div>
-                    <h4 class="mb-1">$<%= resumen.total_comisiones.toLocaleString() %></h4>
-                    <p class="text-muted mb-0">Total Comisiones</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <div class="text-primary mb-2">
-                        <i class="fas fa-store fa-2x"></i>
-                    </div>
-                    <h4 class="mb-1"><%= resumen.total_restaurantes %></h4>
-                    <p class="text-muted mb-0">Restaurantes</p>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Tabla Semanal -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white">
-            <h5 class="mb-0">
-                <i class="fas fa-table me-2"></i>
-                Resumen Semanal <%= year %>
-            </h5>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="text-center" style="min-width: 120px;">Semana</th>
-                            <th class="text-center" style="min-width: 100px;">Período</th>
-                            <% if (!filtros.restaurante) { %>
-                                <th style="min-width: 200px;">Restaurante</th>
-                            <% } %>
-                            <th class="text-center" style="min-width: 120px;">Ventas Brutas</th>
-                            <th class="text-center" style="min-width: 120px;">Comisión (10%)</th>
-                            <th class="text-center" style="min-width: 120px;">Monto Pagado</th>
-                            <th class="text-center" style="min-width: 100px;">Estado</th>
-                            <th class="text-center" style="min-width: 100px;">Vencimiento</th>
-                            <th class="text-center" style="min-width: 80px;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% if (semanasData.length === 0) { %>
-                            <tr>
-                                <td colspan="<%= filtros.restaurante ? 8 : 9 %>" class="text-center py-4">
-                                    <div class="text-muted">
-                                        <i class="fas fa-inbox fa-2x mb-3"></i>
-                                        <p class="mb-0">No hay datos de pagos para el año <%= year %></p>
-                                    </div>
-                                </td>
-                            </tr>
-                        <% } else { %>
-                            <% semanasData.forEach(cobro => { %>
-                                <tr class="<%= cobro.estado === 'vencido' ? 'table-danger' : 
-                                           cobro.estado === 'pagado' ? 'table-success' : 
-                                           cobro.estado === 'exonerado' ? 'table-info' : '' %>">
-                                    <td class="text-center">
-                                        <span class="badge bg-primary">Semana <%= Math.ceil((new Date(cobro.semana_inicio).getTime() - new Date(year, 0, 1).getTime()) / (1000 * 60 * 60 * 24 * 7)) %></span>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="small">
-                                            <strong>Desde:</strong><br>
-                                            <%= new Date(cobro.semana_inicio).toLocaleDateString('es-AR') %><br>
-                                            <strong>Hasta:</strong><br>
-                                            <%= new Date(cobro.semana_fin).toLocaleDateString('es-AR') %>
-                                        </div>
-                                    </td>
-                                    <% if (!filtros.restaurante) { %>
-                                        <td>
-                                            <div class="fw-bold"><%= cobro.restaurante_nombre %></div>
-                                            <small class="text-muted">ID: <%= cobro.restaurante_id %></small>
-                                        </td>
+            <!-- Contenido Principal -->
+            <div class="flex-grow-1 p-4">
+                <!-- Filtros -->
+                <div class="mb-4">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="year" class="form-label">Año</label>
+                            <select name="year" id="year" class="form-select" onchange="this.form.submit()">
+                                <% for(let y = 2023; y <= new Date().getFullYear() + 1; y++) { %>
+                                    <option value="<%= y %>" <%= y == year ? 'selected' : '' %>><%= y %></option>
+                                <% } %>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="restaurante" class="form-label">Restaurante</label>
+                            <select name="restaurante" id="restaurante" class="form-select" onchange="this.form.submit()">
+                                <option value="">Todos los restaurantes</option>
+                                <% if (typeof restaurantes !== 'undefined' && restaurantes) { %>
+                                    <% restaurantes.forEach(function(rest) { %>
+                                        <option value="<%= rest.id %>" <%= (typeof restaurante !== 'undefined' && restaurante == rest.id) ? 'selected' : '' %>><%= rest.nombre %></option>
+                                    <% }); %>
+                                <% } %>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <a href="/admin/pagos-semanales/export?year=<%= year %>" class="btn btn-success">
+                                <i class="fas fa-download me-2"></i>Exportar Excel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Resumen de estadísticas -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted">Total Comisiones</h6>
+                                <h3 class="mb-0">$<%= resumen.total_comisiones.toLocaleString('es-AR') %></h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted">Total Pagado</h6>
+                                <h3 class="mb-0 text-success">$<%= resumen.total_pagado.toLocaleString('es-AR') %></h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted">Total Pendiente</h6>
+                                <h3 class="mb-0 text-warning">$<%= resumen.total_pendiente.toLocaleString('es-AR') %></h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted">Total Exonerado</h6>
+                                <h3 class="mb-0 text-info">$<%= resumen.total_exonerado.toLocaleString('es-AR') %></h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gráficos -->
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-chart-line me-2"></i>Comisiones por Semana
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="chartComisiones"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-chart-pie me-2"></i>Distribución de Pagos
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container d-flex justify-content-center" style="position: relative; height: 250px;">
+                                    <canvas id="chartEstados"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tabla de pagos por restaurante y semana -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-table me-2"></i>Estado de Pagos por Restaurante y Semana
+                        </h6>
+                        <div class="d-flex gap-2">
+                            <a href="/admin/cobros" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Volver a Cobros
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 700px; overflow-y: auto; overflow-x: auto;">
+                            <table class="table table-hover table-bordered mb-0 table-sticky-header" style="min-width: 1200px;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-nowrap sticky-column">Restaurante</th>
+                                        <% semanasAnio.forEach(semana => { %>
+                                            <th class="text-center text-nowrap" title="Semana <%= semana.numero %>: <%= new Date(semana.inicio).toLocaleDateString('es-AR') %> - <%= new Date(semana.fin).toLocaleDateString('es-AR') %>">
+                                                S<%= semana.numero %>
+                                            </th>
+                                        <% }); %>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (pagosPorRestaurantePorSemana.length === 0) { %>
+                                        <tr>
+                                            <td colspan="<%= semanasAnio.length + 1 %>" class="text-center py-4">
+                                                <div class="text-muted">No hay datos de pagos disponibles para el año y filtros seleccionados.</div>
+                                            </td>
+                                        </tr>
+                                    <% } else { %>
+                                        <% pagosPorRestaurantePorSemana.forEach(restauranteData => { %>
+                                            <tr>
+                                                <td class="text-nowrap sticky-column">
+                                                    <%= restauranteData.nombre %>
+                                                </td>
+                                                <% restauranteData.semanas.forEach(semana => { %>
+                                                    <td class="text-center">
+                                                        <% if (semana.estado_pago === 'pagado') { %>
+                                                            <i class="fas fa-check-circle text-success" title="Pagado: $<%= semana.monto_pagado_aprobado.toLocaleString('es-AR', {minimumFractionDigits: 2}) %>"></i>
+                                                        <% } else if (semana.estado_pago === 'pendiente') { %>
+                                                            <a href="/admin/cobros/<%= semana.cobro_id %>" class="text-warning" title="Pendiente: $<%= semana.monto_comision.toLocaleString('es-AR', {minimumFractionDigits: 2}) %>">
+                                                                <i class="fas fa-circle"></i>
+                                                            </a>
+                                                        <% } else if (semana.estado_pago === 'vencido') { %>
+                                                            <a href="/admin/cobros/<%= semana.cobro_id %>" class="text-danger" title="Vencido: $<%= semana.monto_comision.toLocaleString('es-AR', {minimumFractionDigits: 2}) %>">
+                                                                <i class="fas fa-times-circle"></i>
+                                                            </a>
+                                                        <% } else if (semana.estado_pago === 'exonerado') { %>
+                                                            <i class="fas fa-minus-circle text-info" title="Exonerado: $<%= semana.monto_comision.toLocaleString('es-AR', {minimumFractionDigits: 2}) %>"></i>
+                                                        <% } else { %>
+                                                            <i class="fas fa-minus text-muted" title="Sin datos de cobro"></i>
+                                                        <% } %>
+                                                    </td>
+                                                <% }); %>
+                                            </tr>
+                                        <% }); %>
                                     <% } %>
-                                    <td class="text-center">
-                                        <div class="text-primary fw-bold">
-                                            $<%= cobro.ventas_brutas.toLocaleString() %>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="text-success fw-bold">
-                                            $<%= cobro.monto_comision.toLocaleString() %>
-                                        </div>
-                                        <small class="text-muted"><%= cobro.porcentaje_comision %>%</small>
-                                    </td>
-                                    <td class="text-center">
-                                        <% if (cobro.monto_pagado_aprobado > 0) { %>
-                                            <div class="text-success fw-bold">
-                                                $<%= cobro.monto_pagado_aprobado.toLocaleString() %>
-                                            </div>
-                                            <small class="text-muted">
-                                                <%= cobro.comprobantes_count %> comprobante(s)
-                                            </small>
-                                        <% } else { %>
-                                            <span class="text-muted">-</span>
-                                        <% } %>
-                                    </td>
-                                    <td class="text-center">
-                                        <% if (cobro.estado === 'pagado') { %>
-                                            <span class="badge bg-success">Pagado</span>
-                                        <% } else if (cobro.estado === 'pendiente' && new Date(cobro.fecha_vencimiento) < new Date()) { %>
-                                            <span class="badge bg-danger">Vencido</span>
-                                        <% } else if (cobro.estado === 'pendiente') { %>
-                                            <span class="badge bg-warning">Pendiente</span>
-                                        <% } else if (cobro.estado === 'exonerado') { %>
-                                            <span class="badge bg-info">Exonerado</span>
-                                        <% } else { %>
-                                            <span class="badge bg-secondary"><%= cobro.estado %></span>
-                                        <% } %>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="small">
-                                            <%= new Date(cobro.fecha_vencimiento).toLocaleDateString('es-AR') %>
-                                            <% if (cobro.estado === 'pendiente' && new Date(cobro.fecha_vencimiento) < new Date()) { %>
-                                                <br><small class="text-danger">
-                                                    <%= Math.ceil((new Date() - new Date(cobro.fecha_vencimiento)) / (1000 * 60 * 60 * 24)) %> días vencido
-                                                </small>
-                                            <% } %>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <a href="/admin/cobros/<%= cobro.id %>" 
-                                               class="btn btn-outline-primary" 
-                                               title="Ver detalle">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <% if (cobro.estado === 'pendiente') { %>
-                                                <a href="/admin/comprobantes?cobro_id=<%= cobro.id %>" 
-                                                   class="btn btn-outline-warning" 
-                                                   title="Revisar comprobantes">
-                                                    <i class="fas fa-file-invoice"></i>
-                                                </a>
-                                            <% } %>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <% }) %>
-                        <% } %>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Gráfico de Resumen Semanal -->
-    <div class="row mt-4">
-        <div class="col-md-8">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-line me-2"></i>
-                        Evolución de Comisiones por Semana
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="chartComisiones" height="100"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-pie me-2"></i>
-                        Distribución por Estado
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="chartEstados" height="200"></canvas>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -269,100 +198,205 @@
 <!-- Scripts para gráficos -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// Inicializar variables globales para el gráfico
+window.datosGrafico = [];
+window.currentYear = 0;
+
+// Verificar y asignar los datos del gráfico
+if (typeof datosGrafico !== 'undefined') {
+    window.datosGrafico = typeof datosGrafico === 'string' ? JSON.parse(datosGrafico) : datosGrafico;
+}
+if (typeof year !== 'undefined') {
+    window.currentYear = year;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Datos para el gráfico de comisiones por semana
-    const yearData = <%= year %>;
-    const semanas = <%= JSON.stringify(semanasData.map(c => ({
-        semana: Math.ceil((new Date(c.semana_inicio).getTime() - new Date(yearData, 0, 1).getTime()) / (1000 * 60 * 60 * 24 * 7)),
-        comision: c.monto_comision,
-        pagado: c.monto_pagado_aprobado,
-        pendiente: c.monto_comision - c.monto_pagado_aprobado
-    }))) %>;
+    // Inicializar tooltips de Bootstrap
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Usar los datos globales del gráfico
+    const semanas = window.datosGrafico || [];
 
     // Gráfico de comisiones por semana
-    const ctxComisiones = document.getElementById('chartComisiones').getContext('2d');
-    new Chart(ctxComisiones, {
-        type: 'line',
-        data: {
-            labels: semanas.map(s => `Semana ${s.semana}`),
-            datasets: [{
-                label: 'Comisión Total',
-                data: semanas.map(s => s.comision),
-                borderColor: 'rgb(75, 192, 192)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                tension: 0.1
-            }, {
-                label: 'Pagado',
-                data: semanas.map(s => s.pagado),
-                borderColor: 'rgb(54, 162, 235)',
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return '$' + value.toLocaleString();
+    const ctxComisiones = document.getElementById('chartComisiones');
+    if (ctxComisiones) {
+        new Chart(ctxComisiones, {
+            type: 'line',
+            data: {
+                labels: semanas.map(s => `Semana ${s.semana}`),
+                datasets: [{
+                    label: 'Comisión Total',
+                    data: semanas.map(s => s.comision),
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }, {
+                    label: 'Pagado',
+                    data: semanas.map(s => s.pagado),
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString('es-AR');
+                            }
+                        },
+                        grid: {
+                            drawBorder: false
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
                         }
                     }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.dataset.label + ': $' + context.parsed.y.toLocaleString();
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += '$' + context.parsed.y.toLocaleString('es-AR', {minimumFractionDigits: 2});
+                                }
+                                return label;
+                            }
                         }
+                    },
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: false
                     }
                 }
             }
-        }
-    });
+        });
+    }
 
     // Gráfico de distribución por estado
-    const ctxEstados = document.getElementById('chartEstados').getContext('2d');
-    new Chart(ctxEstados, {
-        type: 'doughnut',
-        data: {
-            labels: ['Pagado', 'Pendiente', 'Vencido', 'Exonerado'],
-            datasets: [{
-                data: [
-                    <%= resumen.total_pagado %>,
-                    <%= resumen.total_pendiente %>,
-                    0, // Vencido se calcula dinámicamente
-                    <%= resumen.total_exonerado %>
-                ],
-                backgroundColor: [
-                    'rgb(75, 192, 192)',
-                    'rgb(255, 205, 86)',
-                    'rgb(255, 99, 132)',
-                    'rgb(54, 162, 235)'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.parsed / total) * 100).toFixed(1);
-                            return context.label + ': $' + context.parsed.toLocaleString() + ' (' + percentage + '%)';
+    const ctxEstados = document.getElementById('chartEstados');
+    if (ctxEstados) {
+        const totalPagado = <%- resumen ? JSON.stringify(resumen.total_pagado || 0) : '0' %>;
+        const totalPendiente = <%- resumen ? JSON.stringify(resumen.total_pendiente || 0) : '0' %>;
+        const totalExonerado = <%- resumen ? JSON.stringify(resumen.total_exonerado || 0) : '0' %>;
+        
+        new Chart(ctxEstados, {
+            type: 'doughnut',
+            data: {
+                labels: ['Pagado', 'Pendiente', 'Exonerado'],
+                datasets: [{
+                    data: [totalPagado, totalPendiente, totalExonerado],
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(54, 162, 235, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(54, 162, 235, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                return `${label}: $${value.toLocaleString('es-AR', {minimumFractionDigits: 2})} (${percentage}%)`;
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
+    }
 });
+</script>
+
+<!-- Script para manejar la actualización de filtros -->
+<script>
+// Actualizar la URL cuando cambian los filtros
+function updateFilter() {
+    const year = document.getElementById('year').value;
+    const restaurante = document.getElementById('restaurante').value;
+    
+    let url = `/admin/pagos-semanales?year=${year}`;
+    if (restaurante) {
+        url += `&restaurante=${restaurante}`;
+    }
+    
+    window.location.href = url;
+}
+
+// Asignar eventos a los filtros
+document.addEventListener('DOMContentLoaded', function() {
+    const yearSelect = document.getElementById('year');
+    const restauranteSelect = document.getElementById('restaurante');
+    
+    if (yearSelect) {
+        yearSelect.addEventListener('change', updateFilter);
+    }
+    
+    if (restauranteSelect) {
+        restauranteSelect.addEventListener('change', updateFilter);
+    }
+});
+</script>
+
+<!-- Incluir navegación móvil -->
+<%- include('../partials/admin-mobile-nav', { user: user, currentPath: '/admin/pagos-semanales' }) %>
+
+<!-- Scripts adicionales -->
+<script>
+// Inicializar tooltips de Bootstrap
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+});
+
+// Función para confirmar acciones
+function confirmAction(message, callback) {
+    if (confirm(message)) {
+        if (typeof callback === 'function') {
+            callback();
+        }
+    }
+    return false;
+}
 </script>

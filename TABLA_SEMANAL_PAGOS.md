@@ -193,3 +193,4 @@ Admin → Tabla Semanal de Pagos
 **Versión**: 1.0.0  
 **Estado**: ✅ COMPLETADO  
 **Tipo**: Nueva funcionalidad de administración
+

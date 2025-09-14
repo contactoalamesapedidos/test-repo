@@ -8,33 +8,85 @@ const bcrypt = require('bcryptjs');
 const { requireAdmin } = require('../middleware/auth');
 const { sendEmail } = require('../config/mailer');
 
+// ========== GESTIÓN DE COMISIONES DE REPARTIDORES ========== 
+
+router.get('/comisiones', requireAdmin, async (req, res) => {
+    try {
+        const [comisiones] = await db.execute(`
+            SELECT c.*, u.nombre as repartidor_nombre, u.apellido as repartidor_apellido, p.numero_pedido
+            FROM comisiones c
+            JOIN usuarios u ON c.repartidor_id = u.id
+            JOIN pedidos p ON c.pedido_id = p.id
+            ORDER BY c.fecha_creacion DESC
+        `);
+
+        res.render('admin/comisiones', {
+            title: 'Comisiones de Repartidores - Admin',
+            user: req.session.user,
+            comisiones,
+            path: req.path
+        });
+    } catch (error) {
+        console.error('Error cargando comisiones:', error);
+        res.render('error', { message: 'Error cargando la página de comisiones.' });
+    }
+});
+
+// Marcar comisión como pagada
+router.post('/comisiones/:id/pagar', requireAdmin, async (req, res) => {
+    try {
+        await db.execute("UPDATE comisiones SET estado = 'pagada', fecha_pago = NOW() WHERE id = ?", [req.params.id]);
+        res.redirect('/admin/comisiones?success=1');
+    } catch (error) {
+        console.error('Error al marcar comisión como pagada:', error);
+        res.redirect('/admin/comisiones?error=1');
+    }
+});
+
+// Eliminar comisión
+router.delete('/comisiones/:id/delete', requireAdmin, async (req, res) => {
+    try {
+        const comisionId = req.params.id;
+
+        // Verificar que la comisión existe
+        const [comision] = await db.execute('SELECT * FROM comisiones WHERE id = ?', [comisionId]);
+        if (comision.length === 0) {
+            return res.status(404).json({ success: false, message: 'Comisión no encontrada' });
+        }
+
+        // Eliminar la comisión
+        await db.execute('DELETE FROM comisiones WHERE id = ?', [comisionId]);
+
+        // Log de actividad administrativa
+        await logAdminActivity(
+            req.session.user.id,
+            'eliminar_comision',
+            `Comisión eliminada: ID ${comisionId}`,
+            'comision',
+            comisionId,
+            comision[0],
+            null,
+            req
+        );
+
+        res.json({ success: true, message: 'Comisión eliminada exitosamente' });
+    } catch (error) {
+        console.error('Error eliminando comisión:', error);
+        res.status(500).json({ success: false, message: 'Error eliminando comisión' });
+    }
+});
+
 // Middleware to check if user is admin
 /*
 const requireAdmin = (req, res, next) => {
-  console.log('=== MIDDLEWARE REQUIRE ADMIN ===');
-  console.log('Session ID:', req.sessionID);
-  console.log('Session completa:', req.session);
-  console.log('Usuario en sesión:', req.session.user);
-  
+  // Log removed for security - admin middleware access check
   if (!req.session.user) {
-    console.log('No hay sesión de usuario - Redirigiendo a login');
     return res.redirect('/auth/login');
   }
 
   if (req.session.user.tipo_usuario !== 'admin') {
-    console.log('Usuario no es admin:', {
-      email: req.session.user.email,
-      tipo: req.session.user.tipo_usuario
-    });
     return res.redirect('/auth/login');
   }
-
-  console.log('Acceso admin permitido para:', {
-    id: req.session.user.id,
-    email: req.session.user.email,
-    tipo: req.session.user.tipo_usuario
-  });
-  console.log('=== FIN MIDDLEWARE REQUIRE ADMIN ===');
   next();
 };
 */
@@ -153,6 +205,13 @@ router.get('/', requireAdmin, async (req, res) => {
       FROM cobros_semanales
     `);
 
+    // Contar repartidores independientes pendientes
+    const [[{ independent_drivers_pending }]] = await db.execute(`
+        SELECT COUNT(*) as independent_drivers_pending
+        FROM drivers
+        WHERE restaurante_id IS NULL AND request_status = 'pending'
+    `);
+
     res.render('admin/dashboard', {
       title: 'Panel de Administración - A la Mesa',
       user: req.session.user,
@@ -164,6 +223,7 @@ router.get('/', requireAdmin, async (req, res) => {
       ventasUltimos7Dias,
       comisiones_realizadas: Number(comisionesStats[0]?.comisiones_realizadas || 0),
       comisiones_pendientes: Number(comisionesStats[0]?.comisiones_pendientes || 0),
+      independentDriversPending: independent_drivers_pending,
       path: req.path
     });
   } catch (error) {
@@ -178,6 +238,63 @@ router.get('/', requireAdmin, async (req, res) => {
 
 const axios = require('axios');
 require('dotenv').config();
+
+// ========== GESTIÓN DE REPARTIDORES INDEPENDIENTES ========== 
+
+// Listar repartidores independientes pendientes
+router.get('/repartidores/pendientes', requireAdmin, async (req, res) => {
+    try {
+        const [repartidores] = await db.execute(`
+            SELECT u.id, u.nombre, u.apellido, u.email, u.telefono, u.fecha_registro
+            FROM usuarios u
+            JOIN drivers d ON u.id = d.user_id
+            WHERE d.restaurante_id IS NULL AND d.request_status = 'pending'
+            ORDER BY u.fecha_registro DESC
+        `);
+
+        res.render('admin/repartidores-pendientes', {
+            title: 'Repartidores Independientes Pendientes - Admin',
+            user: req.session.user,
+            repartidores,
+            path: req.path
+        });
+    } catch (error) {
+        console.error('Error cargando repartidores pendientes:', error);
+        res.render('error', { message: 'Error cargando repartidores pendientes' });
+    }
+});
+
+// Aprobar repartidor independiente
+router.post('/repartidores/:id/aprobar', requireAdmin, async (req, res) => {
+    try {
+        const repartidorId = req.params.id;
+        await db.execute(
+            "UPDATE drivers SET request_status = 'accepted', status = 'offline' WHERE user_id = ? AND restaurante_id IS NULL",
+            [repartidorId]
+        );
+        // Opcional: Enviar email de notificación
+        res.redirect('/admin/repartidores/pendientes');
+    } catch (error) {
+        console.error('Error aprobando repartidor:', error);
+        res.redirect('/admin/repartidores/pendientes?error=1');
+    }
+});
+
+// Rechazar repartidor independiente
+router.post('/repartidores/:id/rechazar', requireAdmin, async (req, res) => {
+    try {
+        const repartidorId = req.params.id;
+        await db.execute(
+            "UPDATE drivers SET request_status = 'rejected' WHERE user_id = ? AND restaurante_id IS NULL",
+            [repartidorId]
+        );
+        // Opcional: Enviar email de notificación
+        res.redirect('/admin/repartidores/pendientes');
+    } catch (error) {
+        console.error('Error rechazando repartidor:', error);
+        res.redirect('/admin/repartidores/pendientes?error=1');
+    }
+});
 
 // ========== GESTIÓN DE CONFIGURACIÓN ========== 
 router.get('/configuracion', requireAdmin, async (req, res) => {
@@ -285,11 +402,14 @@ router.get('/usuarios', requireAdmin, async (req, res) => {
       filters.push(activo === '1' ? 1 : 0);
     }
 
-    const sql = `SELECT * ${baseSql} ORDER BY fecha_registro DESC LIMIT ? OFFSET ?`;
+    const sql = `SELECT * ${baseSql} ORDER BY fecha_registro DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`;
     const countSql = `SELECT COUNT(*) as total_count ${baseSql}`;
 
-    const [usuarios] = await db.execute(sql, [...filters, limit, offset]);
-    const [totalCountResult] = await db.execute(countSql, filters);
+    const queryParams = [...filters];
+    const countParams = [...filters];
+
+    const [usuarios] = await db.execute(sql, queryParams);
+    const [totalCountResult] = await db.execute(countSql, countParams);
     const totalUsuarios = totalCountResult[0].total_count;
     const totalPages = Math.ceil(totalUsuarios / limit) || 1;
 
@@ -502,19 +622,19 @@ router.get('/restaurantes', requireAdmin, async (req, res) => {
     const queryParams = [...filterValues];
     const countQueryParams = [...filterValues];
 
-    console.log('Executing SQL for /admin/restaurantes:');
-    console.log('SQL:', sql);
-    console.log('Params:', queryParams);
 
     const [restaurants] = await db.execute(sql, queryParams);
     const [totalCountResult] = await db.execute(countSql, countQueryParams);
     const totalRestaurants = totalCountResult[0].total_count;
     const totalPages = Math.ceil(totalRestaurants / limit);
     
-    // Get categories for filter
+    // Get categories for filter (remove duplicates)
     const [categorias] = await db.execute(`
-      SELECT id, nombre, imagen FROM categorias_restaurantes WHERE activa = 1 ORDER BY nombre
+      SELECT DISTINCT id, nombre, imagen FROM categorias_restaurantes WHERE activa = 1 ORDER BY nombre
     `);
+
+    // Import CategoryIcons utility
+    const CategoryIcons = require('../utils/categoryIcons');
 
     res.render('admin/restaurantes', {
       title: 'Administrar Restaurantes',
@@ -525,7 +645,8 @@ router.get('/restaurantes', requireAdmin, async (req, res) => {
       currentPage: parseInt(page),
       totalPages,
       limit,
-      path: req.path
+      path: req.path,
+      CategoryIcons: CategoryIcons
     });
   } catch (error) {
     console.error('Error loading restaurants:', error);
@@ -710,15 +831,16 @@ router.post('/restaurantes/crear', requireAdmin, [
     // Create restaurant
     const [restaurantResult] = await connection.execute(
       `INSERT INTO restaurantes (
-        usuario_id, nombre, descripcion, direccion, telefono,
+        usuario_id, nombre, descripcion, direccion, telefono, email_contacto,
         horario_apertura, horario_cierre, activo, verificado
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         req.body.restaurante_nombre,
         req.body.restaurante_descripcion,
         req.body.restaurante_direccion,
         req.body.restaurante_telefono || null,
+        req.body.email_contacto || null,
         req.body.horario_apertura || '09:00:00',
         req.body.horario_cierre || '22:00:00',
         req.body.activo ? 1 : 0,
@@ -818,7 +940,7 @@ router.get('/restaurantes/:id/editar', requireAdmin, async (req, res) => {
               }
             }
           } catch (e) {
-            console.error('Error al procesar dias_operacion en admin:', e);
+            // Error procesando dias_operacion, usar valor por defecto
           }
 
           // Si no hay días de operación o hubo error, usar valor por defecto
@@ -850,16 +972,11 @@ router.get('/restaurantes/:id/editar', requireAdmin, async (req, res) => {
 router.post('/restaurantes/:id/editar', requireAdmin, upload.none(), [
   body('nombre').notEmpty().withMessage('El nombre es requerido'),
   body('apellido').notEmpty().withMessage('El apellido es requerido'),
-  body('email').isEmail().withMessage('Email inválido'),
+  body('email').optional().isEmail().withMessage('Email inválido'),
   body('restaurante_nombre').notEmpty().withMessage('El nombre del restaurante es requerido'),
   body('restaurante_descripcion').isLength({ min: 20 }).withMessage('La descripción debe tener al menos 20 caracteres'),
   body('restaurante_direccion').notEmpty().withMessage('La dirección es requerida')
 ], async (req, res) => {
-  console.log('=== INICIO EDICIÓN RESTAURANTE ===');
-  console.log('URL:', req.url);
-  console.log('Método:', req.method);
-  console.log('Body completo:', req.body);
-  console.log('Parámetros:', req.params);
   
   const connection = await db.getConnection();
   
@@ -867,14 +984,9 @@ router.post('/restaurantes/:id/editar', requireAdmin, upload.none(), [
     const restaurantId = req.params.id;
     const errors = validationResult(req);
     
-    console.log('Errores de validación:', errors.array());
-    
     if (!errors.isEmpty()) {
-      console.log('Validación falló, redirigiendo con error');
       return res.redirect(`/admin/restaurantes/${restaurantId}/editar?error=validation`);
     }
-
-    console.log('Validación pasó, continuando...');
 
     const {
       nombre, apellido, email, telefono,
@@ -883,19 +995,11 @@ router.post('/restaurantes/:id/editar', requireAdmin, upload.none(), [
       activo, verificado, dias_operacion
     } = req.body;
 
-    // LOGS PARA DEPURAR
-    console.log('--- EDICIÓN DE RESTAURANTE ---');
-    console.log('Body recibido:', req.body);
-    console.log('Valor recibido de verificado:', verificado);
-    console.log('Valor recibido de activo:', activo);
-    console.log('Días de operación recibidos:', dias_operacion);
-    
     // Procesar días de operación
     let diasOperacionJSON = null;
     if (dias_operacion && Array.isArray(dias_operacion) && dias_operacion.length > 0) {
         diasOperacionJSON = JSON.stringify(dias_operacion.map(dia => parseInt(dia)));
     }
-    console.log('Días de operación procesados:', diasOperacionJSON);
     
     // Get current data for logging
     const [currentData] = await connection.execute(`
@@ -905,42 +1009,33 @@ router.post('/restaurantes/:id/editar', requireAdmin, upload.none(), [
       WHERE r.id = ?
     `, [restaurantId]);
 
-    console.log('Datos actuales del restaurante:', currentData[0]);
-
     if (currentData.length === 0) {
-      console.log('Restaurante no encontrado');
       return res.status(404).redirect('/admin/restaurantes?error=not_found');
     }
 
     await connection.beginTransaction();
-    console.log('Transacción iniciada');
 
     // Update user
-    console.log('Actualizando usuario con datos:', { nombre, apellido, email, telefono });
     await connection.execute(
       `UPDATE usuarios SET nombre = ?, apellido = ?, email = ?, telefono = ?
        WHERE id = ?`,
       [nombre, apellido, email, telefono || null, currentData[0].usuario_id]
     );
-    console.log('Usuario actualizado');
 
     // Update restaurant
-    console.log('Guardando verificado como:', verificado ? 1 : 0);
-    console.log('Guardando activo como:', activo ? 1 : 0);
     await connection.execute(
-      `UPDATE restaurantes SET 
-        nombre = ?, descripcion = ?, direccion = ?, telefono = ?,
+      `UPDATE restaurantes SET
+        nombre = ?, descripcion = ?, direccion = ?, telefono = ?, email_contacto = ?,
         horario_apertura = ?, horario_cierre = ?, dias_operacion = ?, activo = ?, verificado = ?
        WHERE id = ?`,
       [
         restaurante_nombre, restaurante_descripcion, restaurante_direccion,
-        restaurante_telefono || null, horario_apertura || '09:00:00', 
-        horario_cierre || '22:00:00', diasOperacionJSON, activo ? 1 : 0, verificado ? 1 : 0,
+        restaurante_telefono || null, req.body.email_contacto || null,
+        horario_apertura || '09:00:00', horario_cierre || '22:00:00',
+        diasOperacionJSON, activo ? 1 : 0, verificado ? 1 : 0,
         restaurantId
       ]
     );
-    console.log('Restaurante actualizado');
-
     // Update category if provided
     if (categoria_id) {
       await connection.execute(
@@ -951,11 +1046,9 @@ router.post('/restaurantes/:id/editar', requireAdmin, upload.none(), [
         'INSERT INTO restaurante_categorias (restaurante_id, categoria_id) VALUES (?, ?)',
         [restaurantId, categoria_id]
       );
-      console.log('Categoría actualizada');
     }
 
     await connection.commit();
-    console.log('Transacción confirmada');
 
     // Log admin activity
     await logAdminActivity(
@@ -969,17 +1062,14 @@ router.post('/restaurantes/:id/editar', requireAdmin, upload.none(), [
       req
     );
 
-    console.log('Redirigiendo a éxito');
     res.redirect(`/admin/restaurantes/${restaurantId}?success=updated`);
 
   } catch (error) {
     await connection.rollback();
     console.error('Error updating restaurant:', error);
-    console.log('Redirigiendo a error del servidor');
     res.redirect(`/admin/restaurantes/${req.params.id}/editar?error=server`);
   } finally {
     connection.release();
-    console.log('=== FIN EDICIÓN RESTAURANTE ===');
   }
 });
 
@@ -1124,16 +1214,16 @@ router.get('/productos', requireAdmin, async (req, res) => {
       filterValues.push(disponible === 'true' ? 1 : 0);
     }
     
-    sql += ` ORDER BY r.nombre, p.destacado DESC, p.nombre
-      LIMIT ? OFFSET ?`;
-
-    const queryParams = [...filterValues, limit, offset];
-    const countQueryParams = [...filterValues];
-    
-    const [productos] = await db.execute(sql, queryParams);
-    const [totalCountResult] = await db.execute(countSql, countQueryParams);
+    // Primero obtener el total de registros
+    const [totalCountResult] = await db.execute(countSql, filterValues.length > 0 ? filterValues : []);
     const totalProductos = totalCountResult[0].total_count;
     const totalPages = Math.ceil(totalProductos / limit);
+    
+    // Luego obtener los productos con paginación
+    sql += ` ORDER BY r.nombre, p.destacado DESC, p.nombre
+      LIMIT ${limit} OFFSET ${offset}`;
+    
+    const [productos] = await db.execute(sql, filterValues);
     
     // Get restaurants and categories for filters
     const [restaurantes] = await db.execute(`
@@ -1142,7 +1232,7 @@ router.get('/productos', requireAdmin, async (req, res) => {
     
     // Obtener categorías globales para el filtro y el formulario
     const [categorias] = await db.execute(`
-      SELECT id, nombre FROM categorias_productos WHERE restaurante_id IS NULL AND activa = 1 ORDER BY orden_display, nombre
+      SELECT id, nombre, orden_display FROM categorias_productos WHERE restaurante_id IS NULL AND activa = 1 ORDER BY orden_display, nombre
     `);
 
     res.render('admin/productos', {
@@ -1150,8 +1240,17 @@ router.get('/productos', requireAdmin, async (req, res) => {
       user: req.session.user,
       productos,
       restaurantes,
-      categorias, // <-- ahora sí se envía 'categorias'
-      filtros: { restaurante: restaurante || '', search: search || '', categoria: categoria || '', disponible: disponible || '' },
+      categorias,
+      currentPage: page,
+      limit: limit,
+      totalPages: totalPages,
+      totalProductos: totalProductos,
+      filtros: { 
+        restaurante: restaurante || '', 
+        search: search || '', 
+        categoria: categoria || '', 
+        disponible: disponible || '' 
+      },
       currentPage: page,
       totalPages,
       path: req.path
@@ -1475,12 +1574,20 @@ router.get('/cobros', requireAdmin, async (req, res) => {
 
     const resumen = resumenRows[0] || { total_pendiente: 0, total_pagado: 0, total_comisiones: 0 };
 
+    // Obtener lista de restaurantes para el selector de cobro específico
+    const [restaurantes] = await db.execute(`
+      SELECT id, nombre FROM restaurantes
+      WHERE activo = 1 AND verificado = 1
+      ORDER BY nombre
+    `);
+
     res.render('admin/cobros', {
       title: 'Gestión de Cobros - Admin',
       user: req.session.user,
       resumen,
       filtros: { restaurante, estado, semana },
       cobros,
+      restaurantes,
       path: req.path
     });
   } catch (error) {
@@ -1591,17 +1698,87 @@ router.get('/pagos-semanales', requireAdmin, async (req, res) => {
       total_restaurantes: 0 
     };
 
-    res.render('admin/pagos-semanales', {
+    // Preparar los datos para el gráfico
+    const datosGrafico = semanasData.map(c => ({
+      semana: Math.ceil((new Date(c.semana_inicio).getTime() - new Date(currentYear, 0, 1).getTime()) / (1000 * 60 * 60 * 24 * 7)),
+      comision: c.monto_comision,
+      pagado: c.monto_pagado_aprobado || 0,
+      pendiente: c.monto_comision - (c.monto_pagado_aprobado || 0)
+    }));
+
+    // Filtrar semanas que tienen datos o están en un rango razonable
+    const semanasConDatos = semanasAnio.filter(semanaAnio => {
+      // Verificar si esta semana tiene algún cobro
+      const tieneCobro = semanasData.some(cs =>
+        new Date(cs.semana_inicio).toISOString().slice(0, 10) === semanaAnio.fecha_inicio
+      );
+
+      // Incluir semanas que tienen cobros O que están dentro de las últimas 12 semanas y próximas 4 semanas
+      const fechaSemana = new Date(semanaAnio.fecha_inicio);
+      const hoy = new Date();
+      const semanasAtras = Math.floor((hoy - fechaSemana) / (1000 * 60 * 60 * 24 * 7));
+      const semanasAdelante = Math.floor((fechaSemana - hoy) / (1000 * 60 * 60 * 24 * 7));
+
+      return tieneCobro || (semanasAtras >= -4 && semanasAtras <= 12);
+    });
+
+    // Mapear semanasData a una estructura por restaurante y semana
+    const pagosPorRestaurantePorSemana = restaurantes.map(rest => {
+      const semanasDelRestaurante = semanasConDatos.map(semanaAnio => {
+        const cobroSemana = semanasData.find(cs =>
+          cs.restaurante_id === rest.id &&
+          new Date(cs.semana_inicio).toISOString().slice(0, 10) === semanaAnio.fecha_inicio
+        );
+
+        let estadoPago = 'no_data'; // Por defecto si no hay datos
+        if (cobroSemana) {
+          if (cobroSemana.estado === 'pagado') {
+            estadoPago = 'pagado';
+          } else if (cobroSemana.estado === 'exonerado') {
+            estadoPago = 'exonerado';
+          } else if (cobroSemana.estado === 'pendiente' && new Date(cobroSemana.fecha_vencimiento) < new Date()) {
+            estadoPago = 'vencido';
+          } else if (cobroSemana.estado === 'pendiente') {
+            estadoPago = 'pendiente';
+          }
+        }
+
+        return {
+          numero: semanaAnio.numero,
+          fecha_inicio: semanaAnio.fecha_inicio,
+          fecha_fin: semanaAnio.fecha_fin,
+          estado_pago: estadoPago,
+          monto_comision: cobroSemana ? cobroSemana.monto_comision : 0,
+          monto_pagado_aprobado: cobroSemana ? cobroSemana.monto_pagado_aprobado : 0,
+          cobro_id: cobroSemana ? cobroSemana.id : null
+        };
+      });
+
+      return {
+        id: rest.id,
+        nombre: rest.nombre,
+        semanas: semanasDelRestaurante
+      };
+    });
+
+    // Preparar los datos para la plantilla
+    const templateData = {
       title: 'Tabla Semanal de Pagos - Admin',
       user: req.session.user,
       year: currentYear,
-      semanasAnio,
-      restaurantes,
-      semanasData,
+      semanasAnio: semanasConDatos, // Usar semanas filtradas
+      restaurantes, // Se mantiene para el filtro
+      pagosPorRestaurantePorSemana, // Nuevo dato para la tabla principal
       resumen,
       filtros: { year: currentYear, restaurante },
-      path: req.path
-    });
+      activePage: 'pagos-semanales',
+      path: req.path,
+      // Pasar los datos del gráfico como JSON
+      datosGrafico: JSON.stringify(datosGrafico)
+    };
+    
+    
+    res.render('admin/pagos-semanales', templateData);
 
   } catch (error) {
     console.error('Error cargando tabla semanal de pagos:', error);
@@ -1767,6 +1944,44 @@ router.get('/cobros/:id', requireAdmin, async (req, res) => {
       message: 'Error cargando detalle del cobro',
       error: {}
     });
+  }
+});
+
+// Eliminar cobro
+router.delete('/cobros/:id', requireAdmin, async (req, res) => {
+  try {
+    const cobroId = req.params.id;
+
+    // Verificar que el cobro existe
+    const [cobros] = await db.execute('SELECT * FROM cobros_semanales WHERE id = ?', [cobroId]);
+    if (cobros.length === 0) {
+      return res.status(404).json({ success: false, message: 'Cobro no encontrado' });
+    }
+
+    const cobro = cobros[0];
+
+    // Eliminar comprobantes asociados primero
+    await db.execute('DELETE FROM comprobantes_pago WHERE cobro_semanal_id = ?', [cobroId]);
+
+    // Eliminar el cobro
+    await db.execute('DELETE FROM cobros_semanales WHERE id = ?', [cobroId]);
+
+    // Log de actividad administrativa
+    await logAdminActivity(
+      req.session.user.id,
+      'eliminar_cobro',
+      `Cobro eliminado: ID ${cobroId}`,
+      'cobro',
+      cobroId,
+      cobro,
+      null,
+      req
+    );
+
+    res.json({ success: true, message: 'Cobro eliminado exitosamente' });
+  } catch (error) {
+    console.error('Error eliminando cobro:', error);
+    res.status(500).json({ success: false, message: 'Error eliminando cobro' });
   }
 });
 
@@ -2002,6 +2217,59 @@ router.get('/reportes', requireAdmin, async (req, res) => {
   }
 });
 
+// Ver detalle de un pedido específico
+router.get('/pedidos/:id', requireAdmin, async (req, res) => {
+  try {
+    const pedidoId = req.params.id;
+
+    const [pedidos] = await db.execute(`
+      SELECT p.*, r.nombre as restaurante_nombre, r.imagen_logo as restaurante_logo,
+             u.nombre as cliente_nombre, u.apellido as cliente_apellido, u.email as cliente_email, u.telefono as cliente_telefono
+      FROM pedidos p
+      JOIN restaurantes r ON p.restaurante_id = r.id
+      JOIN usuarios u ON p.cliente_id = u.id
+      WHERE p.id = ?
+    `, [pedidoId]);
+
+    if (pedidos.length === 0) {
+      return res.status(404).render('error', {
+        title: 'Pedido No Encontrado',
+        message: 'El pedido que buscas no existe',
+        error: {}
+      });
+    }
+
+    const pedido = pedidos[0];
+
+    // Obtener items del pedido
+    const [itemsPedido] = await db.execute(`
+      SELECT ip.*, p.nombre as producto_nombre, p.imagen as producto_imagen,
+             GROUP_CONCAT(vo.nombre SEPARATOR ', ') as opciones_seleccionadas
+      FROM items_pedido ip
+      JOIN productos p ON ip.producto_id = p.id
+      LEFT JOIN item_opciones_seleccionadas ios ON ip.id = ios.item_pedido_id
+      LEFT JOIN valores_opciones vo ON ios.valor_opcion_id = vo.id
+      WHERE ip.pedido_id = ?
+      GROUP BY ip.id
+    `, [pedidoId]);
+
+    res.render('admin/pedido-detalle', {
+      title: `Pedido #${pedido.numero_pedido} - Admin`,
+      user: req.session.user,
+      pedido,
+      itemsPedido,
+      path: req.path
+    });
+  } catch (error) {
+    console.error('Error getting order detail:', error);
+    res.render('error', {
+      title: 'Error',
+      message: 'Error cargando detalle del pedido',
+      error: {}
+    });
+  }
+});
+
 // Listar todos los pedidos
 router.get('/pedidos', requireAdmin, async (req, res) => {
   try {
@@ -2213,7 +2481,8 @@ router.get('/comprobantes', requireAdmin, async (req, res) => {
       },
       currentPage: page,
       totalPages,
-      path: req.path
+      path: req.path,
+      activePage: 'comprobantes'
     });
   } catch (error) {
     console.error('Error cargando comprobantes:', error);
@@ -2435,25 +2704,181 @@ router.post('/cobros/generar', requireAdmin, async (req, res) => {
   }
 });
 
-// Generar cobros automáticamente para la semana actual
-router.post('/cobros/generar-automatico', requireAdmin, async (req, res) => {
+// Generar cobros para un restaurante específico
+router.post('/cobros/generar-especifico', requireAdmin, async (req, res) => {
+  const { restaurante_id, fecha_inicio, fecha_fin } = req.body;
   const connection = await db.getConnection();
+
   try {
     await connection.beginTransaction();
 
-    // Calcular fechas de la semana actual (lunes a domingo)
-    const hoy = new Date();
-    const lunes = new Date(hoy);
-    const diff = hoy.getDay() === 0 ? 6 : hoy.getDay() - 1; // Si es domingo, retroceder 6 días
-    lunes.setDate(hoy.getDate() - diff);
-    lunes.setHours(0, 0, 0, 0);
-    
-    const domingo = new Date(lunes);
-    domingo.setDate(lunes.getDate() + 6);
-    domingo.setHours(23, 59, 59, 999);
+    // Validar parámetros
+    if (!restaurante_id || !fecha_inicio || !fecha_fin) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Parámetros incompletos' });
+    }
 
-    const fecha_inicio = lunes.toISOString().split('T')[0];
-    const fecha_fin = domingo.toISOString().split('T')[0];
+    // Verificar que el restaurante existe y está activo/verificado
+    const [restaurantes] = await connection.execute(
+      'SELECT r.id, r.nombre, u.email FROM restaurantes r JOIN usuarios u ON r.usuario_id = u.id WHERE r.id = ? AND r.activo = 1 AND r.verificado = 1',
+      [restaurante_id]
+    );
+
+    if (restaurantes.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: 'Restaurante no encontrado o no está activo/verificado' });
+    }
+
+    const restaurante = restaurantes[0];
+
+    // Verificar que no exista ya un cobro para este restaurante en este período
+    const [cobrosExistentes] = await connection.execute(
+      'SELECT id FROM cobros_semanales WHERE restaurante_id = ? AND semana_inicio = ? AND semana_fin = ?',
+      [restaurante_id, fecha_inicio, fecha_fin]
+    );
+
+    if (cobrosExistentes.length > 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `Ya existe un cobro para este restaurante en el período ${fecha_inicio} - ${fecha_fin}`
+      });
+    }
+
+    // Calcular ventas brutas en el período - MISMA LÓGICA QUE LA GENERACIÓN AUTOMÁTICA
+    const [ventas] = await connection.execute(
+      `SELECT
+         COALESCE(SUM(CASE WHEN estado IN ('entregado', 'en_camino', 'listo') THEN total ELSE 0 END), 0) as ventas_confirmadas,
+         COALESCE(SUM(CASE WHEN estado IN ('pendiente', 'confirmado', 'preparando') THEN total ELSE 0 END), 0) as ventas_pendientes,
+         COALESCE(SUM(CASE WHEN estado IN ('entregado', 'en_camino', 'listo', 'pendiente', 'confirmado', 'preparando') THEN total ELSE 0 END), 0) as ventas_brutas,
+         COUNT(CASE WHEN estado IN ('entregado', 'en_camino', 'listo', 'pendiente', 'confirmado', 'preparando') THEN 1 END) as total_pedidos
+       FROM pedidos
+       WHERE restaurante_id = ? AND fecha_pedido BETWEEN ? AND ?`,
+      [restaurante_id, fecha_inicio, fecha_fin]
+    );
+
+    const ventas_brutas = Number(ventas[0].ventas_brutas || 0);
+    const ventas_confirmadas = Number(ventas[0].ventas_confirmadas || 0);
+    const ventas_pendientes = Number(ventas[0].ventas_pendientes || 0);
+    const total_pedidos = Number(ventas[0].total_pedidos || 0);
+
+    // Solo generar cobro si hay ventas
+    if (ventas_brutas <= 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'No hay pedidos en el período seleccionado para este restaurante'
+      });
+    }
+
+    const monto_comision = ventas_brutas * 0.10; // 10% comisión
+    const fecha_vencimiento = new Date();
+    fecha_vencimiento.setDate(fecha_vencimiento.getDate() + 7);
+
+    // Insertar cobro semanal con información detallada - MISMO FORMATO QUE LA GENERACIÓN AUTOMÁTICA
+    await connection.execute(
+      `INSERT INTO cobros_semanales (
+        restaurante_id, semana_inicio, semana_fin, ventas_brutas,
+        monto_comision, fecha_vencimiento, notas
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        restaurante_id,
+        fecha_inicio,
+        fecha_fin,
+        ventas_brutas,
+        monto_comision,
+        fecha_vencimiento,
+        `Pedidos: ${total_pedidos} | Confirmados: $${ventas_confirmadas.toLocaleString()} | Pendientes: $${ventas_pendientes.toLocaleString()}`
+      ]
+    );
+
+    await connection.commit();
+
+    // Log de actividad administrativa
+    await logAdminActivity(
+      req.session.user.id,
+      'generar_cobro_especifico',
+      `Cobro específico generado para restaurante ${restaurante.nombre}`,
+      'cobro',
+      null,
+      null,
+      {
+        restaurante_id,
+        restaurante_nombre: restaurante.nombre,
+        fecha_inicio,
+        fecha_fin,
+        ventas_brutas,
+        monto_comision
+      }
+    );
+
+    // Enviar email al restaurante - MISMO FORMATO QUE LA GENERACIÓN AUTOMÁTICA
+    try {
+      await sendEmail(
+        restaurante.email,
+        `Nuevo cobro semanal generado para ${restaurante.nombre}`,
+        'restaurant-charge',
+        {
+          nombreRestaurante: restaurante.nombre,
+          semana_inicio: fecha_inicio,
+          semana_fin: fecha_fin,
+          ventas_brutas,
+          ventas_confirmadas,
+          ventas_pendientes,
+          total_pedidos,
+          monto_comision,
+          fecha_vencimiento: fecha_vencimiento.toISOString().split('T')[0]
+        }
+      );
+    } catch (emailError) {
+      console.error('Error enviando email de cobro específico:', emailError);
+      // No fallar la operación por error de email
+    }
+
+    res.json({
+      success: true,
+      message: 'Cobro generado exitosamente',
+      data: {
+        restaurante_nombre: restaurante.nombre,
+        fecha_inicio,
+        fecha_fin,
+        ventas_brutas,
+        ventas_confirmadas,
+        ventas_pendientes,
+        total_pedidos,
+        monto_comision,
+        fecha_vencimiento: fecha_vencimiento.toISOString().split('T')[0]
+      }
+    });
+
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error generando cobro específico:', error);
+    res.status(500).json({ success: false, message: 'Error interno del servidor' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Generar cobros automáticamente para el período seleccionado
+router.post('/cobros/generar-automatico', requireAdmin, async (req, res) => {
+  const { fecha_inicio, fecha_fin } = req.body;
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // Validar parámetros
+    if (!fecha_inicio || !fecha_fin) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Fechas de inicio y fin son requeridas' });
+    }
+
+    // Validar que fecha_inicio sea anterior a fecha_fin
+    if (new Date(fecha_inicio) >= new Date(fecha_fin)) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'La fecha de inicio debe ser anterior a la fecha de fin' });
+    }
 
     // Verificar si ya existen cobros para esta semana
     const [cobrosExistentes] = await connection.execute(

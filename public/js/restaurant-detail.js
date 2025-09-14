@@ -1,7 +1,5 @@
 // Restaurant detail page functionality
-console.log('=== RESTAURANT DETAIL SCRIPT LOADING ===');
-console.log('Script path:', document.currentScript?.src);
-console.log('Document ready state:', document.readyState);
+
 
 // Variables globales para el modal
 let currentProduct = null;
@@ -9,7 +7,7 @@ let modalInstance = null;
 
 // Función para inicializar los botones de agregar al carrito
 function initializeAddToCartButtons() {
-    console.log('Initializing add to cart buttons...');
+
     
     // Verificar que Bootstrap esté disponible
     if (typeof bootstrap === 'undefined') {

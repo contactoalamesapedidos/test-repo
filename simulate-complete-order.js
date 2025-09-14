@@ -21,8 +21,7 @@ async function simulateCompleteOrder() {
         console.log(`Suscripciones encontradas: ${subscriptions.length}`);
         
         if (subscriptions.length === 0) {
-            console.log('❌ No hay suscripción para el usuario 27');
-            console.log('Creando suscripción de prueba...');
+
             
             const testSubscription = {
                 endpoint: "https://fcm.googleapis.com/fcm/send/test-endpoint",
@@ -42,7 +41,7 @@ async function simulateCompleteOrder() {
                 ) VALUES (27, 'restaurante', ?, NOW(), NOW())
             `, [JSON.stringify(testSubscription)]);
             
-            console.log('✅ Suscripción de prueba creada');
+
         } else {
             console.log('✅ Usuario 27 tiene suscripción push');
             const sub = subscriptions[0];
@@ -148,4 +147,4 @@ async function simulateCompleteOrder() {
     }
 }
 
-simulateCompleteOrder(); 
+simulateCompleteOrder();

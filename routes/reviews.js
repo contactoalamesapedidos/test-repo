@@ -162,7 +162,7 @@ router.get('/:pedidoId', requireAuth, async (req, res) => {
 
         // Obtener items del pedido
         const [items] = await db.execute(`
-            SELECT ip.*, pr.nombre, pr.imagen
+            SELECT ip.*, pr.nombre, pr.imagen, pr.imagen as imagen_url
             FROM items_pedido ip
             JOIN productos pr ON ip.producto_id = pr.id
             WHERE ip.pedido_id = ?
@@ -200,14 +200,9 @@ router.post('/:pedidoId', requireAuth, async (req, res) => {
             });
         }
 
-        // Validar comentario no vacío
+        // Validar comentario (opcional)
         const comentarioLimpio = (comentario_restaurante || '').toString().trim();
-        if (!comentarioLimpio) {
-            return res.json({
-                success: false,
-                message: 'El comentario no puede estar vacío'
-            });
-        }
+        // El comentario es opcional, así que no validamos que no esté vacío
 
         // Verificar que el pedido puede ser reseñado
         const [reviews] = await db.execute(`
@@ -236,6 +231,7 @@ router.post('/:pedidoId', requireAuth, async (req, res) => {
         }
 
         // Respetar límite configurado y un límite duro de 16h desde la entrega
+        const fechaEntrega = review.fecha_entrega ? new Date(review.fecha_entrega) : null;
         const vencidoPorLimiteDuro = fechaEntrega ? (now - fechaEntrega) > (16 * 60 * 60 * 1000) : false;
         if (now > fechaLimite || vencidoPorLimiteDuro) {
             return res.json({
@@ -340,4 +336,4 @@ router.get('/restaurant/:restaurantId', async (req, res) => {
     }
 });
 
-module.exports = router; 
+module.exports = router;

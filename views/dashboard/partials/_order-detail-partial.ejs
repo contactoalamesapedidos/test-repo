@@ -5,104 +5,231 @@
             <button type="button" class="btn-close" id="close-order-details" aria-label="Close"></button>
         </div>
     </div>
-    <div class="card-body">
-        <div class="order-items mb-4">
-            <h6 class="mb-3">Productos</h6>
-            <% if (items && items.length > 0) { %>
-                <% items.forEach(item => { %>
-                    <div class="order-item d-flex align-items-center mb-3 p-3 border rounded">
-                        <img src="<%= item.imagen ? (item.imagen.startsWith('/uploads/') ? item.imagen : '/uploads/' + item.imagen) : '/images/defaults/product.jpeg' %>" alt="<%= item.nombre || 'Producto' %>" class="rounded me-3" width="80" height="80" style="object-fit: cover;">
-                        <div class="flex-grow-1">
-                            <h6 class="mb-1"><%= item.nombre || 'Producto sin nombre' %></h6>
-                            <% if (item.notas_especiales) { %>
-                                <small class="text-muted d-block mb-1"><i class="fas fa-comment-alt me-1"></i><%= item.notas_especiales %></small>
-                            <% } %>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-muted">Cantidad: <%= item.cantidad || 0 %></span>
-                                <strong>$<%= (Number(item.precio_unitario || 0) * Number(item.cantidad || 0)).toFixed(2) %></strong>
+    <div class="order-detail-view">
+        <div class="order-detail-header">
+            <h3>Detalles del Pedido #<%= order.numero_pedido %></h3>
+            <button id="close-order-details" class="btn-close"></button>
+        </div>
+        <div class="card-body order-scroll" style="max-height: 70vh; overflow: scroll; overflow-x: auto; overflow-y: auto;">
+            <div class="order-items mb-4">
+                <h6 class="mb-3">Productos</h6>
+                <% if (items && items.length > 0) { %>
+                    <% items.forEach(item => { %>
+                        <div class="order-item d-flex align-items-center mb-3 p-3 border rounded">
+                            <img src="<%= item.imagen ? (item.imagen.startsWith('/uploads/') ? item.imagen : '/uploads/' + item.imagen) : '/images/defaults/product.jpeg' %>" alt="<%= item.nombre || 'Producto' %>" class="rounded me-3" width="80" height="80" style="object-fit: cover;">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1"><%= item.nombre || 'Producto sin nombre' %></h6>
+                                <% if (item.notas_especiales) { %>
+                                    <small class="text-muted d-block mb-1"><i class="fas fa-comment-alt me-1"></i><%= item.notas_especiales %></small>
+                                <% } %>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">Cantidad: <%= item.cantidad || 0 %></span>
+                                    <strong>$<%= (Number(item.precio_unitario || 0) * Number(item.cantidad || 0)).toFixed(2) %></strong>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                <% } else { %>
+                    <div class="alert alert-info">No hay productos en este pedido</div>
+                <% } %>
+            </div>
+
+            <div class="order-detail-body">
+                <div class="row">
+                    <div class="col-md-7">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <i class="fas fa-user-circle me-2"></i>Información del Cliente
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Nombre:</strong> <%= order.cliente_nombre %> <%= order.cliente_apellido %></p>
+                                <p><strong>Dirección:</strong> <%= order.direccion_entrega %></p>
+                                <p><strong>Teléfono:</strong> <%= order.cliente_telefono || 'No especificado' %></p>
+                                <p><strong>Email:</strong> <%= order.cliente_email %></p>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <i class="fas fa-receipt me-2"></i>Resumen del Pedido
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-group list-group-flush">
+                                    <% items.forEach(item => { %>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <img src="<%= item.imagen ? item.imagen : '/images/no-image.png' %>" alt="<%= item.nombre %>" class="img-fluid rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                                <%= item.cantidad %>x <%= item.nombre %>
+                                            </div>
+                                            <span>$<%= (item.precio_unitario * item.cantidad).toFixed(2) %></span>
+                                        </li>
+                                    <% }); %>
+                                </ul>
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <span>Subtotal:</span>
+                                    <strong>$<%= (order.subtotal ? parseFloat(order.subtotal).toFixed(2) : '0.00') %></strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Costo de envío:</span>
+                                    <strong>$<%= (order.costo_delivery ? parseFloat(order.costo_delivery).toFixed(2) : '0.00') %></strong>
+                                </div>
+                                <div class="d-flex justify-content-between fs-5 mt-2">
+                                    <span>Total:</span>
+                                    <strong>$<%= (order.total ? parseFloat(order.total).toFixed(2) : '0.00') %></strong>
+                                </div>
                             </div>
                         </div>
                     </div>
-                <% }) %>
-            <% } else { %>
-                <div class="alert alert-info">No hay productos en este pedido</div>
-            <% } %>
-        </div>
 
-        <div class="order-summary p-3 bg-light rounded">
-            <h6 class="mb-3">Resumen del Pedido</h6>
-            <div class="d-flex justify-content-between mb-2">
-                <span>Subtotal:</span>
-                <strong>$<%= Number(order.subtotal || 0).toFixed(2) %></strong>
-            </div>
-            <div class="d-flex justify-content-between mb-2">
-                <span>Envío:</span>
-                <strong><%= Number(order.costo_delivery || 0) > 0 ? `${Number(order.costo_delivery || 0).toFixed(2)}` : 'Gratis' %></strong>
-            </div>
-            <hr>
-            <div class="d-flex justify-content-between mb-2">
-                <span class="fs-5">Total:</span>
-                <strong class="fs-5 text-primary">$<%= Number(order.total || 0).toFixed(2) %></strong>
-            </div>
-        </div>
+                    <div class="col-md-5">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <i class="fas fa-info-circle me-2"></i>Estado del Pedido
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Estado actual:</strong> <span class="badge bg-primary"><%= order.estado %></span></p>
+                                <p><strong>Método de pago:</strong> <span class="badge bg-secondary"><%= order.metodo_pago %></span></p>
+                                <p><strong>Estado del pago:</strong> <span class="badge <%= order.estado_pago === 'pagado' ? 'bg-success' : 'bg-warning' %>"><%= order.estado_pago || 'Pendiente' %></span></p>
+                                <p><strong>Fecha del pedido:</strong> <%= new Date(order.fecha_pedido).toLocaleString('es-AR') %></p>
+                            </div>
+                        </div>
 
-        <div class="delivery-info mt-4">
-            <h6 class="mb-3">Información de Entrega</h6>
-            <div class="p-3 bg-light rounded">
-                <p class="mb-2">
-                    <i class="fas fa-map-marker-alt text-primary me-2"></i>
-                    <strong>Dirección:</strong> <%= order.direccion_entrega %>
-                </p>
-                <% if (order.latitud_entrega && order.longitud_entrega) { %>
-                    <div id="order-map" style="height: 200px; width: 100%;" data-lat="<%= order.latitud_entrega %>" data-lng="<%= order.longitud_entrega %>"></div>
+                        <div class="delivery-info mt-4">
+                            <h6 class="mb-3">Información de Entrega</h6>
+                            <div class="p-3 bg-light rounded">
+                                <p class="mb-2">
+                                    <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                                    <strong>Dirección:</strong> <%= order.direccion_entrega %>
+                                </p>
+                                <% if (order.latitud_entrega && order.longitud_entrega) { %>
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Seguimiento del Pedido</h5>
+                                            <div id="driver-location-status" class="text-muted small">
+                                                <% if (order.estado === 'en_camino' && order.repartidor_id) { %>
+                                                    <i class="fas fa-spinner fa-spin me-1"></i>Conectando...
+                                                <% } else { %>
+                                                    <i class="fas fa-map-marker-alt me-1"></i>Ubicación estática
+                                                <% } %>
+                                            </div>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <div id="order-map"
+                                                 style="height: 400px; width: 100%;"
+                                                 data-order-id="<%= order.id %>"
+                                                 data-driver-id="<%= order.repartidor_id || '' %>"
+                                                 data-driver-lat="<%= order.driver_lat || '' %>"
+                                                 data-driver-lng="<%= order.driver_lng || '' %>"
+                                                 data-cliente-lat="<%= order.latitud_entrega %>"
+                                                 data-cliente-lng="<%= order.longitud_entrega %>"
+                                                 data-restaurante-lat="<%= order.restaurante_lat || '' %>"
+                                                 data-restaurante-lng="<%= order.restaurante_lng || '' %>"
+                                                 data-order-status="<%= order.estado %>"
+                                            ></div>
+                                        </div>
+
+                                    </div>
+                                <% } else { %>
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        No hay información de ubicación disponible para este pedido.
+                                    </div>
+                                <% } %>
+                                <% if (order.notas_especiales) { %>
+                                    <p class="mb-0 mt-2">
+                                        <i class="fas fa-comment-alt text-primary me-2"></i>
+                                        <strong>Notas:</strong> <%= order.notas_especiales %>
+                                    </p>
+                                <% } %>
+                            </div>
+                        </div>
+
+                        <div class="payment-info mt-4">
+                            <h6 class="mb-3">Información de Pago</h6>
+                            <div class="p-3 bg-light rounded">
+                                <p class="mb-0">
+                                    <i class="fas fa-credit-card text-primary me-2"></i>
+                                    <strong>Método de Pago:</strong>
+                                    <%= order.metodo_pago === 'mercadopago' ? 'MercadoPago' : order.metodo_pago === 'efectivo' ? 'Efectivo' : order.metodo_pago === 'transferencia' ? 'Transferencia Bancaria' : order.metodo_pago %>
+                                </p>
+                                <% if (order.metodo_pago === 'transferencia' && order.comprobante_pago_url) { %>
+                                    <hr>
+                                    <h6 class="mt-3">Comprobante de Pago</h6>
+                                    <a href="/uploads/comprobantes/<%= order.comprobante_pago_url %>" target="_blank">
+                                        <img src="/uploads/comprobantes/<%= order.comprobante_pago_url %>" alt="Comprobante de pago" class="img-thumbnail" style="max-width: 200px;">
+                                    </a>
+                                    <p class="mt-2"><strong>Archivo:</strong> <%= order.comprobante_pago_url %></p>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-flex justify-content-end">
+                <%
+                const statusTransitions = {
+                    'pendiente': { next: 'confirmado', text: 'Aceptar', icon: 'fa-check', color: 'success' },
+                    'confirmado': { next: 'preparando', text: 'Preparar', icon: 'fa-hourglass-half', color: 'warning' },
+                    'preparando': { next: 'en_camino', text: 'En Camino', icon: 'fa-truck', color: 'primary' },
+                    'en_camino': { next: 'entregado', text: 'Entregado', icon: 'fa-check', color: 'success' }
+                };
+                const transition = statusTransitions[order.estado];
+                if (transition) { %>
+                    <button class="btn btn-<%= transition.color %> btn-action-text me-2" data-action="update-status" data-order-id="<%= order.id %>" data-status="<%= transition.next %>" title="<%= transition.text %> Pedido">
+                        <i class="fas <%= transition.icon %>"></i> <%= transition.text %>
+                    </button>
                 <% } %>
-                <% if (order.notas_especiales) { %>
-                    <p class="mb-0 mt-2">
-                        <i class="fas fa-comment-alt text-primary me-2"></i>
-                        <strong>Notas:</strong> <%= order.notas_especiales %>
-                    </p>
+                <% if (order.estado === 'pendiente') { %>
+                    <button class="btn btn-danger btn-action-text" data-action="cancel-order" data-order-id="<%= order.id %>" title="Cancelar Pedido">
+                        <i class="fas fa-times"></i> Rechazar
+                    </button>
                 <% } %>
             </div>
         </div>
-
-        <div class="payment-info mt-4">
-            <h6 class="mb-3">Información de Pago</h6>
-            <div class="p-3 bg-light rounded">
-                <p class="mb-0">
-                    <i class="fas fa-credit-card text-primary me-2"></i>
-                    <strong>Método de Pago:</strong>
-                    <%= order.metodo_pago === 'mercadopago' ? 'MercadoPago' : order.metodo_pago === 'efectivo' ? 'Efectivo' : order.metodo_pago === 'transferencia' ? 'Transferencia Bancaria' : order.metodo_pago %>
-                </p>
-                <% if (order.metodo_pago === 'transferencia' && order.comprobante_pago_url) { %>
-                    <hr>
-                    <h6 class="mt-3">Comprobante de Pago</h6>
-                    <a href="/uploads/comprobantes/<%= order.comprobante_pago_url %>" target="_blank">
-                        <img src="/uploads/comprobantes/<%= order.comprobante_pago_url %>" alt="Comprobante de pago" class="img-thumbnail" style="max-width: 200px;">
-                    </a>
-                    <p class="mt-2"><strong>Archivo:</strong> <%= order.comprobante_pago_url %></p>
-                <% } %>
-            </div>
-        </div>
-    </div>
-    <div class="card-footer d-flex justify-content-end">
-        <% 
-        const statusTransitions = {
-            'pendiente': { next: 'confirmado', text: 'Aceptar', icon: 'fa-check', color: 'success' },
-            'confirmado': { next: 'preparando', text: 'Preparar', icon: 'fa-hourglass-half', color: 'warning' },
-            'preparando': { next: 'en_camino', text: 'En Camino', icon: 'fa-truck', color: 'primary' },
-            'en_camino': { next: 'entregado', text: 'Entregado', icon: 'fa-check', color: 'success' }
-        };
-        const transition = statusTransitions[order.estado];
-        if (transition) { %>
-            <button class="btn btn-<%= transition.color %> btn-action-text me-2" data-action="update-status" data-order-id="<%= order.id %>" data-status="<%= transition.next %>" title="<%= transition.text %> Pedido">
-                <i class="fas <%= transition.icon %>"></i> <%= transition.text %>
-            </button>
-        <% } %>
-
-        <% if (order.estado === 'pendiente') { %>
-            <button class="btn btn-danger btn-action-text" data-action="cancel-order" data-order-id="<%= order.id %>" title="Cancelar Pedido">
-                <i class="fas fa-times"></i> Rechazar
-            </button>
-        <% } %>
     </div>
 </div>
+<style>
+    .order-detail-view-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1055;
+        padding: 15px;
+    }
+    .order-detail-view {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        width: 100%;
+        max-width: 900px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .order-detail-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .order-detail-header h3 {
+        margin-bottom: 0;
+        font-size: 1.5rem;
+    }
+    .order-detail-body {
+        padding: 1.5rem;
+        overflow-y: auto;
+    }
+    #order-map, #order-tracking-map, #order-delivery-map {
+        width: 100%;
+        border-radius: 0 0 8px 8px;
+    }
+</style>

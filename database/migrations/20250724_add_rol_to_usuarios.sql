@@ -1,1 +1,0 @@
-ALTER TABLE usuarios ADD COLUMN rol VARCHAR(255) NOT NULL DEFAULT 'cliente';

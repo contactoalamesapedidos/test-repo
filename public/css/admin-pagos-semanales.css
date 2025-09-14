@@ -32,24 +32,24 @@
 }
 
 .badge.bg-success {
-    background-color: #28a745 !important;
+    background-color: #28a745;
 }
 
 .badge.bg-warning {
-    background-color: #ffc107 !important;
-    color: #212529 !important;
+    background-color: #ffc107;
+    color: #212529;
 }
 
 .badge.bg-danger {
-    background-color: #dc3545 !important;
+    background-color: #dc3545;
 }
 
 .badge.bg-info {
-    background-color: #17a2b8 !important;
+    background-color: #17a2b8;
 }
 
 .badge.bg-primary {
-    background-color: #007bff !important;
+    background-color: #007bff;
 }
 
 /* Números de semana */
@@ -147,15 +147,15 @@
 
 /* Estados de las filas */
 .table-danger {
-    background-color: #f8d7da !important;
+    background-color: #f8d7da;
 }
 
 .table-success {
-    background-color: #d1edff !important;
+    background-color: #d1edff;
 }
 
 .table-info {
-    background-color: #d1ecf1 !important;
+    background-color: #d1ecf1;
 }
 
 /* Gráficos */
@@ -208,7 +208,7 @@ canvas {
 
 /* Estados de vencimiento */
 .text-danger {
-    color: #dc3545 !important;
+    color: #dc3545;
     font-weight: 600;
 }
 

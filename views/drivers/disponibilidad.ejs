@@ -1,0 +1,123 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    .day-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+    .day-card.active {
+        border-color: #007bff;
+        box-shadow: 0 0 10px rgba(0,123,255,0.2);
+    }
+    .day-card .form-check-input {
+        width: 1.5em;
+        height: 1.5em;
+    }
+</style>
+
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <div class="col-md-3">
+            <%- include('sidebar', { activePage: 'disponibilidad' }) %>
+        </div>
+        <div class="col-md-9">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Configurar Mi Disponibilidad</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Activa los días que trabajas y personaliza tu horario para cada uno.</p>
+
+                    <% if (locals.success) { %>
+                        <div class="alert alert-success">¡Disponibilidad guardada correctamente!</div>
+                    <% } %>
+
+                    <form action="/repartidores/disponibilidad" method="POST">
+                        <% const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']; %>
+                        
+                        <div class="row">
+                            <% for(let i = 0; i < dias.length; i++) { %>
+                                <div class="col-md-6 mb-3">
+                                    <div class="day-card <%= horarios && horarios[i] ? 'active' : '' %>">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="fw-bold mb-0"><%= dias[i] %></h6>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input day-toggle" type="checkbox" id="day-<%= i %>-toggle" name="horarios[<%= i %>][activo]" <%= horarios && horarios[i] ? 'checked' : '' %> data-day="<%= i %>">
+                                            </div>
+                                        </div>
+                                        <div class="row time-inputs" style="display: <%= horarios && horarios[i] ? 'flex' : 'none' %>;">
+                                            <div class="col-6">
+                                                <label for="inicio-<%= i %>" class="form-label small">Inicio</label>
+                                                <input type="text" class="form-control timepicker" id="inicio-<%= i %>" name="horarios[<%= i %>][inicio]" value="<%= horarios && horarios[i] ? horarios[i].hora_inicio : '09:00' %>">
+                                            </div>
+                                            <div class="col-6">
+                                                <label for="fin-<%= i %>" class="form-label small">Fin</label>
+                                                <input type="text" class="form-control timepicker" id="fin-<%= i %>" name="horarios[<%= i %>][fin]" value="<%= horarios && horarios[i] ? horarios[i].hora_fin : '18:00' %>">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% } %>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="button" class="btn btn-outline-primary" id="copy-first-day">
+                                <i class="fas fa-copy me-2"></i>Copiar primer día a todos
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Guardar Disponibilidad
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    flatpickr(".timepicker", {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i",
+        time_24hr: true
+    });
+
+    document.querySelectorAll('.day-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const dayIndex = this.dataset.day;
+            const timeInputs = this.closest('.day-card').querySelector('.time-inputs');
+            timeInputs.style.display = this.checked ? 'flex' : 'none';
+            this.closest('.day-card').classList.toggle('active', this.checked);
+        });
+    });
+
+    document.getElementById('copy-first-day').addEventListener('click', function() {
+        const firstDayToggle = document.getElementById('day-0-toggle');
+        if (!firstDayToggle.checked) {
+            alert('Activa y configura el Domingo para poder copiar el horario.');
+            return;
+        }
+
+        const firstDayStart = document.getElementById('inicio-0').value;
+        const firstDayEnd = document.getElementById('fin-0').value;
+
+        for (let i = 1; i < 7; i++) {
+            const toggle = document.getElementById(`day-${i}-toggle`);
+            if (toggle.checked) {
+                document.getElementById(`inicio-${i}`).value = firstDayStart;
+                document.getElementById(`fin-${i}`).value = firstDayEnd;
+                // Actualizar flatpickr instance
+                const startInstance = document.getElementById(`inicio-${i}`)._flatpickr;
+                if(startInstance) startInstance.setDate(firstDayStart, true);
+                const endInstance = document.getElementById(`fin-${i}`)._flatpickr;
+                if(endInstance) endInstance.setDate(firstDayEnd, true);
+            }
+        }
+    });
+});
+</script>

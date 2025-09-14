@@ -1,5 +1,5 @@
 @media (max-width: 767.98px) {
-  .table-cobros, .table-responsive { display: none !important; }
+  .table-cobros, .table-responsive { display: none; }
   .cobros-cards-list { display: flex; flex-direction: column; gap: 1.2rem; }
   .cobro-card-mobile {
     display: flex;
@@ -100,5 +100,5 @@
 }
 
 @media (min-width: 768px) {
-  .cobros-cards-list { display: none !important; }
+  .cobros-cards-list { display: none; }
 }

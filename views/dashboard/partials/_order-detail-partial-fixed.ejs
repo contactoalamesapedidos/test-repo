@@ -1,0 +1,315 @@
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Pedido #<%= order.numero_pedido %></h5>
+            <button type="button" class="btn-close" id="close-order-details" aria-label="Close"></button>
+        </div>
+    </div>
+    <div class="card-body order-scroll" style="max-height: 70vh; overflow-y: auto;">
+        <div class="order-items mb-4">
+            <h6 class="mb-3">Productos</h6>
+            <% if (items && items.length > 0) { %>
+                <% items.forEach(item => { %>
+                    <div class="order-item d-flex align-items-center mb-3 p-3 border rounded">
+                        <img src="<%= item.imagen ? (item.imagen.startsWith('/uploads/') ? item.imagen : '/uploads/' + item.imagen) : '/images/defaults/product.jpeg' %>" 
+                             alt="<%= item.nombre || 'Producto' %>" 
+                             class="rounded me-3" 
+                             width="80" 
+                             height="80" 
+                             style="object-fit: cover;">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1"><%= item.nombre || 'Producto sin nombre' %></h6>
+                            <% if (item.notas_especiales) { %>
+                                <small class="text-muted d-block mb-1">
+                                    <i class="fas fa-comment-alt me-1"></i><%= item.notas_especiales %>
+                                </small>
+                            <% } %>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Cantidad: <%= item.cantidad || 0 %></span>
+                                <strong>$<%= (Number(item.precio_unitario || 0) * Number(item.cantidad || 0)).toFixed(2) %></strong>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            <% } else { %>
+                <div class="alert alert-info">No hay productos en este pedido</div>
+            <% } %>
+        </div>
+
+        <div class="row">
+            <div class="col-md-7">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="fas fa-user-circle me-2"></i>Información del Cliente
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Nombre:</strong> <%= order.cliente_nombre %> <%= order.cliente_apellido %></p>
+                        <p><strong>Dirección:</strong> <%= order.direccion_entrega %></p>
+                        <p><strong>Teléfono:</strong> <%= order.cliente_telefono || 'No especificado' %></p>
+                        <p><strong>Email:</strong> <%= order.cliente_email %></p>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="fas fa-receipt me-2"></i>Resumen del Pedido
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <% items.forEach(item => { %>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <img src="<%= item.imagen ? item.imagen : '/images/no-image.png' %>" 
+                                             alt="<%= item.nombre %>" 
+                                             class="img-fluid rounded me-2" 
+                                             style="width: 40px; height: 40px; object-fit: cover;">
+                                        <%= item.cantidad %>x <%= item.nombre %>
+                                    </div>
+                                    <span>$<%= (item.precio_unitario * item.cantidad).toFixed(2) %></span>
+                                </li>
+                            <% }); %>
+                        </ul>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <span>Subtotal:</span>
+                            <strong>$<%= parseFloat(order.subtotal).toFixed(2) %></strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Costo de envío:</span>
+                            <strong>$<%= parseFloat(order.costo_delivery).toFixed(2) %></strong>
+                        </div>
+                        <div class="d-flex justify-content-between fs-5 mt-2">
+                            <span>Total:</span>
+                            <strong>$<%= parseFloat(order.total).toFixed(2) %></strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-5">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="fas fa-info-circle me-2"></i>Estado del Pedido
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Estado actual:</strong> <span class="badge bg-primary"><%= order.estado %></span></p>
+                        <p><strong>Método de pago:</strong> <span class="badge bg-secondary"><%= order.metodo_pago %></span></p>
+                        <p><strong>Estado del pago:</strong> <span class="badge <%= order.estado_pago === 'pagado' ? 'bg-success' : 'bg-warning' %>">
+                            <%= order.estado_pago || 'Pendiente' %></span>
+                        </p>
+                        <p><strong>Fecha del pedido:</strong> <%= new Date(order.fecha_pedido).toLocaleString('es-AR') %></p>
+                    </div>
+                </div>
+
+                <% if (order.latitud_entrega && order.longitud_entrega) { %>
+                    <% if (order.estado === 'en_camino' && order.repartidor_id) { %>
+                        <div class="card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Seguimiento en Tiempo Real</h5>
+                                <div id="driver-location-status" class="text-muted small">
+                                    <i class="fas fa-spinner fa-spin me-1"></i>Conectando...
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div id="order-tracking-map"
+                                     style="height: 300px; width: 100%;"
+                                     data-order-id="<%= order.id %>"
+                                     data-driver-id="<%= order.repartidor_id %>"
+                                     data-driver-lat="<%= order.driver_lat || '' %>"
+                                     data-driver-lng="<%= order.driver_lng || '' %>"
+                                     data-cliente-lat="<%= order.latitud_entrega %>"
+                                     data-cliente-lng="<%= order.longitud_entrega %>"
+                                     data-restaurante-lat="<%= order.restaurante_lat || '' %>"
+                                     data-restaurante-lng="<%= order.restaurante_lng || '' %>"
+                                     data-order-status="<%= order.estado %>">
+                                </div>
+                            </div>
+                        </div>
+                    <% } else { %>
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <i class="fas fa-map-marked-alt me-2"></i>Ubicación de Entrega
+                            </div>
+                            <div class="card-body p-0">
+                                <div id="order-delivery-map"
+                                     style="height: 300px;"
+                                     data-lat="<%= order.latitud_entrega %>"
+                                     data-lng="<%= order.longitud_entrega %>"
+                                     data-restaurante-lat="<%= order.restaurante_lat || '' %>"
+                                     data-restaurante-lng="<%= order.restaurante_lng || '' %>">
+                                </div>
+                            </div>
+                        </div>
+                    <% } %>
+                <% } else { %>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No hay información de seguimiento disponible para este pedido.
+                    </div>
+                <% } %>
+
+                <% if (order.notas_especiales) { %>
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <i class="fas fa-comment-alt me-2"></i>Notas Especiales
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-0"><%= order.notas_especiales %></p>
+                        </div>
+                    </div>
+                <% } %>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-credit-card me-2"></i>Información de Pago
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-1">
+                            <strong>Método de Pago:</strong>
+                            <span class="float-end">
+                                <%= order.metodo_pago === 'mercadopago' ? 'MercadoPago' : 
+                                    order.metodo_pago === 'efectivo' ? 'Efectivo' : 
+                                    order.metodo_pago === 'transferencia' ? 'Transferencia Bancaria' : 
+                                    order.metodo_pago %>
+                            </span>
+                        </p>
+                        
+                        <% if (order.metodo_pago === 'transferencia' && order.comprobante_pago_url) { %>
+                            <hr>
+                            <h6>Comprobante de Pago</h6>
+                            <a href="/uploads/comprobantes/<%= order.comprobante_pago_url %>" target="_blank" class="d-block text-center mb-2">
+                                <img src="/uploads/comprobantes/<%= order.comprobante_pago_url %>" alt="Comprobante de pago" class="img-thumbnail" style="max-width: 200px;">
+                            </a>
+                            <p class="mb-0 small text-muted"><strong>Archivo:</strong> <%= order.comprobante_pago_url %></p>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary" id="close-order-details-footer">
+            <i class="fas fa-times me-1"></i> Cerrar
+        </button>
+        
+        <% 
+        const statusTransitions = {
+            'pendiente': { next: 'confirmado', text: 'Aceptar', icon: 'fa-check', color: 'success' },
+            'confirmado': { next: 'preparando', text: 'Preparar', icon: 'fa-hourglass-half', color: 'warning' },
+            'preparando': { next: 'en_camino', text: 'En Camino', icon: 'fa-truck', color: 'primary' },
+            'en_camino': { next: 'entregado', text: 'Entregado', icon: 'fa-check', color: 'success' }
+        };
+        const transition = statusTransitions[order.estado];
+        if (transition) { %>
+            <button class="btn btn-<%= transition.color %>" data-action="update-status" data-order-id="<%= order.id %>" data-status="<%= transition.next %>">
+                <i class="fas <%= transition.icon %> me-1"></i> <%= transition.text %>
+            </button>
+        <% } %>
+        
+        <% if (order.estado === 'pendiente') { %>
+            <button class="btn btn-danger" data-action="cancel-order" data-order-id="<%= order.id %>">
+                <i class="fas fa-times me-1"></i> Rechazar
+            </button>
+        <% } %>
+    </div>
+</div>
+
+<style>
+    .order-detail-view-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1055;
+        padding: 15px;
+    }
+    
+    .order-scroll {
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    
+    .card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    }
+    
+    .badge {
+        font-size: 0.8em;
+        padding: 0.35em 0.65em;
+    }
+    
+    #order-tracking-map,
+    #order-delivery-map {
+        min-height: 300px;
+        width: 100%;
+    }
+    
+    @media (max-width: 768px) {
+        .order-detail-view {
+            max-height: none;
+            height: 100vh;
+            border-radius: 0;
+        }
+        
+        .card-body {
+            padding: 1rem;
+        }
+    }
+</style>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+
+<!-- Socket.IO -->
+<script src="/socket.io/socket.io.js"></script>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+<!-- Order Tracking Map Script -->
+<script src="/js/dashboard/order-tracking-map.js"></script>
+
+<script>
+    // Cerrar el modal al hacer clic en el botón de cerrar
+    document.addEventListener('DOMContentLoaded', function() {
+        const closeButtons = document.querySelectorAll('#close-order-details, #close-order-details-footer');
+        closeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const modal = document.querySelector('.modal');
+                if (modal) {
+                    const modalInstance = bootstrap.Modal.getInstance(modal);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                } else {
+                    // Si no es un modal de Bootstrap, simplemente ocultamos el contenedor
+                    const container = document.querySelector('.order-detail-view-container');
+                    if (container) {
+                        container.style.display = 'none';
+                    }
+                }
+            });
+        });
+        
+        // Inicializar mapas si existen
+        if (typeof initOrderTrackingMap === 'function') {
+            initOrderTrackingMap();
+        }
+        
+        if (typeof initDeliveryMap === 'function') {
+            initDeliveryMap();
+        }
+    });
+</script>

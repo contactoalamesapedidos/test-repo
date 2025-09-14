@@ -1,0 +1,42 @@
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <!-- Sidebar del Repartidor -->
+        <div class="col-md-3">
+            <%- include('sidebar', { activePage: 'historial' }) %>
+        </div>
+
+        <!-- Contenido Principal -->
+        <div class="col-md-9">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Historial de Entregas</h5>
+                </div>
+                <div class="card-body">
+                    <% if (pedidos && pedidos.length > 0) { %>
+                        <div class="list-group">
+                            <% pedidos.forEach(pedido => { %>
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">Pedido #<%= pedido.numero_pedido %></h5>
+                                        <small><%= new Date(pedido.fecha_pedido).toLocaleString('es-AR') %></small>
+                                    </div>
+                                    <p class="mb-1"><strong>Restaurante:</strong> <%= pedido.restaurante_nombre %></p>
+                                    <p class="mb-1"><strong>Cliente:</strong> <%= pedido.cliente_nombre %> <%= pedido.cliente_apellido %></p>
+                                    <p class="mb-1"><strong>Estado:</strong> <span class="badge bg-success"><%= pedido.estado %></span></p>
+                                    <p class="mb-1"><strong>Total:</strong> $<%= pedido.total %></p>
+                                </div>
+                            <% }); %>
+                        </div>
+                    <% } else { %>
+                        <div class="text-center py-4">
+                            <i class="fas fa-history fa-2x text-muted mb-3"></i>
+                            <p class="text-muted">No tienes entregas completadas.</p>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>

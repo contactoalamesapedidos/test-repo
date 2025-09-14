@@ -1,5 +1,3 @@
-<%- include('../partials/header') %>
-
 <!-- Admin Sidebar -->
 <div class="admin-layout">
     <%- include('partials/sidebar', { activePage: 'dashboard' }) %>
@@ -25,6 +23,18 @@
 
         <!-- Dashboard Content -->
         <div class="p-4">
+
+            <!-- Alerta de Repartidores Independientes Pendientes -->
+            <% if (locals.independentDriversPending && independentDriversPending > 0) { %>
+                <div class="alert alert-warning d-flex justify-content-between align-items-center mb-4">
+                    <span>
+                        <i class="fas fa-user-clock me-2"></i>
+                        Hay <strong><%= independentDriversPending %></strong> repartidor(es) independiente(s) esperando aprobación.
+                    </span>
+                    <a href="/admin/repartidores/pendientes" class="btn btn-sm btn-dark">Revisar Solicitudes</a>
+                </div>
+            <% } %>
+
             <!-- Stats Cards -->
             <div class="row mb-4">
                 <div class="col-md-3">
@@ -139,20 +149,29 @@
                         </div>
                         <div class="card-body">
                             <div class="d-grid gap-2">
-                                <a href="/admin/restaurantes/crear/nuevo" class="btn btn-primary">
-                                    <i class="fas fa-plus me-2"></i>Nuevo Restaurante
+                                <a href="/admin/restaurantes/crear/nuevo" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus-circle fa-lg me-2"></i>
+                                    <span class="d-block">Crear Restaurante</span>
                                 </a>
-                                <a href="/admin/cobros/generar" class="btn btn-success">
-                                    <i class="fas fa-calculator me-2"></i>Generar Cobros
+                                <a href="/admin/cobros/generar" class="btn btn-success btn-sm">
+                                    <i class="fas fa-calculator fa-lg me-2"></i>
+                                    <span class="d-block">Generar Cobros</span>
                                 </a>
-                                <a href="/admin/comprobantes?estado=pendiente" class="btn btn-warning">
-                                    <i class="fas fa-clock me-2"></i>Revisar Pagos
+                                <a href="/admin/comprobantes?estado=pendiente" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-clock fa-lg me-2"></i>
+                                    <span class="d-block">Revisar Pagos</span>
                                 </a>
-                                <a href="/admin/pagos-semanales" class="btn btn-info">
-                                    <i class="fas fa-calendar-week me-2"></i>Tabla Semanal
+                                <a href="/admin/pagos-semanales" class="btn btn-info btn-sm">
+                                    <i class="fas fa-calendar-week fa-lg me-2"></i>
+                                    <span class="d-block">Tabla Semanal</span>
                                 </a>
-                                <a href="/admin/reportes" class="btn btn-secondary">
-                                    <i class="fas fa-file-alt me-2"></i>Ver Reportes
+                                <a href="/admin/reportes" class="btn btn-secondary btn-sm">
+                                    <i class="fas fa-chart-bar fa-lg me-2"></i>
+                                    <span class="d-block">Ver Reportes</span>
+                                </a>
+                                <a href="/admin/usuarios" class="btn btn-dark btn-sm">
+                                    <i class="fas fa-users fa-lg me-2"></i>
+                                    <span class="d-block">Gestionar Usuarios</span>
                                 </a>
                             </div>
                         </div>
@@ -316,55 +335,7 @@
 }
 </style>
 
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
-// Ventas Chart
-const ctx = document.getElementById('ventasChart').getContext('2d');
-const ventasData = {
-    labels: [
-        <% ventasUltimos7Dias.forEach((dia, index) => { %>
-            '<%= new Date(dia.fecha).toLocaleDateString("es-AR", {weekday: "short", day: "numeric"}) %>'<%= index < ventasUltimos7Dias.length - 1 ? ',' : '' %>
-        <% }) %>
-    ],
-    datasets: [{
-        label: 'Ventas ($)',
-        data: [
-            <% ventasUltimos7Dias.forEach((dia, index) => { %>
-                <%= dia.ventas || 0 %><%= index < ventasUltimos7Dias.length - 1 ? ',' : '' %>
-            <% }) %>
-        ],
-        borderColor: 'rgb(75, 192, 192)',
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-        tension: 0.1,
-        fill: true
-    }]
-};
-
-new Chart(ctx, {
-    type: 'line',
-    data: ventasData,
-    options: {
-        responsive: true,
-        plugins: {
-            legend: {
-                display: false
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    callback: function(value) {
-                        return '$' + value.toLocaleString();
-                    }
-                }
-            }
-        }
-    }
-});
-
 // Auto refresh every 5 minutes
 setTimeout(() => {
     location.reload();

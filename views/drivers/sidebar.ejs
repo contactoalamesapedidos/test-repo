@@ -1,0 +1,22 @@
+<div class="card shadow-sm">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0">Panel de Repartidor</h5>
+    </div>
+    <div class="list-group list-group-flush">
+        <a href="/repartidores" class="list-group-item list-group-item-action <%= activePage === 'dashboard' ? 'active' : '' %>">
+            <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+        </a>
+        <a href="/repartidores/historial" class="list-group-item list-group-item-action <%= activePage === 'historial' ? 'active' : '' %>">
+            <i class="fas fa-history me-2"></i> Historial de Entregas
+        </a>
+        <a href="/repartidores/disponibilidad" class="list-group-item list-group-item-action <%= activePage === 'disponibilidad' ? 'active' : '' %>">
+            <i class="fas fa-calendar-alt me-2"></i> Mi Disponibilidad
+        </a>
+        <a href="/repartidores/comisiones" class="list-group-item list-group-item-action <%= activePage === 'comisiones' ? 'active' : '' %>">
+            <i class="fas fa-wallet me-2"></i> Mis Ganancias
+        </a>
+        <a href="/repartidores/estadisticas" class="list-group-item list-group-item-action <%= activePage === 'estadisticas' ? 'active' : '' %>">
+            <i class="fas fa-chart-line me-2"></i> Estadísticas
+        </a>
+    </div>
+</div>

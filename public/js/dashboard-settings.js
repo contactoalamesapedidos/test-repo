@@ -130,6 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     input.disabled = false;
                 }
             });
+            document.getElementById('map').style.pointerEvents = 'auto';
             editRestBtn.style.display = 'none';
         });
     }
@@ -282,9 +283,108 @@ document.addEventListener('DOMContentLoaded', function() {
         // Inicializa el texto de estado
         if (status) status.textContent = toggle.checked ? 'Activadas' : 'Desactivadas';
 
-        toggle.addEventListener('change', () => {
+        toggle.addEventListener('change', async () => {
+            const isChecked = toggle.checked;
+
+            // Si se está activando, solicitar permisos del navegador primero
+            if (isChecked) {
+                try {
+                    console.log('=== ACTIVANDO NOTIFICACIONES PUSH ===');
+
+                    // Verificar si el servicio de notificaciones push está disponible
+                    if (!window.pushNotificationService) {
+                        showNotification('El servicio de notificaciones push no está disponible.', 'error');
+                        toggle.checked = false;
+                        if (hiddenPush) hiddenPush.checked = false;
+                        return;
+                    }
+
+                    console.log('🔧 Inicializando servicio de notificaciones push...');
+                    const success = await window.pushNotificationService.initialize();
+                    console.log('📊 Resultado de inicialización:', success);
+
+                    if (!success) {
+                        showNotification('No se pudo inicializar el servicio de notificaciones. Verifica que estés en una conexión segura (HTTPS).', 'warning');
+                        toggle.checked = false;
+                        if (hiddenPush) hiddenPush.checked = false;
+                        return;
+                    }
+
+                    console.log('🔔 Solicitando permisos del navegador...');
+
+                    // Verificar estado del permiso antes de solicitar
+                    const permisoAntes = Notification.permission;
+                    console.log('📋 Permiso antes de solicitar:', permisoAntes);
+
+                    // Solicitar permisos del navegador
+                    const permissionGranted = await window.pushNotificationService.requestPermission();
+                    console.log('✅ Permiso concedido:', permissionGranted);
+
+                    // Verificar estado del permiso después de solicitar
+                    const permisoDespues = Notification.permission;
+                    console.log('🔄 Permiso después de solicitar:', permisoDespues);
+
+                    if (!permissionGranted || permisoDespues === 'denied') {
+                        console.log('❌ Permiso denegado o revocado automáticamente');
+
+                        // Determinar el tipo de error para dar mejores instrucciones
+                        let errorMessage = 'Debes permitir las notificaciones en el navegador para recibir alertas push.';
+                        if (permisoDespues === 'denied') {
+                            errorMessage = 'El navegador denegó automáticamente el permiso. Revisa la configuración del sitio.';
+                        }
+
+                        showNotification(errorMessage, 'warning');
+                        toggle.checked = false;
+                        if (hiddenPush) hiddenPush.checked = false;
+                        return;
+                    }
+
+                    // Verificar que la suscripción se haya creado correctamente
+                    console.log('🔍 Verificando suscripción después de permisos...');
+                    const hasSubscription = window.pushNotificationService.subscription !== null;
+                    console.log('📨 Suscripción creada:', hasSubscription);
+
+                    if (!hasSubscription) {
+                        showNotification('Error al crear la suscripción push. El navegador puede estar bloqueando las notificaciones.', 'error');
+                        toggle.checked = false;
+                        if (hiddenPush) hiddenPush.checked = false;
+                        return;
+                    }
+
+                    console.log('⏳ Esperando a que la suscripción se guarde en el servidor...');
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+
+                    // Verificar una vez más que todo esté bien
+                    const finalCheck = window.pushNotificationService.isEnabled();
+                    console.log('🎯 Verificación final:', finalCheck);
+
+                    if (!finalCheck) {
+                        showNotification('Las notificaciones se configuraron pero pueden no funcionar correctamente. Revisa la consola para más detalles.', 'warning');
+                    }
+
+                } catch (error) {
+                    console.error('❌ Error al solicitar permisos de notificación:', error);
+                    console.error('📋 Tipo de error:', error.name);
+                    console.error('💬 Mensaje de error:', error.message);
+
+                    // Dar instrucciones específicas según el tipo de error
+                    let userMessage = 'Error al configurar las notificaciones push: ' + error.message;
+
+                    if (error.message.includes('denied') || error.message.includes('NotAllowedError')) {
+                        userMessage = 'El navegador bloqueó las notificaciones. Asegúrate de permitirlas en la configuración del sitio.';
+                    } else if (error.message.includes('HTTPS')) {
+                        userMessage = 'Las notificaciones push requieren HTTPS. Asegúrate de estar en una conexión segura.';
+                    }
+
+                    showNotification(userMessage, 'error');
+                    toggle.checked = false;
+                    if (hiddenPush) hiddenPush.checked = false;
+                    return;
+                }
+            }
+
             // Refleja el valor en el input oculto del formulario de usuario
-            if (hiddenPush) hiddenPush.checked = toggle.checked;
+            if (hiddenPush) hiddenPush.checked = isChecked;
 
             // Construye y envía los datos mínimos requeridos para editar usuario
             if (userDataForm) {
@@ -295,7 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('user_email', userDataForm.querySelector('[name="user_email"]').value);
                 formData.append('user_telefono', userDataForm.querySelector('[name="user_telefono"]').value || '');
                 formData.append('user_ciudad', userDataForm.querySelector('[name="user_ciudad"]').value || '');
-                if (toggle.checked) {
+                if (isChecked) {
                     formData.append('recibir_notificaciones', 'on');
                 }
 
@@ -307,18 +407,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        if (status) status.textContent = toggle.checked ? 'Activadas' : 'Desactivadas';
-                        window.location.reload();
+                        if (status) status.textContent = isChecked ? 'Activadas' : 'Desactivadas';
+                        showNotification(isChecked ?
+                            'Notificaciones push activadas exitosamente. Recibirás alertas de nuevos pedidos.' :
+                            'Notificaciones push desactivadas.',
+                            'success'
+                        );
+                        // Recargar para actualizar el estado global
+                        setTimeout(() => window.location.reload(), 1000);
                     } else {
                         // Si falla, revertir el toggle y mostrar error
-                        toggle.checked = !toggle.checked;
-                        if (hiddenPush) hiddenPush.checked = toggle.checked;
+                        toggle.checked = !isChecked;
+                        if (hiddenPush) hiddenPush.checked = !isChecked;
                         showNotification(data.message || 'No se pudo actualizar la preferencia de notificaciones', 'error');
                     }
                 })
                 .catch(() => {
-                    toggle.checked = !toggle.checked;
-                    if (hiddenPush) hiddenPush.checked = toggle.checked;
+                    toggle.checked = !isChecked;
+                    if (hiddenPush) hiddenPush.checked = !isChecked;
                     showNotification('Error de red al actualizar notificaciones', 'error');
                 });
             }
@@ -380,9 +486,163 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    // Descuento en Efectivo/Transferencia
+    const discountToggle = document.getElementById('toggleDiscount');
+    if (discountToggle) {
+        discountToggle.addEventListener('change', () => {
+            const ofreceDescuento = discountToggle.checked;
+
+            fetch('/dashboard/settings/discount', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    ofrece_descuento_efectivo: ofreceDescuento ? 1 : 0
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(data.message, 'success');
+                } else {
+                    discountToggle.checked = !ofreceDescuento; // Revert on failure
+                    showNotification(data.message || 'Error al actualizar la configuración de descuento.', 'error');
+                }
+            })
+            .catch(() => {
+                discountToggle.checked = !ofreceDescuento; // Revert on failure
+                showNotification('Error de red al actualizar la configuración de descuento.', 'error');
+            });
+        });
+    }
+
+    // Map Initialization
+    const mapElement = document.getElementById('map');
+    if (mapElement) {
+        const latInput = document.getElementById('latitud');
+        const lngInput = document.getElementById('longitud');
+        const restaurantAddress = document.getElementById('direccion').value;
+
+        let initialLat = parseFloat(latInput.value);
+        let initialLng = parseFloat(lngInput.value);
+
+        // Default to a central location if no coordinates are saved
+        if (isNaN(initialLat) || isNaN(initialLng)) {
+            initialLat = -34.6037; // Buenos Aires latitude
+            initialLng = -58.3816; // Buenos Aires longitude
+        }
+
+        const map = L.map('map').setView([initialLat, initialLng], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        const marker = L.marker([initialLat, initialLng], { draggable: true }).addTo(map);
+
+        // Add drag event to update coordinates
+        marker.on('dragend', function(event) {
+            const position = marker.getLatLng();
+            latInput.value = position.lat;
+            lngInput.value = position.lng;
+            showNotification('Ubicación del marcador actualizada.', 'info');
+        });
+
+        // Update hidden inputs on map moveend
+        map.on('moveend', function() {
+            const center = map.getCenter();
+            latInput.value = center.lat;
+            lngInput.value = center.lng;
+        });
+
+        // Geocode address if no coordinates are set
+        if (isNaN(parseFloat(latInput.value)) || isNaN(parseFloat(lngInput.value))) {
+            fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(restaurantAddress)}&format=json&limit=1`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const result = data[0];
+                        const newLat = parseFloat(result.lat);
+                        const newLng = parseFloat(result.lon);
+
+                        map.setView([newLat, newLng], 16);
+                        marker.setLatLng([newLat, newLng]);
+                        latInput.value = newLat;
+                        lngInput.value = newLng;
+                    } else {
+                        console.warn('No se encontraron coordenadas para la dirección:', restaurantAddress);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error geocodificando la dirección:', error);
+                });
+        }
+
+        // Get Current Location Button Logic
+        const getCurrentLocationBtn = document.getElementById('getCurrentLocationBtn');
+        if (getCurrentLocationBtn) {
+            getCurrentLocationBtn.addEventListener('click', function() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+
+                        map.setView([lat, lng], 16); // Set map view to current location
+                        marker.setLatLng([lat, lng]);
+                        latInput.value = lat;
+                        lngInput.value = lng;
+                        showNotification('Ubicación actual obtenida.', 'success');
+                    }, function(error) {
+                        console.error('Error getting current location:', error);
+                        let errorMessage = 'No se pudo obtener la ubicación actual.';
+                        if (error.code === error.PERMISSION_DENIED) {
+                            errorMessage += ' Permiso denegado. Por favor, habilita los servicios de ubicación.';
+                        } else if (error.code === error.POSITION_UNAVAILABLE) {
+                            errorMessage += ' Información de ubicación no disponible.';
+                        } else if (error.code === error.TIMEOUT) {
+                            errorMessage += ' La solicitud para obtener la ubicación ha caducado.';
+                        }
+                        showNotification(errorMessage, 'error');
+                    });
+                } else {
+                    showNotification('Tu navegador no soporta la geolocalización.', 'error');
+                }
+            });
+        }
+    }
 });
 
 // Función para mostrar notificaciones
-function showNotification(message, type = 'success') {
-    // ... (show notification logic)
+function showNotification(message, type = 'info') {
+  const toast = document.createElement('div');
+
+  // Para errores en PC, usar texto negro en lugar de blanco
+  const isErrorOnDesktop = type === 'error' && window.innerWidth > 768;
+  const textColorClass = isErrorOnDesktop ? 'text-dark' : 'text-white';
+  const closeBtnClass = isErrorOnDesktop ? 'btn-close' : 'btn-close-white';
+
+  toast.className = `toast align-items-center ${textColorClass} bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
+  toast.setAttribute('role', 'alert');
+  toast.setAttribute('aria-live', 'assertive');
+  toast.setAttribute('aria-atomic', 'true');
+
+  toast.innerHTML = `
+      <div class="d-flex">
+          <div class="toast-body">
+              ${message}
+          </div>
+          <button type="button" class="${closeBtnClass} me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+  `;
+
+  document.body.appendChild(toast);
+  const bsToast = new bootstrap.Toast(toast);
+  bsToast.show();
+
+  toast.addEventListener('hidden.bs.toast', () => {
+      document.body.removeChild(toast);
+  });
 }

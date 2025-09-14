@@ -2,21 +2,21 @@
     position: fixed;
     top: 0;
     left: 0;
-    width: 100% !important;
-    height: 100% !important;
+    width: 100%;
+    height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
-    display: none; /* Removed !important */
-    justify-content: center !important;
+    display: none;
+    justify-content: center;
     z-index: 1050;
-    padding: 10px !important;
+    padding: 10px;
     box-sizing: border-box;
     overflow-y: scroll;
 }
 
 .order-detail-container {
-    width: 90vw !important;
-    max-width: 450px !important;
-    max-height: 95vh !important;
+    width: 90vw;
+    max-width: 450px;
+    max-height: 95vh;
     background-color: #fff;
     border-radius: 0.5rem;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
@@ -34,9 +34,9 @@
 
 .order-detail-container .btn-close {
     position: absolute;
-    top: 10px !important;
-    right: 10px !important;
-    z-index: 1060 !important;
+    top: 10px;
+    right: 10px;
+    z-index: 1060;
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
     border-radius: 50%;
@@ -53,15 +53,15 @@
 }
 
 .btn-action-text {
-    padding: 0.5rem 0.8rem; /* Reduced padding */
+    padding: 0.5rem 0.8rem;
     height: auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.9rem; /* Slightly reduced font size */
+    font-size: 0.9rem;
     white-space: nowrap;
     box-sizing: border-box;
-    flex-shrink: 1; /* Allow buttons to shrink */
+    flex-shrink: 1;
 }
 
 .btn-action-text i {
@@ -69,7 +69,7 @@
 }
 
 .mobile-nav-item {
-    display: flex !important;
+    display: flex;
     flex-direction: column;
     align-items: center;
     font-size: 0.8rem;

@@ -25,17 +25,45 @@ function initializeChatListeners(orderId, userId, userType, chatContainer = docu
     socket.emit('join-order-chat', { orderId, userId, userType });
     console.log(`DEBUG: Emitido 'join-order-chat' para pedido ${orderId}, usuario ${userId} (${userType})`);
 
+    // Timeout para la carga inicial del historial
+    let historyTimeout = setTimeout(() => {
+        console.warn('DEBUG: Timeout esperando historial de chat');
+        const loadingElement = chatWindow.querySelector('#loading-messages');
+        if (loadingElement) {
+            loadingElement.innerHTML = `
+                <i class="fas fa-exclamation-triangle fa-2x text-warning mb-3"></i>
+                <p>No se pudo cargar el historial de mensajes.<br>Intenta recargar la página.</p>
+            `;
+        }
+    }, 10000); // 10 segundos timeout
+
     socket.on('chat-history', (data) => {
+        clearTimeout(historyTimeout); // Limpiar timeout si llega la respuesta
         console.log("DEBUG: Historial de chat recibido:", data);
+
+        // Ocultar el indicador de carga
+        const loadingElement = chatWindow.querySelector('#loading-messages');
+        if (loadingElement) {
+            loadingElement.remove();
+        }
+
         if (data.error) {
             console.error('Error al cargar historial:', data.message);
-            chatWindow.innerHTML = `<p class="text-danger">Error al cargar el historial de mensajes: ${data.message}</p>`;
+            chatWindow.innerHTML = `<p class="text-danger text-center">Error al cargar el historial de mensajes: ${data.message}</p>`;
             return;
         }
+
         chatWindow.innerHTML = ''; // Limpiar mensajes existentes
-        data.messages.forEach(msg => {
-            displayMessage(msg);
-        });
+
+        if (data.messages && data.messages.length > 0) {
+            data.messages.forEach(msg => {
+                displayMessage(msg);
+            });
+        } else {
+            // Mostrar mensaje cuando no hay mensajes
+            chatWindow.innerHTML = '<p class="text-center text-muted py-5">Aún no hay mensajes en este chat.<br>¡Sé el primero en escribir!</p>';
+        }
+
         // Scroll al final con un pequeño retraso para asegurar que el DOM se ha actualizado
         requestAnimationFrame(() => {
             setTimeout(() => {
@@ -89,12 +117,63 @@ function initializeChatListeners(orderId, userId, userType, chatContainer = docu
     function sendMessage() {
         const message = messageInput.value.trim();
         if (message) {
+            // Mostrar estado de carga
+            const originalText = sendButton.innerHTML;
+            sendButton.disabled = true;
+            sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+            messageInput.disabled = true;
+
             console.log('DEBUG: Datos a enviar en socket.emit:', { orderId, userId, userType, message });
+
+            // Configurar timeout para restaurar estado si no hay respuesta
+            const timeoutId = setTimeout(() => {
+                console.warn('DEBUG: Timeout alcanzado, restaurando estado del botón');
+                restoreButtonState(originalText);
+            }, 10000); // 10 segundos timeout
+
             socket.emit('send-chat-message', { orderId, userId, userType, message });
+
+            // Limpiar el input inmediatamente
             messageInput.value = '';
+
+            // Escuchar confirmación de envío exitoso
+            socket.once('message-sent', (data) => {
+                clearTimeout(timeoutId);
+                console.log('DEBUG: Mensaje enviado exitosamente:', data);
+                restoreButtonState(originalText);
+            });
+
+            // Escuchar errores de envío
+            socket.once('message-error', (data) => {
+                clearTimeout(timeoutId);
+                console.error('DEBUG: Error al enviar mensaje:', data);
+                restoreButtonState(originalText);
+                // Mostrar mensaje de error al usuario
+                const errorDiv = document.createElement('div');
+                errorDiv.classList.add('alert', 'alert-danger', 'mt-2');
+                errorDiv.textContent = `Error al enviar mensaje: ${data.message || 'Error desconocido'}`;
+                chatWindow.appendChild(errorDiv);
+                setTimeout(() => {
+                    chatWindow.scrollTop = chatWindow.scrollHeight;
+                }, 50);
+                // Remover mensaje de error después de 5 segundos
+                setTimeout(() => {
+                    if (errorDiv.parentNode) {
+                        errorDiv.remove();
+                    }
+                }, 5000);
+            });
+
         } else {
             console.log("DEBUG: Intento de enviar mensaje vacío.");
         }
+    }
+
+    function restoreButtonState(originalText) {
+        sendButton.disabled = false;
+        sendButton.innerHTML = originalText;
+        messageInput.disabled = false;
+        messageInput.focus(); // Volver a enfocar el input
     }
 
     function displayMessage(msg) {

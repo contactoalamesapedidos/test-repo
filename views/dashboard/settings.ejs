@@ -1,3 +1,8 @@
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+
 <!-- Datos del usuario para notificaciones push -->
 <script data-user type="application/json">
 <%- JSON.stringify({
@@ -116,11 +121,7 @@
                                     <input type="number" class="form-control" id="costo_delivery" name="costo_delivery" step="0.01" min="0" value="<%= restaurant.costo_delivery || '0.00' %>">
                                     <div class="form-text">Ingresa el costo de envío para pedidos de delivery</div>
                                 </div>
-                                <div class="mb-3">
-                                    <label for="descuento_delivery" class="form-label">Descuento de Delivery (%)</label>
-                                    <input type="number" class="form-control" id="descuento_delivery" name="descuento_delivery" min="0" max="100" value="<%= restaurant.descuento_delivery || '0' %>">
-                                    <div class="form-text">Porcentaje de descuento en el costo de delivery (0-100).</div>
-                                </div>
+
 
                                 <!-- Tiempo de Entrega -->
                                 <h5 class="mb-3 mt-4">Tiempo de Entrega Estimado</h5>
@@ -209,6 +210,22 @@
                             </div>
                         </div>
 
+                        <!-- Mapa para Ubicación -->
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm mb-4 mt-4">
+                                <div class="card-body">
+                                    <h5 class="mb-3"><i class="fas fa-map-marker-alt me-2"></i>Ubicación en el Mapa</h5>
+                                    <p class="text-muted">Arrastra el marcador para ajustar la ubicación exacta de tu restaurante. Esto ayudará a los repartidores a encontrarte fácilmente.</p>
+                                    <div id="map" style="height: 400px; width: 100%; background-color: #f0f0f0;" class="mb-3"></div>
+                                    <input type="hidden" id="latitud" name="latitud" value="<%= restaurant.latitud || '' %>">
+                                    <input type="hidden" id="longitud" name="longitud" value="<%= restaurant.longitud || '' %>">
+                                    <button type="button" id="getCurrentLocationBtn" class="btn btn-outline-secondary btn-sm mt-2">
+                                        <i class="fas fa-map-marker-alt me-1"></i> Obtener Ubicación Actual
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="mt-4 d-flex gap-2 justify-content-end edit-actions" id="restEditActions" style="display:none;">
                             <button type="submit" class="btn btn-success"><i class="fas fa-save me-2"></i>Guardar</button>
                             <button type="button" class="btn btn-secondary" id="cancelRestEditBtn">Cancelar</button>
@@ -250,6 +267,24 @@
                 </div>
             </div>
 
+            <!-- Descuento en Efectivo/Transferencia -->
+            <div class="card border-0 shadow-sm mb-4 mt-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0"><i class="fas fa-percent me-2"></i>Descuento en Efectivo/Transferencia</h5>
+                    </div>
+                    <form id="discountForm">
+                        <div class="form-check form-switch form-switch-lg d-flex align-items-center">
+                            <input class="form-check-input" type="checkbox" id="toggleDiscount" <%= restaurant.ofrece_descuento_efectivo ? 'checked' : '' %>>
+                            <label class="form-check-label ms-3" for="toggleDiscount">
+                                Ofrecer 5% de descuento en pagos con efectivo o transferencia
+                            </label>
+                        </div>
+                        <small class="text-muted d-block mt-2">Al activar esta opción, se aplicará automáticamente un 5% de descuento al total de la compra cuando el cliente elija pagar en efectivo o por transferencia.</small>
+                    </form>
+                </div>
+            </div>
+
             <!-- Notificaciones Push - Switch moderno -->
             <div class="card mt-5 mb-4 shadow-sm">
                 <div class="card-body">
@@ -262,6 +297,46 @@
                             <span id="pushStatus" class="ms-3"></span>
                     </div>
                     <small class="text-muted d-block mt-2">Recibe alertas en tiempo real cuando recibas un nuevo pedido, incluso si no tienes la página abierta.</small>
+
+                    <!-- Botón de prueba de notificaciones -->
+                    <div class="mt-3">
+                        <button type="button" id="checkPermissionStatus" class="btn btn-outline-info btn-sm me-2">
+                            <i class="fas fa-info-circle me-2"></i>Ver estado de permisos
+                        </button>
+                        <button type="button" id="testPushNotification" class="btn btn-outline-primary btn-sm me-2">
+                            <i class="fas fa-test-tube me-2"></i>Probar notificaciones push
+                        </button>
+                        <button type="button" id="manualEnableNotifications" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-cog me-2"></i>Habilitar manualmente
+                        </button>
+                        <button type="button" id="debugSendNotification" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-bug me-2"></i>Debug Directo
+                        </button>
+                        <small class="text-muted d-block mt-1">Si el diálogo no aparece, usa "Habilitar manualmente" para configurar las notificaciones.</small>
+
+                    <!-- Instrucciones para habilitar notificaciones cuando están bloqueadas -->
+                    <div id="notificationInstructions" class="alert alert-warning mt-3" style="display: none;">
+                        <h6><i class="fas fa-exclamation-triangle me-2"></i>⚠️ Notificaciones Bloqueadas</h6>
+                        <p class="mb-2">Las notificaciones están bloqueadas en tu navegador. Para habilitarlas:</p>
+                        <div id="browserInstructions"></div>
+                        <div class="alert alert-success mt-3">
+                            <strong>✅ Después de seguir estos pasos:</strong><br>
+                            Actualiza la página (F5) y las notificaciones funcionarán correctamente.
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <h6><i class="fas fa-mobile-alt me-2"></i>💡 Sobre la posición de las notificaciones:</h6>
+                        <p class="mb-1">Las notificaciones push aparecen en la parte superior de la pantalla y son controladas por el navegador.</p>
+                        <p class="mb-0"><strong>Si aparecen detrás del menú móvil:</strong></p>
+                        <ul class="mb-0">
+                            <li>En Android: Las notificaciones aparecen por encima de todo</li>
+                            <li>En iOS: Las notificaciones aparecen en el centro de la pantalla</li>
+                            <li>En desktop: Aparecen en la esquina superior derecha</li>
+                        </ul>
+                    </div>
+                    </div>
+
                     <hr class="my-4">
                     <div class="form-check form-switch form-switch-lg d-flex align-items-center">
                         <input class="form-check-input" type="checkbox" id="toggleEmailNewOrders" <%= Number(user.email_notif_nuevo_pedido) === 1 ? 'checked' : '' %> autocomplete="off">
@@ -278,23 +353,61 @@
             <div class="card mt-5 mb-4 shadow-sm">
                 <div class="card-body">
                     <h5 class="mb-3"><i class="fas fa-money-bill-wave me-2"></i>Integración con Mercado Pago</h5>
-                    <% if (restaurant.mp_access_token) { %>
+
+                    <!-- Estado de configuración -->
+                    <% if (restaurant.mp_access_token && restaurant.mp_public_key) { %>
                         <div class="alert alert-success">
-                            <i class="fas fa-check-circle"></i> Tu cuenta de Mercado Pago está vinculada.
+                            <i class="fas fa-check-circle me-2"></i> ¡Tu cuenta de MercadoPago está vinculada correctamente!
                         </div>
-                        <p><strong>ID de Vendedor de MP:</strong> <%= restaurant.mp_user_id %></p>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>ID de Vendedor:</strong></p>
+                                <code class="text-muted"><%= restaurant.mp_user_id %></code>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Estado:</strong></p>
+                                <span class="badge bg-success">Activo</span>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-3">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Ahora puedes recibir pagos directamente de tus clientes a través de MercadoPago.
+                        </p>
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="/dashboard/mercadopago/auth" class="btn btn-info" style="background-color: #0dcaf0 !important; border-color: #0dcaf0 !important;">Re-vincular cuenta de Mercado Pago</a>
-                            <form action="/dashboard/mercadopago/unlink" method="POST" onsubmit="return confirm('¿Estás seguro de que quieres desvincular tu cuenta de Mercado Pago? Esto impedirá que recibas pagos a través de esta plataforma.');">
-                                <button type="submit" class="btn btn-danger">Desvincular cuenta de Mercado Pago</button>
-                            </form>
+                            <a href="/dashboard/mercadopago/auth" class="btn btn-outline-primary">
+                                <i class="fas fa-sync me-2"></i>Re-vincular cuenta
+                            </a>
+                            <button type="button" class="btn btn-outline-danger" onclick="unlinkMP()">
+                                <i class="fas fa-unlink me-2"></i>Desvincular
+                            </button>
                         </div>
                     <% } else { %>
                         <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle"></i> Tu cuenta de Mercado Pago no está vinculada.
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            MercadoPago no está configurado para recibir pagos directos.
                         </div>
-                        <p>Para poder recibir pagos directamente de tus clientes, necesitas vincular tu cuenta de Mercado Pago.</p>
-                        <a href="/dashboard/mercadopago/auth" class="btn btn-primary d-grid" style="background-color: #0d6efd !important; border-color: #0d6efd !important;">Vincular cuenta de Mercado Pago</a>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6>¿Por qué necesitas vincular MercadoPago?</h6>
+                                <ul class="text-muted small">
+                                    <li>✅ Recibir pagos directamente en tu cuenta</li>
+                                    <li>✅ Tus clientes pagan con tarjeta, efectivo o transferencia</li>
+                                    <li>✅ MercadoPago se encarga de la seguridad y procesamiento</li>
+                                    <li>✅ Tú solo cobras tu comisión semanal a la plataforma</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <a href="/dashboard/mercadopago/auth" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-link me-2"></i><br>
+                                    Vincular<br>Cuenta
+                                </a>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="alert alert-info">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <strong>Proceso automático:</strong> Al hacer clic en "Vincular Cuenta", serás redirigido a MercadoPago para autorizar el acceso. Una vez autorizado, todas las credenciales se configurarán automáticamente.
+                        </div>
                     <% } %>
                 </div>
             </div>
@@ -303,4 +416,492 @@
 </div>
 
 <!-- Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
 <script src="/js/dashboard-settings.js"></script>
+
+<script>
+// Función para mostrar vista previa de imágenes
+function previewImage(input, previewElement) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            previewElement.src = e.target.result;
+            previewElement.style.display = 'block';
+        };
+
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Vista previa del logo
+document.getElementById('logo').addEventListener('change', function() {
+    const preview = document.querySelector('#logo').nextElementSibling.nextElementSibling.querySelector('img');
+    previewImage(this, preview);
+});
+
+// Vista previa del banner
+document.getElementById('banner').addEventListener('change', function() {
+    const preview = document.querySelector('#banner').nextElementSibling.nextElementSibling.querySelector('img');
+    previewImage(this, preview);
+});
+
+// Función para verificar estado de permisos
+document.getElementById('checkPermissionStatus').addEventListener('click', function() {
+    const currentPermission = Notification.permission;
+    console.log('Estado actual de permisos:', currentPermission);
+
+    let message = '';
+    let type = 'info';
+
+    switch (currentPermission) {
+        case 'granted':
+            message = '✅ Las notificaciones están permitidas en este navegador.';
+            type = 'success';
+            // Ocultar instrucciones si estaban visibles
+            document.getElementById('notificationInstructions').style.display = 'none';
+            break;
+        case 'denied':
+            message = '❌ Las notificaciones están bloqueadas. Ve a Configuración > Privacidad > Notificaciones y permite las notificaciones para este sitio.';
+            type = 'error';
+            // Mostrar instrucciones para habilitar notificaciones
+            showNotificationInstructions();
+            break;
+        case 'default':
+            message = 'ℹ️ Las notificaciones están en estado predeterminado (no se ha solicitado permiso aún).';
+            type = 'info';
+            // Ocultar instrucciones si estaban visibles
+            document.getElementById('notificationInstructions').style.display = 'none';
+            break;
+        default:
+            message = '❓ Estado de permisos desconocido: ' + currentPermission;
+            type = 'warning';
+            break;
+    }
+
+    showNotification(message, type);
+});
+
+// Función para mostrar instrucciones cuando las notificaciones están bloqueadas
+function showNotificationInstructions() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    let instructions = '';
+
+    if (userAgent.includes('chrome') || userAgent.includes('chromium') || userAgent.includes('edge')) {
+        instructions = `
+        <div class="alert alert-info">
+            <h6>🔧 Habilitar notificaciones en Chrome/Edge:</h6>
+            <ol class="mb-0">
+                <li>Haz clic en el ícono del <strong>candado 🔒</strong> en la barra de direcciones</li>
+                <li>Busca <strong>"Notificaciones"</strong></li>
+                <li>Cambia a <strong>"Permitir"</strong></li>
+                <li><strong>Actualiza la página</strong> (F5)</li>
+                <li>Haz clic en <strong>"Probar notificaciones push"</strong></li>
+            </ol>
+        </div>
+        `;
+    } else if (userAgent.includes('firefox')) {
+        instructions = `
+        <div class="alert alert-info">
+            <h6>🔧 Habilitar notificaciones en Firefox:</h6>
+            <ol class="mb-0">
+                <li>Haz clic en el ícono del <strong>escudo 🛡️</strong> en la barra de direcciones</li>
+                <li>Busca <strong>"Notificaciones"</strong></li>
+                <li>Cambia a <strong>"Permitir"</strong></li>
+                <li><strong>Actualiza la página</strong> (F5)</li>
+                <li>Haz clic en <strong>"Probar notificaciones push"</strong></li>
+            </ol>
+        </div>
+        `;
+    } else {
+        instructions = `
+        <div class="alert alert-warning">
+            <h6>🔧 Navegador no reconocido:</h6>
+            <p>Busca en la configuración de tu navegador las opciones de privacidad/notificaciones y permite las notificaciones para este sitio.</p>
+        </div>
+        `;
+    }
+
+    document.getElementById('browserInstructions').innerHTML = instructions;
+    document.getElementById('notificationInstructions').style.display = 'block';
+}
+
+// Función para habilitar notificaciones manualmente
+document.getElementById('manualEnableNotifications').addEventListener('click', function() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    let instructions = '';
+
+    if (userAgent.includes('chrome') || userAgent.includes('chromium') || userAgent.includes('edge')) {
+        instructions = `
+        <div class="alert alert-info">
+            <h6>🔧 Habilitar notificaciones en Chrome/Edge:</h6>
+            <ol class="mb-0">
+                <li>Haz clic en el ícono del <strong>candado 🔒</strong> en la barra de direcciones</li>
+                <li>Busca <strong>"Notificaciones"</strong></li>
+                <li>Cambia a <strong>"Permitir"</strong></li>
+                <li><strong>Actualiza la página</strong> (F5)</li>
+                <li>Haz clic en <strong>"Probar notificaciones push"</strong></li>
+            </ol>
+        </div>
+        `;
+    } else if (userAgent.includes('firefox')) {
+        instructions = `
+        <div class="alert alert-info">
+            <h6>🔧 Habilitar notificaciones en Firefox:</h6>
+            <ol class="mb-0">
+                <li>Haz clic en el ícono del <strong>escudo 🛡️</strong> en la barra de direcciones</li>
+                <li>Busca <strong>"Notificaciones"</strong></li>
+                <li>Cambia a <strong>"Permitir"</strong></li>
+                <li><strong>Actualiza la página</strong> (F5)</li>
+                <li>Haz clic en <strong>"Probar notificaciones push"</strong></li>
+            </ol>
+        </div>
+        `;
+    } else {
+        instructions = `
+        <div class="alert alert-warning">
+            <h6>🔧 Navegador no reconocido:</h6>
+            <p>Busca en la configuración de tu navegador las opciones de privacidad/notificaciones y permite las notificaciones para este sitio.</p>
+        </div>
+        `;
+    }
+
+    // Mostrar modal con instrucciones
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.innerHTML = `
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Habilitar Notificaciones Manualmente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    ${instructions}
+                    <div class="alert alert-success mt-3">
+                        <strong>✅ Después de seguir estos pasos:</strong><br>
+                        Las notificaciones push funcionarán correctamente y recibirás alertas de nuevos pedidos.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-primary" onclick="location.reload()">Actualizar Página</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+
+    modal.addEventListener('hidden.bs.modal', () => {
+        document.body.removeChild(modal);
+    });
+});
+
+// Función para probar notificaciones push
+document.getElementById('testPushNotification').addEventListener('click', async function() {
+    const button = this;
+    const originalText = button.innerHTML;
+
+    // Cambiar texto del botón mientras se procesa
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
+    button.disabled = true;
+
+    try {
+        // Primero verificar si hay suscripción push
+        console.log('🔧 Verificando suscripción push antes de probar...');
+
+        // Verificar si el servicio de notificaciones está disponible
+        if (!window.pushNotificationService) {
+            showNotification('El servicio de notificaciones push no está disponible.', 'error');
+            return;
+        }
+
+        // Inicializar el servicio si no está inicializado
+        const initialized = await window.pushNotificationService.initialize();
+        if (!initialized) {
+            showNotification('No se pudo inicializar el servicio de notificaciones.', 'error');
+            return;
+        }
+
+        // Verificar si ya hay una suscripción
+        const hasSubscription = window.pushNotificationService.subscription !== null;
+        console.log('¿Hay suscripción existente?', hasSubscription);
+        console.log('Valor de subscription:', window.pushNotificationService.subscription);
+        console.log('Evaluación de !hasSubscription:', !hasSubscription);
+
+        if (!hasSubscription) {
+            console.log('🚨 ENTRANDO AL BLOQUE DE CREACIÓN DE SUSCRIPCIÓN');
+            console.log('No hay suscripción, verificando permisos...');
+
+            // Verificar el estado actual de los permisos
+            const currentPermission = Notification.permission;
+            console.log('Estado actual de permisos:', currentPermission);
+
+            if (currentPermission === 'denied') {
+                showNotification('Las notificaciones están bloqueadas en este navegador. Ve a la configuración del sitio y permite las notificaciones.', 'error');
+                return;
+            }
+
+            if (currentPermission === 'default') {
+                console.log('Permisos en estado default, solicitando...');
+                showNotification('Solicitando permisos de notificación...', 'info');
+            }
+
+            // Intentar crear suscripción
+            console.log('=== INICIANDO CREACIÓN DE SUSCRIPCIÓN ===');
+            console.log('Intentando crear suscripción push...');
+            try {
+                console.log('VERIFICACIÓN PREVIA:');
+                console.log('- Service Worker disponible:', !!window.pushNotificationService.registration);
+                console.log('- PushManager disponible:', !!window.pushNotificationService.registration?.pushManager);
+                console.log('- Permisos actuales:', Notification.permission);
+
+                console.log('Llamando a requestPermission...');
+                const permissionGranted = await window.pushNotificationService.requestPermission();
+                console.log('Resultado de requestPermission:', permissionGranted);
+                console.log('Estado de permisos después de requestPermission:', Notification.permission);
+
+                if (!permissionGranted) {
+                    console.log('Permisos no concedidos, verificando estado actual...');
+                    const finalPermission = Notification.permission;
+                    console.log('Estado final de permisos:', finalPermission);
+
+                    if (finalPermission === 'denied') {
+                        showNotification('Los permisos fueron denegados. Para habilitar las notificaciones, haz clic en el ícono del candado 🔒 en la barra de direcciones y permite las notificaciones.', 'error');
+                    } else {
+                        showNotification('Debes permitir las notificaciones en el navegador para poder probarlas.', 'warning');
+                    }
+                    return;
+                }
+            } catch (permissionError) {
+                console.error('Error al solicitar permisos:', permissionError);
+                showNotification('Error al solicitar permisos: ' + permissionError.message, 'error');
+                return;
+            }
+
+            // Verificar que la suscripción se creó
+            const subscriptionCreated = window.pushNotificationService.subscription !== null;
+            console.log('¿Suscripción creada?', subscriptionCreated);
+
+            if (!subscriptionCreated) {
+                showNotification('Error al crear la suscripción push.', 'error');
+                return;
+            }
+
+            // Esperar un momento para que la suscripción se guarde
+            console.log('Esperando que la suscripción se guarde...');
+            showNotification('Guardando suscripción...', 'info');
+            await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+
+        // Ahora sí, enviar la notificación de prueba
+        console.log('🔧 Enviando petición de prueba de notificaciones...');
+        const response = await fetch('/api/push/test-restaurant', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest' // Indicar que es AJAX
+            },
+            credentials: 'same-origin' // Incluir cookies de sesión
+        });
+
+        console.log('📡 Respuesta del servidor:', response.status);
+
+        if (response.status === 401) {
+            // Error de autenticación
+            const result = await response.json();
+            console.log('❌ Error de autenticación:', result);
+            showNotification('Error de autenticación: ' + (result.message || 'Sesión expirada'), 'error');
+            return;
+        }
+
+        if (!response.ok) {
+            // Otro tipo de error
+            const errorText = await response.text();
+            console.log('❌ Error del servidor:', response.status, errorText);
+
+            try {
+                const errorData = JSON.parse(errorText);
+                if (errorData.needsResubscribe) {
+                    // Mostrar mensaje y automáticamente intentar reactivar las notificaciones
+                    showNotification('🔄 Las notificaciones necesitan ser reactivadas...', 'info');
+
+                    // Simular clic en el toggle para reactivar
+                    setTimeout(async () => {
+                        const toggle = document.getElementById('togglePushNotifications');
+                        if (toggle && !toggle.checked) {
+                            // Activar el toggle
+                            toggle.checked = true;
+                            // Disparar el evento change
+                            toggle.dispatchEvent(new Event('change'));
+                        }
+                    }, 1000);
+
+                    return;
+                }
+                showNotification(errorData.message || 'Error del servidor: ' + response.status, 'error');
+            } catch (e) {
+                showNotification('Error del servidor: ' + response.status, 'error');
+            }
+            return;
+        }
+
+        const result = await response.json();
+        console.log('✅ Respuesta exitosa:', result);
+
+        if (result.success) {
+            showNotification(result.message, 'success');
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        console.error('💥 Error en la petición:', error);
+        showNotification('Error de conexión: ' + error.message, 'error');
+    } finally {
+        // Restaurar botón
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+});
+
+// Función para debug directo de notificaciones
+document.getElementById('debugSendNotification').addEventListener('click', async function() {
+    const button = this;
+    const originalText = button.innerHTML;
+
+    // Cambiar texto del botón mientras se procesa
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Debug...';
+    button.disabled = true;
+
+    try {
+        // Obtener datos del usuario desde el script tag
+        const userData = document.querySelector('script[data-user]');
+        if (!userData) {
+            showNotification('No se encontraron datos del usuario.', 'error');
+            return;
+        }
+
+        const user = JSON.parse(userData.textContent);
+        console.log('Usuario para debug:', user);
+
+        // Enviar notificación de debug directo
+        const response = await fetch('/api/push/debug-send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                userId: user.id,
+                title: '🧪 Debug Notification',
+                body: `Debug test desde settings - ${new Date().toLocaleTimeString()}`,
+                url: '/dashboard/orders'
+            })
+        });
+
+        console.log('📡 Respuesta del debug:', response.status);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.log('❌ Error del debug:', response.status, errorText);
+            showNotification('Error en debug: ' + response.status, 'error');
+            return;
+        }
+
+        const result = await response.json();
+        console.log('✅ Respuesta debug exitosa:', result);
+
+        if (result.success) {
+            showNotification('✅ Debug enviado exitosamente. Revisa si llega la notificación.', 'success');
+        } else {
+            showNotification('❌ Debug falló: ' + (result.message || 'Error desconocido'), 'error');
+        }
+    } catch (error) {
+        console.error('💥 Error en debug:', error);
+        showNotification('Error de conexión en debug: ' + error.message, 'error');
+    } finally {
+        // Restaurar botón
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+});
+
+// Función para desvincular cuenta de MercadoPago
+async function unlinkMP() {
+    if (!confirm('¿Estás seguro de que quieres desvincular tu cuenta de MercadoPago? Esto impedirá que recibas pagos directos de tus clientes.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/dashboard/settings/mp-unlink', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert('Cuenta de MercadoPago desvinculada exitosamente');
+            location.reload(); // Recargar para mostrar cambios
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error unlinking MP:', error);
+        alert('Error al desvincular la cuenta');
+    }
+}
+
+// Mostrar mensajes de éxito/error desde URL parameters
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    if (urlParams.get('success') === 'mp_auth_success') {
+        showNotification('¡Cuenta de MercadoPago vinculada exitosamente! Ahora puedes recibir pagos directos.', 'success');
+    }
+
+    if (urlParams.get('error')) {
+        const errorType = urlParams.get('error');
+        const message = urlParams.get('message') || 'Error desconocido';
+
+        if (errorType.startsWith('mp_')) {
+            showNotification('Error en MercadoPago: ' + decodeURIComponent(message), 'error');
+        }
+    }
+});
+
+function showNotification(message, type = 'info') {
+    const toast = document.createElement('div');
+    // Ajustar posición para móviles (80px más arriba)
+    const isMobile = window.innerWidth <= 768;
+    const bottomPosition = isMobile ? '80px' : '20px';
+    toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
+    toast.style.cssText = `bottom: ${bottomPosition} !important; z-index: 9999;`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+
+    toast.addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toast);
+    });
+}
+</script>

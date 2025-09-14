@@ -2,9 +2,9 @@
 <div class="container-fluid py-4">
     <!-- Banner de Restaurante -->
     <div class="card shadow-sm mb-4 position-relative overflow-hidden">
-    <div class="banner-container position-relative" data-bg="<%= restaurant.imagen_banner ? '/uploads/' + restaurant.imagen_banner : '/images/defaults/default-banner.jpg' %>" style="height: 250px; background-size: cover; background-position: center; z-index: 1;">
+    <div class="banner-container position-relative" data-bg="<%= restaurant.imagen_banner ? (restaurant.imagen_banner.startsWith('/uploads') ? restaurant.imagen_banner : ('/uploads/' + restaurant.imagen_banner)) : '/images/no-image.png' %>" style="height: 250px; background-size: cover; background-position: center; z-index: 1;">
         <!-- Logo por encima del banner -->
-        <img src="<%= restaurant.imagen_logo ? '/uploads/' + restaurant.imagen_logo : '/images/defaults/default-logo.png' %>" class="rounded-circle border border-3 border-white shadow-lg restaurant-banner-logo" alt="Logo del Restaurante">
+        <img src="<%= restaurant.imagen_logo ? (restaurant.imagen_logo.startsWith('/uploads') ? restaurant.imagen_logo : ('/uploads/' + restaurant.imagen_logo)) : '/images/no-image.png' %>" class="rounded-circle border border-3 border-white shadow-lg restaurant-banner-logo" alt="Logo del Restaurante">
         <span class="badge <%= restaurant.abierto ? 'bg-success' : 'bg-danger' %> position-absolute restaurant-open-badge">
             <i class="fas fa-circle me-1"></i> <%= restaurant.abierto ? 'Abierto' : 'Cerrado' %>
         </span>
@@ -63,6 +63,17 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Alerta de Repartidores Pendientes -->
+            <% if (locals.pendingDriversCount && pendingDriversCount > 0) { %>
+                <div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
+                    <span>
+                        <i class="fas fa-motorcycle me-2"></i>
+                        Tienes <strong><%= pendingDriversCount %></strong> nueva(s) solicitud(es) de repartidor pendiente(s).
+                    </span>
+                    <a href="/dashboard/driver-requests" class="btn btn-sm btn-primary">Ver Solicitudes</a>
+                </div>
+            <% } %>
 
             <!-- Stats cards -->
             <div class="row mb-4">
@@ -203,7 +214,71 @@ document.addEventListener('DOMContentLoaded', function() {
         const bg = el.getAttribute('data-bg');
         if (bg) el.style.backgroundImage = `url('${bg}')`;
     });
-    
 
 });
+
+// Función para alternar el estado del restaurante
+function toggleRestaurantStatus() {
+    const button = event.target.closest('button');
+    const currentStatus = button.getAttribute('data-restaurant-status') === 'true';
+    const newStatus = !currentStatus;
+    const action = newStatus ? 'activar' : 'desactivar';
+
+    // Mostrar confirmación
+    const confirmMessage = newStatus ?
+        '¿Estás seguro de que quieres activar el restaurante? Los clientes podrán hacer pedidos.' :
+        '¿Estás seguro de que quieres desactivar el restaurante? No recibirás nuevos pedidos.';
+
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    // Deshabilitar el botón mientras se procesa
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
+
+    // Enviar solicitud al servidor
+    fetch('/dashboard/toggle-status', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accion: action })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Actualizar el botón
+            button.setAttribute('data-restaurant-status', newStatus.toString());
+            button.className = `btn btn-sm ${newStatus ? 'btn-danger' : 'btn-success'}`;
+            button.innerHTML = `<i class="fas ${newStatus ? 'fa-power-off' : 'fa-play'}"></i><span class="ms-1 d-none d-sm-inline">${newStatus ? 'Desactivar' : 'Activar'}</span>`;
+            button.setAttribute('title', newStatus ? 'Desactivar restaurante' : 'Activar restaurante');
+
+            // Actualizar el badge de estado
+            const badge = document.querySelector('.restaurant-open-badge');
+            if (badge) {
+                badge.className = `badge ${newStatus ? 'bg-success' : 'bg-danger'} position-absolute restaurant-open-badge`;
+                badge.innerHTML = `<i class="fas fa-circle me-1"></i> ${newStatus ? 'Abierto' : 'Cerrado'}`;
+            }
+
+            // Mostrar mensaje de éxito
+            alert(data.message);
+
+            // Recargar la página para actualizar todos los elementos
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al cambiar el estado del restaurante. Por favor, inténtalo de nuevo.');
+    })
+    .finally(() => {
+        // Rehabilitar el botón
+        button.disabled = false;
+        button.innerHTML = originalText;
+    });
+}
 </script>

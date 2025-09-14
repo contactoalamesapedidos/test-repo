@@ -1,14 +1,220 @@
-/* Oculta la barra de scroll horizontal en el carrusel de categorías en móviles */
+/* Carrusel horizontal - Móviles */
 @media (max-width: 768px) {
   .categories-scroll {
     overflow-x: auto;
+    overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
-    height: 100%;
-    width: 1250px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 15px;
+    padding: 20px 15px;
+    min-width: 1400px; /* Ajustado para 8 categorías */
+    width: auto;
+    scroll-behavior: smooth;
+    position: relative;
   }
+
   .categories-scroll::-webkit-scrollbar {
-    display: none; /* Chrome, Safari */
+    display: none;
+  }
+
+  .category-item {
+    flex: 0 0 auto;
+    min-width: 140px;
+    max-width: 160px;
+    width: 150px;
+    margin-right: 10px;
+  }
+
+  .category-card {
+    height: 160px;
+    padding: 15px 10px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    text-align: center;
+  }
+
+  .category-icon-img {
+    width: 100px;
+    height: 100px;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+  }
+
+  .category-name {
+    font-size: 1rem;
+    margin-bottom: 0;
+    margin-top: 10px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #343a40;
+    position: relative;
+    z-index: 2;
+    transition: color 0.4s ease;
+    text-align: center;
+    display: block;
+    width: 100%;
+    font-family: inherit;
+    letter-spacing: normal;
+    word-wrap: break-word;
+    visibility: visible;
+    opacity: 1;
+    height: auto;
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+  }
+
+  /* Additional specificity for mobile text */
+  .categories-section .category-item .category-card .category-icon-wrapper .category-name {
+    font-size: 1rem;
+    color: #343a40;
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    position: relative;
+    z-index: 10;
+  }
+
+  .categories-carousel-container,
+  .categories-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Carrusel horizontal - Desktop */
+@media (min-width: 769px) {
+  .categories-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    -ms-overflow-style: auto;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 20px;
+    padding: 30px 20px;
+    min-width: 2000px; /* Aumentado para desktop */
+    width: auto;
+    scroll-behavior: smooth;
+  }
+
+  .categories-scroll::-webkit-scrollbar {
+    height: 6px;
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+
+  .categories-scroll::-webkit-scrollbar-thumb {
+    background: #ff6b35;
+    border-radius: 3px;
+  }
+
+  .categories-scroll::-webkit-scrollbar-thumb:hover {
+    background: #e55a2b;
+  }
+
+  .category-item {
+    flex: 0 0 auto;
+    min-width: 180px;
+    max-width: 200px;
+    width: 190px;
+    margin-right: 15px;
+  }
+
+  .category-card {
+    height: 180px;
+    padding: 25px 20px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .category-icon-img {
+    width: 110px;
+    height: 110px;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+  }
+
+  .category-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #343a40;
+    position: relative;
+    z-index: 2;
+    transition: color 0.4s ease;
+    text-align: center;
+    margin-top: 15px;
+    font-family: inherit;
+    letter-spacing: normal;
+    word-wrap: break-word;
+    display: block;
+    width: 100%;
+  }
+
+  .categories-carousel-container,
+  .categories-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    position: relative;
+  }
+
+
+
+  /* Estilos para las flechas de navegación creadas con JavaScript */
+  .category-nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid #ff6b35;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: #ff6b35;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    opacity: 0.7;
+  }
+
+  .category-nav-left {
+    left: 10px;
+  }
+
+  .category-nav-right {
+    right: 10px;
+  }
+
+  .category-nav-arrow:hover {
+    background: #ff6b35;
+    color: white;
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 4px 16px rgba(255,107,53,0.3);
+    opacity: 1;
+  }
+
+  .category-nav-arrow:active {
+    transform: translateY(-50%) scale(0.95);
   }
 }
 /* Oculta la barra de scroll horizontal pero permite el scroll táctil en móviles */
@@ -22,6 +228,56 @@
     display: none; /* Chrome, Safari */
   }
 }
+/* Global category name visibility fix */
+.category-name {
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  color: #343a40;
+}
+
+/* Global category icon background fix */
+.category-icon-img {
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+}
+
+/* Force text visibility for all category names in mobile */
+@media (max-width: 768px) {
+  .category-name {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    color: #343a40;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    margin-top: 10px;
+    line-height: 1.2;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    height: auto;
+    position: relative;
+    z-index: 15;
+  }
+
+  /* Ensure parent containers don't hide text */
+  .category-icon-wrapper {
+    position: relative;
+    overflow: visible;
+  }
+
+  .category-card {
+    overflow: visible;
+  }
+
+  .category-item {
+    overflow: visible;
+  }
+}
+
 /* Estilos modernos para el carrusel de inicio */
 #restaurantPromoCarousel {
   box-shadow: 0 4px 24px rgba(0,0,0,0.12);

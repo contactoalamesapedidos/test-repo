@@ -1,0 +1,126 @@
+<div class="container-fluid">
+    <h1 class="mt-4">Gestión de Comisiones de Repartidores</h1>
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-table mr-1"></i>
+            Solicitudes de Pago de Comisiones
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Repartidor</th>
+                            <th>Monto Total</th>
+                            <th>Estado</th>
+                            <th>Fecha de Solicitud</th>
+                            <th>Comprobante</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% pagos.forEach(pago => { %>
+                            <tr>
+                                <td><%= pago.id %></td>
+                                <td><%= pago.repartidor_nombre %> <%= pago.repartidor_apellido %></td>
+                                <td>$<%= pago.monto_total %></td>
+                                <td><%= pago.estado %></td>
+                                <td><%= new Date(pago.fecha_solicitud).toLocaleString('es-AR') %></td>
+                                <td>
+                                    <a href="/<%= pago.comprobante_pago %>" target="_blank">Ver Comprobante</a>
+                                </td>
+                                <td>
+                                    <% if (pago.estado === 'en_revision') { %>
+                                        <form action="/admin/comisiones/<%= pago.id %>/aprobar" method="POST" style="display: inline;">
+                                            <button type="submit" class="btn btn-success btn-sm">Aprobar</button>
+                                        </form>
+                                        <form action="/admin/comisiones/<%= pago.id %>/rechazar" method="POST" style="display: inline;">
+                                            <button type="submit" class="btn btn-danger btn-sm">Rechazar</button>
+                                        </form>
+                                    <% } %>
+                                    <button type="button" class="btn btn-outline-danger btn-sm delete-comision-btn"
+                                            data-id="<%= pago.id %>"
+                                            data-monto="<%= pago.monto_total %>"
+                                            data-repartidor="<%= pago.repartidor_nombre %> <%= pago.repartidor_apellido %>"
+                                            title="Eliminar comisión">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SweetAlert2 para notificaciones -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Manejar eliminación de comisión
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-comision-btn')) {
+            const button = e.target.closest('.delete-comision-btn');
+            const comisionId = button.getAttribute('data-id');
+            const monto = button.getAttribute('data-monto');
+            const repartidor = button.getAttribute('data-repartidor');
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: `¿Deseas eliminar la comisión de $${monto} para ${repartidor}? Esta acción no se puede deshacer.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Enviar solicitud de eliminación
+                    fetch(`/admin/comisiones/${comisionId}/delete`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Eliminar la fila de la tabla
+                            const row = button.closest('tr');
+                            if (row) {
+                                row.remove();
+
+                                // Mostrar mensaje de éxito
+                                Swal.fire(
+                                    '¡Eliminado!',
+                                    `La comisión de ${repartidor} ha sido eliminada.`,
+                                    'success'
+                                );
+                            }
+                        } else {
+                            Swal.fire(
+                                'Error',
+                                'No se pudo eliminar la comisión. Por favor, inténtalo de nuevo.',
+                                'error'
+                            );
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire(
+                            'Error',
+                            'Ocurrió un error al intentar eliminar la comisión.',
+                            'error'
+                        );
+                    });
+                }
+            });
+        }
+    });
+});
+</script>

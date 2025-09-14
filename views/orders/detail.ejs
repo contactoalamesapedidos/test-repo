@@ -1,6 +1,6 @@
 <div class="container mt-4">
     <div class="row">
-        <div class="col-lg-8 mx-auto">
+        <div class="col-12">
             <!-- Order Status Card -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
@@ -24,258 +24,365 @@
                         </span>
                     </div>
                 </div>
-                <div class="card-body">
-                    <!-- Restaurant Info -->
-                    <div class="restaurant-info mb-4 p-3 bg-light rounded">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-store text-primary fs-4 me-3"></i>
-                            <div>
-                                <h6 class="mb-1"><%= restaurant && restaurant.nombre ? restaurant.nombre : 'Restaurante no disponible' %></h6>
-                                <small class="text-muted">
-                                    <i class="fas fa-map-marker-alt me-1"></i>
-                                    <%= restaurant && restaurant.direccion ? restaurant.direccion : 'Dirección no disponible' %>
-                                </small>
-                                
-                            </div>
-                        </div>
-                    </div>
-
-                    <% if (order.estado === 'en_camino' && order.repartidor_id) { %>
-                        <div class="card shadow-sm mb-4">
-                            <div class="card-header bg-primary text-white">
-                                <i class="fas fa-map-marker-alt me-2"></i> Seguimiento de tu Pedido
-                            </div>
-                            <div class="card-body">
-                                <p>Tu repartidor <strong><%= order.repartidor_nombre %></strong> está en camino con tu pedido.</p>
-                                <div id="deliveryMap" style="height: 300px; width: 100%;"></div>
-                                <p class="mt-2 text-muted text-center" id="driver-location-status">Cargando ubicación del repartidor...</p>
-                            </div>
-                        </div>
-                    <% } %>
-
-                    <!-- Order Items -->
-                    <div class="order-items mb-4">
-                        <h6 class="mb-3">Productos</h6>
-                        <% if (items && items.length > 0) { %>
-                            <% items.forEach(item => { %>
-                                <div class="order-item d-flex align-items-center mb-3 p-3 border rounded">
-                                    <img src="<%= item.imagen.startsWith('/uploads/') ? item.imagen : '/uploads/' + (item.imagen || 'no-image.png') %>" 
-                                         alt="<%= item.nombre || 'Producto' %>" 
-                                         class="rounded me-3" width="80" height="80"
-                                         style="object-fit: cover;">
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1"><%= item.nombre || 'Producto sin nombre' %></h6>
-                                        <% if (item.notas_especiales) { %>
-                                            <small class="text-muted d-block mb-1">
-                                                <i class="fas fa-comment-alt me-1"></i>
-                                                <%= item.notas_especiales %>
+                <div class="card-body p-0">
+                    <!-- Layout horizontal para PC -->
+                    <div class="row g-0">
+                        <!-- Columna izquierda: Detalles del pedido -->
+                        <div class="col-lg-8" style="border-right: 1px solid #dee2e6;">
+                            <div class="p-4">
+                                <!-- Restaurant Info -->
+                                <div class="restaurant-info mb-4 p-3 bg-light rounded">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-store text-primary fs-4 me-3"></i>
+                                        <div>
+                                            <h6 class="mb-1"><%= restaurant && restaurant.nombre ? restaurant.nombre : 'Restaurante no disponible' %></h6>
+                                            <small class="text-muted">
+                                                <i class="fas fa-map-marker-alt me-1"></i>
+                                                <%= restaurant && restaurant.direccion ? restaurant.direccion : 'Dirección no disponible' %>
                                             </small>
-                                        <% } %>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="text-muted">Cantidad: <%= item.cantidad || 0 %></span>
-                                            <strong>$<%= (Number(item.precio_unitario || 0) * Number(item.cantidad || 0)).toFixed(2) %></strong>
                                         </div>
                                     </div>
                                 </div>
-                            <% }) %>
-                        <% } else { %>
-                            <div class="alert alert-info">
-                                No hay productos en este pedido
-                            </div>
-                        <% } %>
-                    </div>
 
-                    <!-- Order Summary -->
-                    <div class="order-summary p-3 bg-light rounded">
-                        <h6 class="mb-3">Resumen del Pedido</h6>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Subtotal:</span>
-                            <strong>$<%= Number(order && order.subtotal ? order.subtotal : 0).toFixed(2) %></strong>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Envío:</span>
-                            <strong><%= Number(order && order.costo_delivery ? order.costo_delivery : 0) > 0 ? `$${Number(order && order.costo_delivery ? order.costo_delivery : 0).toFixed(2)}` : 'Gratis' %></strong>
-                        </div>
-                        <% if (order && (order.metodo_pago === 'efectivo' || order.metodo_pago === 'transferencia')) { %>
-                            <%
-                                const originalTotal = Number(order.subtotal || 0) + Number(order.costo_delivery || 0);
-                                const discountAmount = originalTotal - Number(order.total || 0);
-                            %>
-                            <div class="d-flex justify-content-between mb-2 text-success">
-                                <span>Descuento:</span>
-                                <strong>-$<%= discountAmount.toFixed(2) %></strong>
-                            </div>
-                        <% } %>
-                        <hr>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="fs-5">Total:</span>
-                            <strong class="fs-5 text-primary">$<%= Number(order && order.total ? order.total : 0).toFixed(2) %></strong>
-                        </div>
-                    </div>
-
-                    <!-- Delivery Info -->
-                    <div class="delivery-info mt-4">
-    <h6 class="mb-3">Información de Entrega</h6>
-    <div class="p-3 bg-light rounded">
-        <p class="mb-2">
-            <i class="fas fa-map-marker-alt text-primary me-2"></i>
-            <strong>Dirección:</strong> <%= order && order.direccion_entrega ? order.direccion_entrega : 'No disponible' %>
-        </p>
-        <% if (order && order.latitud_entrega && order.longitud_entrega) { %>
-            <button class="btn btn-outline-success btn-sm mb-2" onclick="showOrderLocation('<%= order.latitud_entrega %>', '<%= order.longitud_entrega %>')">
-                <i class="fas fa-map-marked-alt me-1"></i> Ver ubicación mejorada
-            </button>
-        <% } %>
-        <% if (order && order.notas_especiales) { %>
-            <p class="mb-0">
-                <i class="fas fa-comment-alt text-primary me-2"></i>
-                <strong>Notas:</strong> <%= order.notas_especiales %>
-            </p>
-        <% } %>
-    </div>
-</div>
-
-                    <!-- Payment Info -->
-                    <div class="payment-info mt-4">
-                        <h6 class="mb-3">Información de Pago</h6>
-<div class="p-3 bg-light rounded">
-    <p class="mb-0">
-        <i class="fas fa-credit-card text-primary me-2"></i>
-        <strong>Método de Pago:</strong> 
-        <%= order && order.metodo_pago ? 
-            (order.metodo_pago === 'mercadopago' ? 'MercadoPago' :
-             order.metodo_pago === 'efectivo' ? 'Efectivo' :
-             order.metodo_pago === 'transferencia' ? 'Transferencia Bancaria' :
-             order.metodo_pago) : 'No disponible' %>
-    </p>
-    <% if (order && order.metodo_pago === 'mercadopago') { %>
-        <p class="mb-0 mt-2">
-            <i class="fas fa-info-circle text-info me-2"></i>
-            <strong>Estado del Pago:</strong>
-            <% if (order.estado === 'confirmado' || order.estado === 'pagado') { %>
-                <span class="badge bg-success">Pagado</span>
-            <% } else if (order.estado === 'pendiente_pago') { %>
-                <span class="badge bg-warning text-dark">Pendiente de pago</span>
-            <% } else if (order.estado === 'cancelado') { %>
-                <span class="badge bg-danger">Pago rechazado</span>
-            <% } else { %>
-                <span class="badge bg-secondary">Desconocido</span>
-            <% } %>
-        </p>
-    <% } %>
-                            <% if (order && order.metodo_pago === 'transferencia') { %>
-                            <hr>
-                            <h6 class="mt-3">Datos para Transferencia</h6>
-                            <p class="mb-1"><strong>CBU/CVU:</strong> <%= restaurant.datos_transferencia_cbu %></p>
-                            <p class="mb-1"><strong>Alias:</strong> <%= restaurant.datos_transferencia_alias %></p>
-                            <p class="mb-1"><strong>Titular:</strong> <%= restaurant.datos_transferencia_titular %></p>
-                            <p class="mb-2"><strong>DNI/CUIT:</strong> <%= restaurant.datos_transferencia_dni %></p>
-
-                            <% if (!order.comprobante_pago_url) { %>
-                            <form id="comprobanteForm" class="mt-3" enctype="multipart/form-data">
-                                <input type="hidden" name="orderId" value="<%= order.id %>">
-                                <div class="mb-3">
-                                    <label for="comprobante" class="form-label">Subir Comprobante de Pago</label>
-                                    <input type="file" class="form-control" id="comprobante" name="comprobante" accept="image/*,.pdf,.jpg,.jpeg,.png">
+                                <!-- Order Items -->
+                                <div class="order-items mb-4">
+                                    <h6 class="mb-3">Productos</h6>
+                                    <% if (items && items.length > 0) { %>
+                                        <% items.forEach(item => { %>
+                                            <div class="order-item d-flex align-items-center mb-3 p-3 border rounded">
+                                                <img src="<%= item.imagen && item.imagen.startsWith('/uploads/') ? item.imagen : '/uploads/' + (item.imagen || 'no-image.png') %>"
+                                                     alt="<%= item.nombre || 'Producto' %>"
+                                                     class="rounded me-3" width="80" height="80"
+                                                     style="object-fit: cover;">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1"><%= item.nombre || 'Producto sin nombre' %></h6>
+                                                    <% if (item.notas_especiales) { %>
+                                                        <small class="text-muted d-block mb-1">
+                                                            <i class="fas fa-comment-alt me-1"></i>
+                                                            <%= item.notas_especiales %>
+                                                        </small>
+                                                    <% } %>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="text-muted">Cantidad: <%= item.cantidad || 0 %></span>
+                                                        <strong>$<%= (Number(item.precio_unitario || 0) * Number(item.cantidad || 0)).toFixed(2) %></strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <% }) %>
+                                    <% } else { %>
+                                        <div class="alert alert-info">
+                                            No hay productos en este pedido
+                                        </div>
+                                    <% } %>
                                 </div>
-                                <button type="submit" class="btn" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">Enviar Comprobante</button>
-                            </form>
-                            <% } else { %>
-                            <div class="mt-3">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h6 class="card-title mb-3">Comprobante de Pago Subido</h6>
-                                        <div class="d-flex align-items-center">
-                                            <a href="/uploads/comprobantes/<%= order.comprobante_pago_url %>" 
-                                               target="_blank" 
-                                               class="me-3">
-                                                <img src="/uploads/comprobantes/<%= order.comprobante_pago_url %>" 
-                                                     alt="Comprobante de pago" 
-                                                     class="img-thumbnail" 
-                                                     style="max-width: 200px;">
-                                            </a>
-                                            <div class="ms-3">
-                                                <p class="mb-1">
-                                                    <i class="fas fa-file-image text-primary me-2"></i>
-                                                    <strong>Archivo:</strong> <%= order.comprobante_pago_url %>
-                                                </p>
-                                                <p class="mb-0">
-                                                    <i class="fas fa-external-link-alt text-info me-2"></i>
-                                                    <a href="/uploads/comprobantes/<%= order.comprobante_pago_url %>" 
-                                                       target="_blank" 
-                                                       class="text-decoration-none">
-                                                        Ver en ventana nueva
-                                                    </a>
-                                                </p>
+
+                                <!-- Order Summary -->
+                                <div class="order-summary p-3 bg-light rounded">
+                                    <h6 class="mb-3">Resumen del Pedido</h6>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Subtotal:</span>
+                                        <strong>$<%= Number(order && order.subtotal ? order.subtotal : 0).toFixed(2) %></strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Envío:</span>
+                                        <strong><%= Number(order && order.costo_delivery ? order.costo_delivery : 0) > 0 ? `$${Number(order && order.costo_delivery ? order.costo_delivery : 0).toFixed(2)}` : 'Gratis' %></strong>
+                                    </div>
+                                    <% if (order && (order.metodo_pago === 'efectivo' || order.metodo_pago === 'transferencia')) { %>
+                                        <%
+                                            const originalTotal = Number(order.subtotal || 0) + Number(order.costo_delivery || 0);
+                                            const discountAmount = originalTotal - Number(order.total || 0);
+                                            const hasDiscount = discountAmount > 0;
+                                        %>
+                                        <% if (hasDiscount) { %>
+                                        <div class="d-flex justify-content-between mb-2 text-success">
+                                            <span>Descuento:</span>
+                                            <strong>-$<%= discountAmount.toFixed(2) %></strong>
+                                        </div>
+                                        <% } %>
+                                    <% } %>
+                                    <hr>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="fs-5">Total:</span>
+                                        <strong class="fs-5 text-primary">$<%= Number(order && order.total ? order.total : 0).toFixed(2) %></strong>
+                                    </div>
+                                </div>
+
+                                <!-- Delivery Info -->
+                                <div class="delivery-info mt-4">
+                                    <h6 class="mb-3">Información de Entrega</h6>
+                                    <div class="p-3 bg-light rounded">
+                                        <p class="mb-2">
+                                            <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                                            <strong>Dirección:</strong> <%= order && order.direccion_entrega ? order.direccion_entrega : 'No disponible' %>
+                                        </p>
+                                        <% if (order && order.notas_especiales) { %>
+                                            <p class="mb-0 mt-2">
+                                                <i class="fas fa-comment-alt text-primary me-2"></i>
+                                                <strong>Notas:</strong> <%= order.notas_especiales %>
+                                            </p>
+                                        <% } %>
+                                    </div>
+                                </div>
+
+                                <!-- Payment Info -->
+                                <div class="payment-info mt-4">
+                                    <h6 class="mb-3">Información de Pago</h6>
+                                    <div class="p-3 bg-light rounded">
+                                        <p class="mb-0">
+                                            <i class="fas fa-credit-card text-primary me-2"></i>
+                                            <strong>Método de Pago:</strong>
+                                            <%= order && order.metodo_pago ?
+                                                (order.metodo_pago === 'mercadopago' ? 'MercadoPago' :
+                                                 order.metodo_pago === 'efectivo' ? 'Efectivo' :
+                                                 order.metodo_pago === 'transferencia' ? 'Transferencia Bancaria' :
+                                                 order.metodo_pago) : 'No disponible' %>
+                                        </p>
+                                        <% if (order && order.metodo_pago === 'mercadopago') { %>
+                                            <p class="mb-0 mt-2">
+                                                <i class="fas fa-info-circle text-info me-2"></i>
+                                                <strong>Estado del Pago:</strong>
+                                                <% if (order.estado === 'confirmado' || order.estado === 'pagado') { %>
+                                                    <span class="badge bg-success">Pagado</span>
+                                                <% } else if (order.estado === 'pendiente_pago') { %>
+                                                    <span class="badge bg-warning text-dark">Pendiente de pago</span>
+                                                <% } else if (order.estado === 'cancelado') { %>
+                                                    <span class="badge bg-danger">Pago rechazado</span>
+                                                <% } else { %>
+                                                    <span class="badge bg-secondary">Desconocido</span>
+                                                <% } %>
+                                            </p>
+                                        <% } %>
+                                        <% if (order && order.metodo_pago === 'transferencia') { %>
+                                            <hr>
+                                            <h6 class="mt-3">Datos para Transferencia</h6>
+                                            <p class="mb-1"><strong>CBU/CVU:</strong> <%= restaurant.datos_transferencia_cbu %></p>
+                                            <p class="mb-1"><strong>Alias:</strong> <%= restaurant.datos_transferencia_alias %></p>
+                                            <p class="mb-1"><strong>Titular:</strong> <%= restaurant.datos_transferencia_titular %></p>
+                                            <p class="mb-2"><strong>DNI/CUIT:</strong> <%= restaurant.datos_transferencia_dni %></p>
+
+                                            <% if (!order.comprobante_pago_url) { %>
+                                            <form id="comprobanteForm" class="mt-3" enctype="multipart/form-data">
+                                                <input type="hidden" name="orderId" value="<%= order.id %>">
+                                                <div class="mb-3">
+                                                    <label for="comprobante" class="form-label">Subir Comprobante de Pago</label>
+                                                    <input type="file" class="form-control" id="comprobante" name="comprobante" accept="image/*,.pdf,.jpg,.jpeg,.png">
+                                                </div>
+                                                <button type="submit" class="btn" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">Enviar Comprobante</button>
+                                            </form>
+                                            <% } else { %>
+                                            <div class="mt-3">
+                                                <div class="card">
+                                                    <div class="card-body">
+                                                        <h6 class="card-title mb-3">Comprobante de Pago Subido</h6>
+                                                        <div class="d-flex align-items-center">
+                                                            <a href="/uploads/comprobantes/<%= order.comprobante_pago_url %>"
+                                                               target="_blank"
+                                                               class="me-3">
+                                                                <img src="/uploads/comprobantes/<%= order.comprobante_pago_url %>"
+                                                                     alt="Comprobante de pago"
+                                                                     class="img-thumbnail"
+                                                                     style="max-width: 200px;">
+                                                            </a>
+                                                            <div class="ms-3">
+                                                                <p class="mb-1">
+                                                                    <i class="fas fa-file-image text-primary me-2"></i>
+                                                                    <strong>Archivo:</strong> <%= order.comprobante_pago_url %>
+                                                                </p>
+                                                                <p class="mb-0">
+                                                                    <i class="fas fa-external-link-alt text-info me-2"></i>
+                                                                    <a href="/uploads/comprobantes/<%= order.comprobante_pago_url %>"
+                                                                       target="_blank"
+                                                                       class="text-decoration-none">
+                                                                        Ver en ventana nueva
+                                                                    </a>
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <% } %>
+                                        <% } %>
+                                    </div>
+                                </div>
+
+                                <!-- Order Timeline -->
+                                <div class="order-timeline mt-4">
+                                    <h6 class="mb-3">Estado del Pedido</h6>
+
+                                    <%
+                                      let showCompletePaymentButton = false;
+                                      if (order && order.estado === 'pendiente_pago') {
+                                        const orderTime = new Date(order.fecha_pedido);
+                                        const currentTime = new Date();
+                                        const minutesDiff = (currentTime - orderTime) / (1000 * 60);
+                                        if (minutesDiff <= 15) {
+                                          showCompletePaymentButton = true;
+                                        }
+                                      }
+                                    %>
+
+                                    <% if (showCompletePaymentButton) { %>
+                                      <div class="alert alert-warning mb-3">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                          <div>
+                                            <i class="fas fa-clock me-2"></i>
+                                            <strong>Pago Pendiente</strong>
+                                            <p class="mb-0 mt-1">Tu pedido está esperando que completes el pago. Tienes hasta 15 minutos para completarlo.</p>
+                                          </div>
+                                          <a href="/orders/<%= order.id %>/complete-payment" class="btn btn-primary">
+                                            <i class="fas fa-credit-card me-2"></i>
+                                            Completar Pago
+                                          </a>
+                                        </div>
+                                      </div>
+                                    <% } %>
+
+                                    <div class="timeline">
+                                        <% const estados = ['pendiente', 'confirmado', 'preparando', 'en_camino', 'entregado'] %>
+                                        <% estados.forEach((estado, index) => { %>
+                                            <div class="timeline-item d-flex mb-3">
+                                                <div class="timeline-icon me-3">
+                                                    <div class="timeline-dot <%= order && order.estado === estado ? 'active' :
+                                                                               order && estados.indexOf(order.estado) > index ? 'completed' : '' %>">
+                                                        <i class="fas fa-<%= estado === 'pendiente' ? 'clock' :
+                                                                           estado === 'confirmado' ? 'check' :
+                                                                           estado === 'preparando' ? 'utensils' :
+                                                                           estado === 'en_camino' ? 'truck' :
+                                                                           'check-circle' %>"></i>
+                                                    </div>
+                                                    <% if (index < estados.length - 1) { %>
+                                                        <div class="timeline-line"></div>
+                                                    <% } %>
+                                                </div>
+                                                <div class="timeline-content">
+                                                    <h6 class="mb-1"><%= estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ') %></h6>
+                                                    <small class="text-muted">
+                                                        <%= order && order.estado === estado ? 'Estado actual' :
+                                                           order && estados.indexOf(order.estado) > index ? 'Completado' :
+                                                           'Pendiente' %>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        <% }) %>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Columna derecha: Mapa o Confirmación de Entrega -->
+                        <div class="col-lg-4">
+                            <div class="p-4">
+                                <% if (order.estado === 'entregado') { %>
+                                    <!-- Animación de Pedido Entregado -->
+                                    <div class="delivered-confirmation text-center">
+                                        <div class="delivered-animation mb-4">
+                                            <div class="delivered-icon">
+                                                <i class="fas fa-check-circle"></i>
+                                            </div>
+                                            <div class="delivered-package">
+                                                <i class="fas fa-box"></i>
+                                            </div>
+                                        </div>
+                                        <h5 class="text-success mb-3">
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            ¡Pedido Entregado!
+                                        </h5>
+                                        <p class="text-muted mb-3">
+                                            Tu pedido ha sido entregado exitosamente. ¡Gracias por tu compra!
+                                        </p>
+                                        <div class="delivered-details p-3 bg-light rounded">
+                                            <div class="mb-2">
+                                                <i class="fas fa-calendar-check text-success me-2"></i>
+                                                <strong>Entregado el:</strong><br>
+                                                <small class="text-muted">
+                                                    <%= order.fecha_pedido ? new Date(order.fecha_pedido).toLocaleDateString('es-AR', {
+                                                        weekday: 'long',
+                                                        year: 'numeric',
+                                                        month: 'long',
+                                                        day: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    }) : 'Fecha no disponible' %>
+                                                </small>
+                                            </div>
+                                            <% if (order.repartidor_nombre) { %>
+                                            <div class="mb-2">
+                                                <i class="fas fa-user text-primary me-2"></i>
+                                                <strong>Entregado por:</strong><br>
+                                                <small class="text-muted"><%= order.repartidor_nombre %></small>
+                                            </div>
+                                            <% } %>
+                                            <div class="mt-3">
+                                                <i class="fas fa-star text-warning me-2"></i>
+                                                <strong>¿Qué te pareció el servicio?</strong>
+                                                <div class="mt-2">
+                                                    <button class="btn btn-sm btn-outline-warning me-1" onclick="rateDelivery(5)">
+                                                        <i class="fas fa-star"></i> Excelente
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-primary" onclick="rateDelivery()">
+                                                        Calificar
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                            <% } %>
-                            <% } %>
-                        </div>
-                    </div>
-
-                    <!-- Order Timeline -->
-                    <div class="order-timeline mt-4">
-                        <h6 class="mb-3">Estado del Pedido</h6>
-                        
-                        <% 
-                          let showCompletePaymentButton = false;
-                          if (order && order.estado === 'pendiente_pago') {
-                            const orderTime = new Date(order.fecha_pedido);
-                            const currentTime = new Date();
-                            const minutesDiff = (currentTime - orderTime) / (1000 * 60);
-                            if (minutesDiff <= 15) {
-                              showCompletePaymentButton = true;
-                            }
-                          }
-                        %>
-
-                        <% if (showCompletePaymentButton) { %>
-                          <div class="alert alert-warning mb-3">
-                            <div class="d-flex align-items-center justify-content-between">
-                              <div>
-                                <i class="fas fa-clock me-2"></i>
-                                <strong>Pago Pendiente</strong>
-                                <p class="mb-0 mt-1">Tu pedido está esperando que completes el pago. Tienes hasta 15 minutos para hacerlo.</p>
-                              </div>
-                              <a href="/orders/<%= order.id %>/complete-payment" class="btn btn-primary">
-                                <i class="fas fa-credit-card me-2"></i>
-                                Completar Pago
-                              </a>
-                            </div>
-                          </div>
-                        <% } %>
-                        
-                        <div class="timeline">
-                            <% const estados = ['pendiente', 'confirmado', 'preparando', 'en_camino', 'entregado'] %>
-                            <% estados.forEach((estado, index) => { %>
-                                <div class="timeline-item d-flex mb-3">
-                                    <div class="timeline-icon me-3">
-                                        <div class="timeline-dot <%= order && order.estado === estado ? 'active' : 
-                                                                   order && estados.indexOf(order.estado) > index ? 'completed' : '' %>">
-                                            <i class="fas fa-<%= estado === 'pendiente' ? 'clock' :
-                                                               estado === 'confirmado' ? 'check' :
-                                                               estado === 'preparando' ? 'utensils' :
-                                                               estado === 'en_camino' ? 'truck' :
-                                                               'check-circle' %>"></i>
-                                        </div>
-                                        <% if (index < estados.length - 1) { %>
-                                            <div class="timeline-line"></div>
+                                <% } else { %>
+                                    <!-- Mapa para estados no entregados -->
+                                    <h6 class="mb-3">
+                                        <i class="fas fa-map-marked-alt text-primary me-2"></i>
+                                        <% if (order.estado === 'en_camino' && order.repartidor_id) { %>
+                                            Seguimiento en Tiempo Real
+                                        <% } else { %>
+                                            Ubicación de Entrega
                                         <% } %>
-                                    </div>
-                                    <div class="timeline-content">
-                                        <h6 class="mb-1"><%= estado.charAt(0).toUpperCase() + estado.slice(1).replace('_', ' ') %></h6>
-                                        <small class="text-muted">
-                                            <%= order && order.estado === estado ? 'Estado actual' :
-                                               order && estados.indexOf(order.estado) > index ? 'Completado' :
-                                               'Pendiente' %>
-                                        </small>
-                                    </div>
-                                </div>
-                            <% }) %>
+                                    </h6>
+
+                                    <% if (order && order.latitud_entrega && order.longitud_entrega) { %>
+                                        <div id="orderLocationMapContainer" style="position: relative; height: 500px; width: 100%; border-radius: 8px; border: 1px solid #dee2e6;">
+                                            <!-- Loading indicator -->
+                                            <div id="orderMapLoading" class="text-center py-4" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); z-index: 10; display: flex; align-items: center; justify-content: center;">
+                                                <div>
+                                                    <div class="spinner-border text-primary" role="status">
+                                                        <span class="visually-hidden">Cargando mapa...</span>
+                                                    </div>
+                                                    <div class="mt-2 text-muted">Cargando mapa...</div>
+                                                </div>
+                                            </div>
+                                            <div id="orderLocationMap" style="height: 100%; width: 100%;"></div>
+                                        </div>
+
+                                        <!-- Información del estado del pedido -->
+                                        <div class="mt-3 p-3 bg-light rounded">
+                                            <h6 class="text-info mb-2">
+                                                <i class="fas fa-map-marker-alt me-2"></i>Estado del Pedido
+                                            </h6>
+                                            <p class="small text-muted mb-0">
+                                                <%= order.estado === 'pendiente' ? 'Pedido recibido, esperando confirmación' :
+                                                   order.estado === 'confirmado' ? 'Pedido confirmado por el restaurante' :
+                                                   order.estado === 'preparando' ? 'El restaurante está preparando tu pedido' :
+                                                   order.estado === 'en_camino' ? 'Tu pedido está en camino' :
+                                                   order.estado === 'entregado' ? 'Pedido entregado exitosamente' :
+                                                   order.estado === 'cancelado' ? 'Pedido cancelado' :
+                                                   'Estado desconocido' %>
+                                            </p>
+                                            <% if (order.estado === 'en_camino' && order.repartidor_id) { %>
+                                                <div class="mt-2">
+                                                    <small class="text-primary">
+                                                        <i class="fas fa-motorcycle me-1"></i>
+                                                        <strong><%= order.repartidor_nombre %></strong> está entregando tu pedido
+                                                    </small>
+                                                </div>
+                                            <% } %>
+                                        </div>
+                                    <% } else { %>
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            No hay coordenadas disponibles para mostrar el mapa
+                                        </div>
+                                    <% } %>
+                                <% } %>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -297,12 +404,7 @@
                         <i class="fas fa-comments me-2"></i> Chat
                     </button>
                     <% } %>
-                    <% if (order && order.estado === 'en_camino') { %>
-                        <button id="markAsDeliveredBtn" data-order-id="<%= order.id %>" class="btn btn-success">
-                            <i class="fas fa-check me-2"></i>
-                            Marcar como Entregado
-                        </button>
-                    <% } %>
+                    
                     <% if (order && order.estado === 'pendiente') { %>
                         <button id="cancelOrderBtn" data-order-id="<%= order.id %>" class="btn btn-outline-danger">
                             <i class="fas fa-times me-2"></i>
@@ -408,6 +510,149 @@
 .chat-section #chatMessages .ms-auto {
     margin-left: auto !important;
 }
+
+/* Estilos para order-scroll - Solo en móviles */
+.order-scroll {
+    /* En desktop no hay scroll */
+}
+
+/* Media query para móviles */
+@media (max-width: 767px) {
+    .order-scroll {
+        overflow: auto;
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: 70vh; /* Altura máxima para permitir scroll en móviles */
+        -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+    }
+
+    /* Mapa responsivo para móviles */
+    #orderLocationMapContainer {
+        height: 300px !important;
+        margin-bottom: 15px;
+    }
+
+    #orderLocationMap {
+        height: 300px !important;
+    }
+
+    /* Ajustar layout para móviles */
+    .col-lg-8 {
+        border-right: none !important;
+        border-bottom: 1px solid #dee2e6 !important;
+        margin-bottom: 20px;
+    }
+
+    .col-lg-4 .p-4 {
+        padding: 15px !important;
+    }
+
+    /* Ajustar tamaños de fuente en móviles */
+    .leaflet-control-container {
+        font-size: 12px;
+    }
+
+    .leaflet-popup-content-wrapper {
+        font-size: 14px;
+    }
+
+    .leaflet-popup-tip {
+        background-color: white;
+    }
+}
+
+@media (max-width: 575px) {
+    #orderLocationMapContainer {
+        height: 250px !important;
+    }
+
+    #orderLocationMap {
+        height: 250px !important;
+    }
+
+    .col-lg-4 .p-4 {
+        padding: 10px !important;
+    }
+
+    .card-header h5 {
+        font-size: 1rem !important;
+    }
+}
+
+/* Estilos para la confirmación de entrega estática */
+.delivered-confirmation {
+    position: relative;
+    overflow: hidden;
+}
+
+.delivered-animation {
+    position: relative;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+}
+
+.delivered-icon {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 3rem;
+    color: white;
+    z-index: 2;
+}
+
+.delivered-package {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 4rem;
+    color: rgba(255, 255, 255, 0.8);
+    z-index: 1;
+}
+
+.delivered-details {
+    border: 2px solid #28a745;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #f8fff8 0%, #ffffff 100%);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.1);
+}
+
+.delivered-details .btn-outline-warning:hover {
+    background-color: #ffc107;
+    border-color: #ffc107;
+}
+
+.delivered-details .btn-outline-primary:hover {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+    .delivered-animation {
+        height: 150px;
+    }
+
+    .delivered-icon {
+        font-size: 2.5rem;
+        top: 15px;
+    }
+
+    .delivered-package {
+        font-size: 3rem;
+        bottom: 15px;
+    }
+
+    .delivered-details {
+        margin-top: 20px;
+    }
+}
 </style>
 
 <!-- Modal de Detalles del Pedido (incluye el chat) -->
@@ -460,21 +705,523 @@
 
 <!-- Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
-
-
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+
+<!-- Modal para ver ubicación -->
+<div class="modal fade" id="orderLocationModal" tabindex="-1" aria-labelledby="orderLocationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="orderLocationModalLabel">Ubicación de Entrega</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="orderLocationMapModal" style="height:350px; border-radius:12px; border:1px solid #ccc;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="order-status-data"
      data-order-id="<%= order.id %>"
      data-order-status="<%= order.estado %>"
-     data-repartidor-id="<%= order.repartidor_id %>"
+     data-repartidor-id="<%= order.repartidor_id || '' %>"
      data-order-lat="<%= order.latitud_entrega %>"
      data-order-lng="<%= order.longitud_entrega %>"
+     data-driver-lat="<%= order.driver_lat || '' %>"
+     data-driver-lng="<%= order.driver_lng || '' %>"
+     data-restaurant-lat="<%= restaurant && restaurant.latitud ? restaurant.latitud : '' %>"
+     data-restaurant-lng="<%= restaurant && restaurant.longitud ? restaurant.longitud : '' %>"
      style="display: none;"></div>
 
-<!-- Scripts -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+
+
+<!-- Debug info -->
+<script>
+    console.log('=== DEBUG ORDER DATA ===');
+    console.log('Order ID:', '<%= order.id %>');
+    console.log('Order Status:', '<%= order.estado %>');
+    console.log('Repartidor ID:', '<%= order.repartidor_id %>');
+    console.log('Order Lat:', '<%= order.latitud_entrega %>');
+    console.log('Order Lng:', '<%= order.longitud_entrega %>');
+    console.log('Driver Lat:', '<%= order.driver_lat || "" %>');
+    console.log('Driver Lng:', '<%= order.driver_lng || "" %>');
+    console.log('=======================');
+</script>
+
 <script src="/js/order-tracking.js"></script>
+
+<!-- Modal para cancelar pedido -->
+<div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-labelledby="cancelOrderModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="cancelOrderModalLabel">Cancelar Pedido</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <form id="cancelOrderForm">
+          <div class="mb-3">
+            <label for="cancelReason" class="form-label">¿Por qué quieres cancelar el pedido?</label>
+            <textarea class="form-control" id="cancelReason" name="cancelReason" rows="3" placeholder="Ingresa el motivo de cancelación..." required></textarea>
+            <div class="form-text">Esta información ayudará al restaurante a mejorar su servicio.</div>
+          </div>
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger">Confirmar Cancelación</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Chat functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const openChatBtn = document.getElementById('openClientChatBtn');
+    const chatModal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+    const chatMessages = document.getElementById('chat-messages');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-message-input');
+    const orderId = document.getElementById('order-status-data').dataset.orderId;
+    const userId = document.getElementById('app-config').dataset.userId;
+    const userType = document.getElementById('app-config').dataset.userType;
+
+    // Initialize Socket.IO
+    const socket = io();
+
+    // Join user room and order chat room
+    if (userId) {
+        socket.emit('join-user', userId);
+        socket.emit('join-order-chat', {
+            orderId: orderId,
+            userId: userId,
+            userType: userType
+        });
+    }
+
+    // Open chat modal
+    if (openChatBtn) {
+        openChatBtn.addEventListener('click', function() {
+            chatModal.show();
+            loadChatMessages();
+            chatInput.focus();
+        });
+    }
+
+    // Load chat messages
+    function loadChatMessages() {
+        fetch(`/orders/${orderId}/chat/messages`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayMessages(data.messages);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading chat messages:', error);
+            });
+    }
+
+    // Display messages in chat
+    function displayMessages(messages) {
+        chatMessages.innerHTML = '';
+        if (messages.length === 0) {
+            chatMessages.innerHTML = '<div class="text-center text-muted py-5">No hay mensajes aún. ¡Envía el primero!</div>';
+            return;
+        }
+
+        messages.forEach(message => {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `d-flex mb-3 ${message.remitente_tipo === 'cliente' ? 'justify-content-end' : 'justify-content-start'}`;
+
+            const messageContent = `
+                <div class="message-bubble ${message.remitente_tipo === 'cliente' ? 'bg-primary text-white' : 'bg-light text-dark'} rounded p-2">
+                    <div class="message-text">${escapeHtml(message.mensaje)}</div>
+                    <small class="${message.remitente_tipo === 'cliente' ? 'text-white-50' : 'text-muted'}">
+                        ${new Date(message.fecha_envio).toLocaleTimeString('es-AR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })}
+                    </small>
+                </div>
+            `;
+
+            messageDiv.innerHTML = messageContent;
+            chatMessages.appendChild(messageDiv);
+        });
+
+        // Scroll to bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Send message
+    if (chatForm) {
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Disable button and show loading state
+            const submitBtn = chatForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
+            // Send message via socket
+            socket.emit('send-order-message', {
+                orderId: orderId,
+                message: message,
+                userId: userId,
+                userType: userType
+            });
+
+            // Clear input
+            chatInput.value = '';
+
+            // Add message to UI immediately
+            addMessageToUI({
+                mensaje: message,
+                remitente_tipo: 'cliente',
+                fecha_envio: new Date()
+            });
+
+            // Reset button after a short delay (in case socket confirmation doesn't arrive)
+            setTimeout(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }, 3000);
+        });
+    }
+
+    // Listen for new messages
+    socket.on('new-order-message', function(data) {
+        if (data.orderId == orderId) {
+            addMessageToUI(data.message);
+
+            // Reset button state when message is confirmed
+            const submitBtn = chatForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar';
+
+            // Play notification sound if message is not from current user
+            if (data.message.remitente_tipo !== 'cliente') {
+                playNotificationSound();
+            }
+        }
+    });
+
+    // Listen for message sent confirmation
+    socket.on('message-sent', function(data) {
+        console.log('Mensaje enviado exitosamente:', data);
+        // Reset button state
+        const submitBtn = chatForm.querySelector('button[type="submit"]');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar';
+    });
+
+    // Listen for chat errors
+    socket.on('chat-error', function(data) {
+        console.error('Error en chat:', data);
+        // Reset button state and show error
+        const submitBtn = chatForm.querySelector('button[type="submit"]');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar';
+
+        // Show error notification
+        if (typeof showNotification !== 'undefined') {
+            showNotification('Error al enviar mensaje. Inténtalo de nuevo.', 'error');
+        } else {
+            alert('Error al enviar mensaje. Inténtalo de nuevo.');
+        }
+    });
+
+    // Add message to UI
+    function addMessageToUI(message) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `d-flex mb-3 ${message.remitente_tipo === 'cliente' ? 'justify-content-end' : 'justify-content-start'}`;
+
+        const messageContent = `
+            <div class="message-bubble ${message.remitente_tipo === 'cliente' ? 'bg-primary text-white' : 'bg-light text-dark'} rounded p-2">
+                <div class="message-text">${escapeHtml(message.mensaje)}</div>
+                <small class="${message.remitente_tipo === 'cliente' ? 'text-white-50' : 'text-muted'}">
+                    ${new Date(message.fecha_envio).toLocaleTimeString('es-AR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })}
+                </small>
+            </div>
+        `;
+
+        messageDiv.innerHTML = messageContent;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Play notification sound
+    function playNotificationSound() {
+        const audio = document.getElementById('chatNotificationSound');
+        if (audio) {
+            audio.play().catch(e => console.log('Audio play failed:', e));
+        }
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Cancel order functionality
+    const cancelOrderBtn = document.getElementById('cancelOrderBtn');
+    if (cancelOrderBtn) {
+        cancelOrderBtn.addEventListener('click', function() {
+            const orderId = this.dataset.orderId;
+
+            // Show cancel modal instead of prompt
+            const cancelModal = new bootstrap.Modal(document.getElementById('cancelOrderModal'));
+            cancelModal.show();
+        });
+    }
+
+    // Handle cancel order form submission
+    const cancelOrderForm = document.getElementById('cancelOrderForm');
+    if (cancelOrderForm) {
+        cancelOrderForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const orderId = document.getElementById('cancelOrderBtn').dataset.orderId;
+            const motivo = document.getElementById('cancelReason').value.trim();
+
+            if (!motivo) {
+                showNotification('Por favor, ingresa el motivo de cancelación', 'warning');
+                return;
+            }
+
+            fetch(`/orders/${orderId}/cancel`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ motivo: motivo.trim() })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Pedido cancelado exitosamente', 'success');
+                    // Close modal
+                    const cancelModal = bootstrap.Modal.getInstance(document.getElementById('cancelOrderModal'));
+                    cancelModal.hide();
+                    // Reload page after a short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showNotification('Error al cancelar el pedido: ' + (data.message || 'Error desconocido'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error al cancelar el pedido', 'error');
+            });
+        });
+    }
+
+    // Función para calificar el delivery
+    window.rateDelivery = function(rating) {
+        if (rating) {
+            // Calificación rápida con estrellas
+            submitRating(rating);
+        } else {
+            // Mostrar modal de calificación completa
+            showRatingModal();
+        }
+    };
+
+    function submitRating(rating) {
+        const orderId = document.getElementById('order-status-data').dataset.orderId;
+
+        fetch(`/orders/${orderId}/rate-delivery`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                rating: rating,
+                comentario: rating === 5 ? '¡Excelente servicio!' : 'Buen servicio'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('¡Gracias por tu calificación!', 'success');
+                // Actualizar la UI para mostrar que ya se calificó
+                const ratingSection = document.querySelector('.delivered-details .mt-3');
+                if (ratingSection) {
+                    ratingSection.innerHTML = `
+                        <div class="text-center">
+                            <i class="fas fa-check-circle text-success fs-2 mb-2"></i>
+                            <p class="text-success mb-0"><strong>¡Calificación enviada!</strong></p>
+                            <small class="text-muted">Gracias por ayudarnos a mejorar</small>
+                        </div>
+                    `;
+                }
+            } else {
+                showNotification('Error al enviar calificación', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error al enviar calificación', 'error');
+        });
+    }
+
+    function showRatingModal() {
+        // Crear modal de calificación
+        const modalHtml = `
+            <div class="modal fade" id="ratingModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Calificar Servicio de Delivery</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="ratingForm">
+                                <div class="text-center mb-4">
+                                    <div class="rating-stars mb-3">
+                                        <i class="fas fa-star star-rating" data-rating="1"></i>
+                                        <i class="fas fa-star star-rating" data-rating="2"></i>
+                                        <i class="fas fa-star star-rating" data-rating="3"></i>
+                                        <i class="fas fa-star star-rating" data-rating="4"></i>
+                                        <i class="fas fa-star star-rating" data-rating="5"></i>
+                                    </div>
+                                    <div id="ratingText" class="text-muted">Selecciona tu calificación</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="ratingComment" class="form-label">Comentario (opcional)</label>
+                                    <textarea class="form-control" id="ratingComment" rows="3" placeholder="Cuéntanos tu experiencia..."></textarea>
+                                </div>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                    <button type="submit" class="btn btn-primary" id="submitRatingBtn" disabled>Enviar Calificación</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Agregar modal al DOM
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Mostrar modal
+        const modal = new bootstrap.Modal(document.getElementById('ratingModal'));
+        modal.show();
+
+        // Variables para manejar la calificación
+        let selectedRating = 0;
+        const stars = document.querySelectorAll('.star-rating');
+        const ratingText = document.getElementById('ratingText');
+        const submitBtn = document.getElementById('submitRatingBtn');
+
+        // Manejadores de eventos para las estrellas
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                selectedRating = parseInt(this.dataset.rating);
+                updateStars(selectedRating);
+                submitBtn.disabled = false;
+            });
+
+            star.addEventListener('mouseover', function() {
+                const rating = parseInt(this.dataset.rating);
+                updateStars(rating);
+            });
+
+            star.addEventListener('mouseout', function() {
+                updateStars(selectedRating);
+            });
+        });
+
+        function updateStars(rating) {
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.add('text-warning');
+                    star.classList.remove('text-muted');
+                } else {
+                    star.classList.remove('text-warning');
+                    star.classList.add('text-muted');
+                }
+            });
+
+            const ratingTexts = {
+                0: 'Selecciona tu calificación',
+                1: 'Muy malo',
+                2: 'Malo',
+                3: 'Regular',
+                4: 'Bueno',
+                5: 'Excelente'
+            };
+            ratingText.textContent = ratingTexts[rating] || 'Selecciona tu calificación';
+        }
+
+        // Manejar envío del formulario
+        document.getElementById('ratingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            if (selectedRating === 0) {
+                showNotification('Por favor selecciona una calificación', 'warning');
+                return;
+            }
+
+            const comentario = document.getElementById('ratingComment').value.trim();
+            const orderId = document.getElementById('order-status-data').dataset.orderId;
+
+            fetch(`/orders/${orderId}/rate-delivery`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    rating: selectedRating,
+                    comentario: comentario || null
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('¡Gracias por tu calificación!', 'success');
+                    modal.hide();
+
+                    // Actualizar la UI
+                    const ratingSection = document.querySelector('.delivered-details .mt-3');
+                    if (ratingSection) {
+                        ratingSection.innerHTML = `
+                            <div class="text-center">
+                                <i class="fas fa-check-circle text-success fs-2 mb-2"></i>
+                                <p class="text-success mb-0"><strong>¡Calificación enviada!</strong></p>
+                                <small class="text-muted">Gracias por ayudarnos a mejorar</small>
+                            </div>
+                        `;
+                    }
+                } else {
+                    showNotification('Error al enviar calificación', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error al enviar calificación', 'error');
+            });
+        });
+
+        // Limpiar modal cuando se cierre
+        document.getElementById('ratingModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+    }
+});
+</script>

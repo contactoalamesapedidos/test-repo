@@ -122,7 +122,60 @@
         <script>
         // Datos reales para los gráficos
     const dailyStats = <%- JSON.stringify(dailyStats) %>;
-    const dias = dailyStats.map(d => d.dia).reverse();
+    // Formatear fechas a dd/mm
+    const dias = dailyStats.map(d => {
+        let dateStr = d.dia;
+
+        // Debug: mostrar el formato de fecha recibido
+        console.log('Fecha original:', dateStr, typeof dateStr);
+
+        // Si es un objeto Date, convertir a string
+        if (dateStr instanceof Date) {
+            dateStr = dateStr.toISOString().split('T')[0]; // YYYY-MM-DD
+        }
+
+        // Si es un string, asegurar formato YYYY-MM-DD
+        if (typeof dateStr === 'string') {
+            // Si tiene formato DD/MM/YYYY, convertir a YYYY-MM-DD
+            if (dateStr.indexOf('/') !== -1 && dateStr.split('/').length === 3) {
+                var parts = dateStr.split('/');
+                if (parts[2] && parts[2].length === 4) {
+                    // DD/MM/YYYY -> YYYY-MM-DD
+                    var monthPadded = parts[1].length === 1 ? '0' + parts[1] : parts[1];
+                    var dayPadded = parts[0].length === 1 ? '0' + parts[0] : parts[0];
+                    dateStr = parts[2] + '-' + monthPadded + '-' + dayPadded;
+                }
+            }
+        }
+
+        var day, month;
+
+        // Parsear fecha en formato YYYY-MM-DD
+        if (dateStr && typeof dateStr === 'string' && dateStr.indexOf('-') !== -1) {
+            var parts = dateStr.split('-');
+            if (parts.length >= 3) {
+                // YYYY-MM-DD
+                var year = parts[0];
+                month = parts[1];
+                day = parts[2];
+                console.log('Parsed - Year:', year, 'Month:', month, 'Day:', day);
+            }
+        }
+
+        // Si no se pudo parsear, usar valores por defecto
+        if (!day || !month) {
+            console.log('No se pudo parsear fecha:', dateStr);
+            day = '01';
+            month = '01';
+        }
+
+        // Formatear con ceros a la izquierda manualmente
+        var dayFormatted = day.length === 1 ? '0' + day : day;
+        var monthFormatted = month.length === 1 ? '0' + month : month;
+        var formatted = dayFormatted + '/' + monthFormatted;
+        console.log('Fecha formateada:', formatted);
+        return formatted;
+    }).reverse();
     const ingresosDia = dailyStats.map(d => d.ingresos).reverse();
 
     const weekChartStats = <%- JSON.stringify(weekChartStats) %>;

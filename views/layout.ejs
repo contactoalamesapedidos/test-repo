@@ -27,7 +27,7 @@
     <%- include('partials/header', { currentPath: currentPath, user: user }) %>
 
     <!-- Main Content -->
-    <main class="container py-4" style="padding-top: 76px !important;">
+    <main class="container py-4">
         <%- body %>
     </main>
 
@@ -53,26 +53,24 @@
     <!-- Navegación móvil general o dashboard según usuario y ruta -->
     <% if (user && user.tipo_usuario === 'restaurante' && ((typeof isDashboardPage !== 'undefined' && isDashboardPage) || (currentPath && (currentPath.startsWith('/dashboard') || currentPath.startsWith('/dashboard/orders'))))) { %>
       <!-- Menú móvil dashboard restaurante -->
+      <% const currentActivePage = typeof activePage !== 'undefined' ? activePage : ''; %>
       <nav class="mobile-nav mobile-only dashboard-mobile-nav d-md-none d-lg-none d-xl-none">
-        <a href="/dashboard" class="mobile-nav-item <%= currentPath === '/dashboard' ? 'active' : '' %>">
+        <a href="/dashboard" class="mobile-nav-item <%= currentActivePage === 'dashboard' ? 'active' : '' %>">
             <i class="fas fa-home"></i>
             <span>Dashboard</span>
         </a>
-        <a href="/dashboard/products" class="mobile-nav-item <%= currentPath === '/dashboard/products' ? 'active' : '' %>">
+        <a href="/dashboard/products" class="mobile-nav-item <%= currentActivePage === 'productos' ? 'active' : '' %>">
             <i class="fas fa-utensils"></i>
             <span>Productos</span>
         </a>
-        <a href="/dashboard/orders" class="mobile-nav-item <%= currentPath === '/dashboard/orders' ? 'active' : '' %>" style="position: relative;">
+        <a href="/dashboard/orders" class="mobile-nav-item <%= currentActivePage === 'pedidos' ? 'active' : '' %>" style="position: relative;">
             <i class="fas fa-shopping-cart"></i>
             <span>Pedidos</span>
-            <% if (typeof pedidosNoEntregados !== 'undefined' && pedidosNoEntregados !== null) { %>
-                <!-- DEBUG: pedidosNoEntregados = <%= pedidosNoEntregados %> -->
-                <% if (pedidosNoEntregados > 0) { %>
-                    <span class="badge bg-danger rounded-pill" style="position: absolute; top: -7px; right: 3px; font-size: 1.17em; padding: 0.52em 0.78em;"><%= pedidosNoEntregados %></span>
-                <% } %>
+            <% if (typeof pedidos_no_entregados !== 'undefined' && pedidos_no_entregados > 0) { %>
+                <span class="badge bg-danger rounded-pill" style="position: absolute; top: -7px; right: 3px; font-size: 1.17em; padding: 0.52em 0.78em;"><%= pedidos_no_entregados %></span>
             <% } %>
         </a>
-        <a href="/dashboard/settings" class="mobile-nav-item <%= currentPath === '/dashboard/settings' ? 'active' : '' %>">
+        <a href="/dashboard/settings" class="mobile-nav-item <%= currentActivePage === 'configuracion' ? 'active' : '' %>">
             <i class="fas fa-cog"></i>
             <span>Config</span>
         </a>
@@ -89,19 +87,23 @@
           <h5>Menú del Restaurante</h5>
         </div>
         <div class="overlay-content">
-          <a href="/dashboard/estadisticas" class="overlay-nav-item <%= currentPath === '/dashboard/estadisticas' ? 'active' : '' %>">
+          <a href="/dashboard/estadisticas" class="overlay-nav-item <%= currentActivePage === 'estadisticas' ? 'active' : '' %>">
               <i class="fas fa-chart-bar"></i>
               <span>Estadísticas</span>
           </a>
-          <a href="/dashboard/drivers" class="overlay-nav-item <%= currentPath === '/dashboard/drivers' ? 'active' : '' %>" style="display: none;">
+          <a href="/dashboard/drivers" class="overlay-nav-item <%= currentActivePage === 'conductores' ? 'active' : '' %>">
               <i class="fas fa-motorcycle"></i>
               <span>Repartidores</span>
           </a>
-          <a href="/dashboard/pagos" class="overlay-nav-item <%= currentPath === '/dashboard/pagos' ? 'active' : '' %>">
+          <a href="/dashboard/driver-requests" class="overlay-nav-item <%= currentActivePage === 'driver-requests' ? 'active' : '' %>">
+              <i class="fas fa-user-plus"></i>
+              <span>Solicitudes de Repartidores</span>
+          </a>
+          <a href="/dashboard/pagos" class="overlay-nav-item <%= currentActivePage === 'pagos' ? 'active' : '' %>">
               <i class="fas fa-money-bill-wave"></i>
               <span>Pagos y Cobros</span>
           </a>
-          
+
           <a href="/auth/logout" class="overlay-nav-item">
               <i class="fas fa-sign-out-alt"></i>
               <span>Cerrar Sesión</span>
@@ -111,6 +113,9 @@
     <% } else if (user && user.tipo_usuario === 'admin') { %>
       <!-- Menú móvil admin -->
       <%- include('partials/admin-mobile-nav', { currentPath: currentPath, user: user }) %>
+    <% } else if (user && user.tipo_usuario === 'repartidor') { %>
+      <!-- Menú móvil repartidor -->
+      <%- include('drivers/mobile-nav', { currentPath: currentPath, user: user }) %>
     <% } else if (!(currentPath && currentPath.startsWith('/dashboard'))) { %>
       <!-- Menú móvil cliente -->
       <%- include('partials/client-mobile-nav', { currentPath: currentPath }) %>
@@ -148,11 +153,6 @@
                         <li class="mb-2">
                             <a href="/contact" class="text-muted text-decoration-none">
                                 <i class="fas fa-envelope me-2"></i>Contacto
-                            </a>
-                        </li>
-                        <li class="mb-2">
-                            <a href="/restaurant-requirements" class="text-muted text-decoration-none">
-                                <i class="fas fa-store me-2"></i>Únete como Restaurante
                             </a>
                         </li>
                         <li class="mb-2">
@@ -237,6 +237,11 @@
     <script src="/js/cart.js"></script>
     <script src="/js/dashboard/products.js"></script>
     <script src="/js/cookie-consent.js"></script>
+
+    <!-- GPS Tracker for Drivers -->
+    <% if (user && user.tipo_usuario === 'repartidor') { %>
+    <script src="/js/driver-gps-tracker.js"></script>
+    <% } %>
     
     <!-- Bloque de datos de usuario para notificaciones push -->
     <% if (typeof user !== 'undefined' && user) { %>
@@ -302,6 +307,30 @@
                 item.classList.remove('active');
             }
         });
+
+        // Dashboard mobile overlay menu
+        const dashboardMoreBtn = document.getElementById('dashboardMoreBtn');
+        const dashboardMobileOverlayMenu = document.getElementById('dashboardMobileOverlayMenu');
+        const closeDashboardOverlayBtn = document.getElementById('closeDashboardOverlayBtn');
+
+        if (dashboardMoreBtn) {
+            dashboardMoreBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (dashboardMobileOverlayMenu) {
+                    dashboardMobileOverlayMenu.classList.add('show');
+                    document.body.classList.add('overlay-open');
+                }
+            });
+        }
+
+        if (closeDashboardOverlayBtn) {
+            closeDashboardOverlayBtn.addEventListener('click', function() {
+                if (dashboardMobileOverlayMenu) {
+                    dashboardMobileOverlayMenu.classList.remove('show');
+                    document.body.classList.remove('overlay-open');
+                }
+            });
+        }
     });
     </script>
     

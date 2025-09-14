@@ -1,5 +1,5 @@
 @media (max-width: 767.98px) {
-  .table-mis-pedidos, .table-responsive { display: none !important; }
+  .table-mis-pedidos, .table-responsive { display: none; }
   .orders-cards-list { display: flex; flex-direction: column; gap: 1.2rem; }
   .order-card-mobile {
     display: flex;
@@ -90,5 +90,5 @@
 }
 
 @media (min-width: 768px) {
-  .orders-cards-list { display: none !important; }
+  .orders-cards-list { display: none; }
 }

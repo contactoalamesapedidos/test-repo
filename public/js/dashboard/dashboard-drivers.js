@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('Error: ' + result.message + (result.errors ? '\n' + result.errors.join('\n') : ''));
                 }
             } catch (error) {
-                console.error('Error adding driver:', error);
+                console.error('Error al añadir repartidor:', error);
                 alert('Error al añadir repartidor.');
             }
         });
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('Error: ' + result.message + (result.errors ? '\n' + result.errors.join('\n') : ''));
                 }
             } catch (error) {
-                console.error('Error updating driver:', error);
+                console.error('Error al actualizar repartidor:', error);
                 alert('Error al actualizar repartidor.');
             }
         });
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         alert('Error: ' + result.message);
                     }
                 } catch (error) {
-                    console.error('Error deleting driver:', error);
+                    console.error('Error al eliminar repartidor:', error);
                     alert('Error al eliminar repartidor.');
                 }
             }

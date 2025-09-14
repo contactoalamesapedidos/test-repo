@@ -23,4 +23,16 @@ router.get('/restaurant/:id/delivery-fee', async (req, res) => {
     }
 });
 
+router.get('/restaurants/names', async (req, res) => {
+    try {
+        const [restaurants] = await db.execute(
+            'SELECT id, nombre FROM restaurantes WHERE verificado = 1 AND activo = 1 ORDER BY nombre ASC'
+        );
+        res.json(restaurants);
+    } catch (error) {
+        console.error('Error fetching restaurant names:', error);
+        res.status(500).json({ error: 'Error fetching restaurant names' });
+    }
+});
+
 module.exports = router;

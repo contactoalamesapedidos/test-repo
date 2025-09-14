@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitud de Repartidor Aprobada</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+        .header { background-color: #ff6b35; color: white; padding: 10px 20px; border-radius: 8px 8px 0 0; text-align: center; }
+        .content { padding: 20px; line-height: 1.6; color: #333333; }
+        .button { display: inline-block; background-color: #f7931e; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; margin-top: 20px; }
+        .footer { text-align: center; margin-top: 20px; font-size: 0.8em; color: #666666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>¡Tu Solicitud de Repartidor ha sido Aprobada!</h2>
+        </div>
+        <div class="content">
+            <p>Hola <%= nombre %>,</p>
+            <p>Nos complace informarte que tu solicitud para ser repartidor del restaurante <strong><%= restauranteNombre %></strong> ha sido <strong>APROBADA</strong>.</p>
+            <p>¡Bienvenido al equipo! Ahora puedes iniciar sesión en tu cuenta y comenzar a recibir pedidos.</p>
+            <p>Haz clic en el botón de abajo para ir al panel de inicio de sesión:</p>
+            <p style="text-align: center;">
+                <a href="<%= loginLink %>" class="button">Iniciar Sesión</a>
+            </p>
+            <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
+            <p>Saludos cordiales,</p>
+            <p>El equipo de A la Mesa</p>
+        </div>
+        <div class="footer">
+            <p>&copy; <%= new Date().getFullYear() %> A la Mesa. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>

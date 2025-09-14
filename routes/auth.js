@@ -39,8 +39,7 @@ router.post('/login', [
     body('password').isLength({ min: 1 }).withMessage('La contraseña es requerida').trim(),
     body('remember').optional().toBoolean()
 ], async (req, res) => {
-    // Deshabilitar temporalmente la protección contra fuerza bruta
-    console.log('Intento de login (protección deshabilitada):', req.body.email);
+    // Rate limiting aplicado en server.js
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.redirect('/auth/login?error=Email o contraseña incorrectos');
@@ -50,30 +49,17 @@ router.post('/login', [
 
     try {
         // Buscar usuario con email exacto primero
-        console.log('[AUTH] Buscando usuario con email exacto:', email);
-        
         let [users] = await db.execute(
-            'SELECT * FROM usuarios WHERE email = ?', 
+            'SELECT * FROM usuarios WHERE email = ?',
             [email]
         );
-        
+
         // Si no se encuentra, buscar sin distinguir mayúsculas/minúsculas
         if (users.length === 0) {
-            console.log('[AUTH] No se encontró con email exacto, intentando búsqueda insensible a mayúsculas');
             [users] = await db.execute(
-                'SELECT * FROM usuarios WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))', 
+                'SELECT * FROM usuarios WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))',
                 [email]
             );
-        }
-
-        console.log('[AUTH] Resultados de búsqueda:', users.length, 'usuarios encontrados');
-        if (users.length > 0) {
-            console.log('[AUTH] Primer usuario encontrado:', {
-                id: users[0].id,
-                email: users[0].email,
-                tipo_usuario: users[0].tipo_usuario,
-                password_length: users[0].password ? users[0].password.length : 'null'
-            });
         }
 
         if (users.length === 0) {
@@ -82,44 +68,11 @@ router.post('/login', [
 
         const user = users[0];
 
-        console.log('=== DEBUG INICIO DE SESIÓN ===');
-        console.log(`[AUTH] Email proporcionado: ${email}`);
-        console.log(`[AUTH] Usuario encontrado en DB:`, {
-            id: user.id,
-            email: user.email,
-            tipo_usuario: user.tipo_usuario,
-            password_length: user.password ? user.password.length : 'null',
-            password_start: user.password ? user.password.substring(0, 10) + '...' : 'null',
-            password_ends_with: user.password ? '...' + user.password.substring(-10) : 'null'
-        });
-        
-        console.log(`[AUTH] Comparando contraseñas...`);
-        console.log(`[AUTH] Contraseña proporcionada: '${password}'`);
-        console.log(`[AUTH] Hash almacenado: ${user.password.substring(0, 10)}...${user.password.substring(-10)}`);
-        
-        // Verificar si el hash parece ser un hash bcrypt válido
-        const isBcryptHash = /^\$2[ayb]\$\d{2}\$[./0-9A-Za-z]{53}$/.test(user.password);
-        console.log(`[AUTH] ¿El hash parece ser un hash bcrypt válido?: ${isBcryptHash}`);
-        
         const isMatch = await bcrypt.compare(password, user.password);
-        console.log(`[AUTH] Resultado de bcrypt.compare(): ${isMatch}`);
-        
-        // Si falla, intentar con una contraseña alternativa común
-        if (!isMatch && password === '123456') {
-            console.log('[AUTH] Probando con contraseña alternativa...');
-            const testHash = await bcrypt.hash('123456', 10);
-            console.log(`[AUTH] Hash generado para '123456': ${testHash.substring(0, 10)}...`);
-            console.log(`[AUTH] Comparando con hash almacenado: ${testHash === user.password}`);
-        }
 
         if (!isMatch) {
-            console.log('[AUTH] Error: La contraseña no coincide');
             return res.redirect('/auth/login?error=Email o contraseña incorrectos');
         }
-        
-        console.log('[AUTH] Contraseña válida, creando sesión...');
-
-        console.log(`[AUTH] Usuario ${user.email} autenticado. Tipo de usuario de DB: ${user.tipo_usuario}`);
 
         // Guardar todos los campos relevantes en la sesión
         req.session.user = {
@@ -135,7 +88,7 @@ router.post('/login', [
             recibir_notificaciones: user.recibir_notificaciones
         };
 
-        console.log(`[AUTH] Tipo de usuario guardado en sesión: ${req.session.user.tipo_usuario}`);
+
 
         if (remember) {
             req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -144,8 +97,12 @@ router.post('/login', [
         }
 
         // Redirigir según el tipo de usuario
-        if (user.tipo_usuario === 'restaurante' || user.tipo_usuario === 'admin') {
+        if (user.tipo_usuario === 'admin') {
+            res.redirect('/admin');
+        } else if (user.tipo_usuario === 'restaurante') {
             res.redirect('/dashboard');
+        } else if (user.tipo_usuario === 'repartidor') {
+            res.redirect('/repartidores');
         } else {
             res.redirect('/');
         }
@@ -334,85 +291,13 @@ router.post('/register-restaurant', [
     }
 });
 
-// Register driver page
-router.get('/register-driver', (req, res) => {
-    res.render('auth/register-driver', {
-        title: 'Registrar Repartidor - A la Mesa',
-        error: null,
-        success: null
-    });
-});
 
-// Handle driver registration
-router.post('/register-driver', [
-    body('nombre_apellido').trim().notEmpty().withMessage('El nombre y apellido son requeridos'),
-    body('email').isEmail().withMessage('Email inválido').trim(),
-    body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
-    body('vehicle_type').notEmpty().withMessage('El tipo de vehículo es requerido'),
-], async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.render('auth/register-driver', {
-            title: 'Registro de Repartidor - A la Mesa',
-            error: errors.array()[0].msg,
-            success: ''
-        });
-    }
-
-    const { nombre_apellido, email, password, telefono, ciudad, vehicle_type } = req.body;
-    const [nombre, ...apellido_parts] = nombre_apellido.split(' ');
-    const apellido = apellido_parts.join(' ');
-
-    const connection = await db.getConnection();
-    try {
-        await connection.beginTransaction();
-
-        const [existingUsers] = await connection.execute('SELECT id FROM usuarios WHERE email = ?', [email]);
-        if (existingUsers.length > 0) {
-            await connection.rollback();
-            return res.render('auth/register-driver', {
-                title: 'Registrar Repartidor - A la Mesa',
-                error: 'El email ya está registrado',
-                success: null
-            });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const [userResult] = await connection.execute(
-            'INSERT INTO usuarios (nombre, apellido, email, password, telefono, ciudad, tipo_usuario) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [nombre, apellido, email, hashedPassword, telefono || null, ciudad || '', 'repartidor']
-        );
-
-        const userId = userResult.insertId;
-
-        await connection.execute(
-            'INSERT INTO drivers (user_id, vehicle_type, status) VALUES (?, ?, ?)',
-            [userId, vehicle_type, 'offline'] // Por defecto, el repartidor inicia offline
-        );
-
-        await connection.commit();
-
-        res.redirect('/auth/login?message=Registro de repartidor exitoso. Ahora puedes iniciar sesión.');
-
-    } catch (error) {
-        await connection.rollback();
-        console.error('Error en el registro de repartidor:', error);
-        res.render('auth/register-driver', {
-            title: 'Registrar Repartidor - A la Mesa',
-            error: 'Error interno del servidor al registrar repartidor',
-            success: null
-        });
-    } finally {
-        connection.release();
-    }
-});
 
 // User profile page
 router.get('/profile', requireAuth, async (req, res) => {
     try {
         const [users] = await db.execute('SELECT id, nombre, apellido, email, telefono, ciudad, direccion_principal, tipo_usuario, recibir_notificaciones FROM usuarios WHERE id = ?', [req.session.user.id]);
-        console.log('Usuario obtenido de la BD:', users[0]);
+
         if (users.length === 0) {
             req.session.destroy(() => {
                 res.redirect('/auth/login?error=Usuario no encontrado');
@@ -457,7 +342,7 @@ router.post('/profile', requireAuth, [
     const recibir_notificaciones = req.body.recibir_notificaciones ? 1 : 0;
     const userId = req.session.user.id;
 
-    console.log('Datos recibidos en actualización:', { nombre, apellido, email, telefono, ciudad, direccion });
+
 
     try {
         // Check if email already exists for another user
@@ -471,10 +356,8 @@ router.post('/profile', requireAuth, [
             [nombre, apellido, email, telefono || null, ciudad || null, direccion || null, recibir_notificaciones, userId]
         );
 
-        console.log('Usuario actualizado en la BD. Verificando...');
         const [updatedUser] = await db.execute('SELECT * FROM usuarios WHERE id = ?', [userId]);
         const user = updatedUser[0];
-        console.log('Datos después de actualizar:', user);
 
         // Actualizar todos los campos relevantes en la sesión
         req.session.user = {
@@ -527,8 +410,6 @@ router.post('/change-password', requireAuth, [
         }
 
         const hashedNewPassword = await bcrypt.hash(new_password, 10);
-        console.log(`[AUTH] Actualizando contraseña para el usuario ID: ${userId}`);
-        console.log(`[AUTH] Nuevo hash de contraseña: ${hashedNewPassword}`);
         await db.execute('UPDATE usuarios SET password = ? WHERE id = ?', [hashedNewPassword, userId]);
 
         res.redirect('/auth/profile?message=Contraseña actualizada exitosamente');
@@ -720,67 +601,127 @@ router.get('/register-driver', (req, res) => {
 });
 
 // Handle driver registration
-router.post('/register-driver', [
-    body('nombre_apellido').trim().notEmpty().withMessage('El nombre y apellido son requeridos'),
-    body('email').isEmail().withMessage('Email inválido').normalizeEmail(),
-    body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
-    body('vehicle_type').notEmpty().withMessage('El tipo de vehículo es requerido'),
-], async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.render('auth/register-driver', {
-            title: 'Registro de Repartidor - A la Mesa',
-            error: errors.array()[0].msg,
-            success: ''
-        });
-    }
-
-    const { nombre_apellido, email, password, telefono, ciudad, vehicle_type } = req.body;
-    const [nombre, ...apellido_parts] = nombre_apellido.split(' ');
-    const apellido = apellido_parts.join(' ');
+router.post('/register-driver', async (req, res, next) => {
+    // Verificar si es una petición AJAX (usando headers personalizados)
+    const isAjax = req.get('X-Requested-With') === 'XMLHttpRequest' || 
+                  (req.headers.accept && req.headers.accept.includes('application/json'));
 
     const connection = await db.getConnection();
-    try {
-        await connection.beginTransaction();
+    await connection.beginTransaction();
 
-        const [existingUsers] = await connection.execute('SELECT id FROM usuarios WHERE email = ?', [email]);
-        if (existingUsers.length > 0) {
-            await connection.rollback();
-            return res.render('auth/register-driver', {
-                title: 'Registrar Repartidor - A la Mesa',
-                error: 'El email ya está registrado',
-                success: null
-            });
+    try {
+        // Validar campos requeridos
+        const { nombre, apellido, email, password, telefono, vehicle_type, registration_type, restaurant_id } = req.body;
+        
+
+        
+        // Validar campos requeridos
+        if (!nombre || nombre.trim() === '') {
+            throw new Error('El campo nombre es requerido');
+        }
+        
+        if (!apellido || apellido.trim() === '') {
+            throw new Error('El campo apellido es requerido');
+        }
+        
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            throw new Error('El email no es válido');
+        }
+        
+        if (!password || password.length < 6) {
+            throw new Error('La contraseña debe tener al menos 6 caracteres');
+        }
+        
+        if (!vehicle_type) {
+            throw new Error('El tipo de vehículo es requerido');
         }
 
+        let restauranteId = null;
+        let requestStatus = 'independent';
+
+        if (registration_type === 'restaurant') {
+            if (!restaurant_id) {
+                throw new Error('El ID del restaurante es requerido para este tipo de registro.');
+            }
+            const [restaurants] = await connection.execute(
+                'SELECT id FROM restaurantes WHERE id = ?',
+                [restaurant_id]
+            );
+
+            if (restaurants.length === 0) {
+                throw new Error('Restaurante no encontrado. Por favor, verifica el ID.');
+            }
+            restauranteId = restaurants[0].id;
+            requestStatus = 'pending';
+        }
+        
+        // Normalizar datos
+        const nombreCompleto = `${nombre.trim()} ${apellido.trim()}`;
+        const emailNormalizado = email.trim().toLowerCase();
+        
+        // Verificar si el email ya existe
+        const [existingUsers] = await connection.execute('SELECT id FROM usuarios WHERE email = ?', [emailNormalizado]);
+        if (existingUsers.length > 0) {
+            throw new Error('El email ya está registrado');
+        }
+        
+        // Hashear la contraseña
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        const [userResult] = await connection.execute(
-            'INSERT INTO usuarios (nombre, apellido, email, password, telefono, ciudad, tipo_usuario) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [nombre, apellido, email, hashedPassword, telefono || null, ciudad || '', 'repartidor']
+        
+        // Crear el usuario
+        const [result] = await connection.execute(
+            'INSERT INTO usuarios (nombre, apellido, email, password, telefono, tipo_usuario) VALUES (?, ?, ?, ?, ?, ?)',
+            [nombre.trim(), apellido.trim(), emailNormalizado, hashedPassword, telefono ? telefono.trim() : null, 'repartidor']
         );
-
-        const userId = userResult.insertId;
-
+        
+        const userId = result.insertId;
+        
+        // Crear el perfil de repartidor
         await connection.execute(
-            'INSERT INTO drivers (user_id, vehicle_type, status) VALUES (?, ?, ?)',
-            [userId, vehicle_type, 'offline'] // Por defecto, el repartidor inicia offline
+            'INSERT INTO drivers (user_id, vehicle_type, status, restaurante_id, request_status) VALUES (?, ?, "offline", ?, ?)',
+            [userId, vehicle_type, restauranteId, requestStatus]
         );
-
+        
         await connection.commit();
+        connection.release();
+        
+        // Respuesta exitosa
+        let successMessage = 'Registro exitoso. Por favor inicia sesión.';
+        if (requestStatus === 'pending') {
+            successMessage = 'Solicitud de registro enviada. Espera la aprobación del restaurante.';
+        }
 
-        res.redirect('/auth/login?message=Registro de repartidor exitoso. Ahora puedes iniciar sesión.');
-
+        if (isAjax) {
+            return res.status(200).json({
+                success: true,
+                message: successMessage,
+                redirect: '/auth/login'
+            });
+        }
+        
+        return res.render('auth/login', {
+            title: 'Iniciar Sesión - A la Mesa',
+            error: null,
+            success: successMessage
+        });
+        
     } catch (error) {
         await connection.rollback();
+        connection.release();
         console.error('Error en el registro de repartidor:', error);
-        res.render('auth/register-driver', {
-            title: 'Registrar Repartidor - A la Mesa',
-            error: 'Error interno del servidor al registrar repartidor',
+        
+        if (isAjax) {
+            return res.status(400).json({
+                success: false,
+                message: error.message || 'Error en el registro. Por favor intenta de nuevo.'
+            });
+        }
+        
+        return res.render('auth/register-driver', {
+            title: 'Registro de Repartidor - A la Mesa',
+            error: error.message || 'Error en el registro. Por favor intenta de nuevo.',
             success: null
         });
-    } finally {
-        connection.release();
     }
 });
 

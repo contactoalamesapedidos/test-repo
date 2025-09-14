@@ -11,7 +11,7 @@
                         <!-- Búsqueda por texto -->
                         <div class="mb-3">
                             <label for="searchQuery" class="form-label">Buscar</label>
-                            <input type="text" class="form-control" id="searchQuery" name="q" 
+                            <input type="text" class="form-control" id="searchQuery" name="q"
                                    value="<%= searchQuery %>" placeholder="Nombre del restaurante...">
                         </div>
 
@@ -21,12 +21,51 @@
                             <select class="form-select" id="categoryFilter" name="category">
                                 <option value="">Todas las categorías</option>
                                 <% categories.forEach(category => { %>
-                                    <option value="<%= category.nombre %>" 
+                                    <option value="<%= category.nombre %>"
                                             <%= selectedCategory === category.nombre ? 'selected' : '' %>>
                                         <%= category.nombre %>
                                     </option>
                                 <% }) %>
                             </select>
+                        </div>
+
+                        <!-- Ordenar por -->
+                        <div class="mb-3">
+                            <label for="sortFilter" class="form-label">Ordenar por</label>
+                            <select class="form-select" id="sortFilter" name="sort">
+                                <option value="relevance" <%= sortBy === 'relevance' ? 'selected' : '' %>>Más relevantes</option>
+                                <option value="rating" <%= sortBy === 'rating' ? 'selected' : '' %>>Mejor calificación</option>
+                                <option value="delivery_time" <%= sortBy === 'delivery_time' ? 'selected' : '' %>>Tiempo de entrega</option>
+                                <option value="delivery_cost" <%= sortBy === 'delivery_cost' ? 'selected' : '' %>>Costo de envío</option>
+                                <option value="price_low" <%= sortBy === 'price_low' ? 'selected' : '' %>>Precio más bajo</option>
+                                <option value="price_high" <%= sortBy === 'price_high' ? 'selected' : '' %>>Precio más alto</option>
+                                <option value="name" <%= sortBy === 'name' ? 'selected' : '' %>>Nombre (A-Z)</option>
+                                <option value="newest" <%= sortBy === 'newest' ? 'selected' : '' %>>Más recientes</option>
+                            </select>
+                        </div>
+
+                        <!-- Filtros adicionales -->
+                        <div class="mb-3">
+                            <label class="form-label">Filtros adicionales</label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <select class="form-select form-select-sm" id="priceRangeFilter" name="price_range">
+                                        <option value="">Rango de precio</option>
+                                        <option value="0-50" <%= priceRange === '0-50' ? 'selected' : '' %>>$0 - $50</option>
+                                        <option value="50-100" <%= priceRange === '50-100' ? 'selected' : '' %>>$50 - $100</option>
+                                        <option value="100-200" <%= priceRange === '100-200' ? 'selected' : '' %>>$100 - $200</option>
+                                        <option value="200+" <%= priceRange === '200+' ? 'selected' : '' %>>$200+</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <select class="form-select form-select-sm" id="ratingFilter" name="min_rating">
+                                        <option value="">Calificación mínima</option>
+                                        <option value="4" <%= minRating === '4' ? 'selected' : '' %>>4+ estrellas</option>
+                                        <option value="3" <%= minRating === '3' ? 'selected' : '' %>>3+ estrellas</option>
+                                        <option value="2" <%= minRating === '2' ? 'selected' : '' %>>2+ estrellas</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
 
                         <button type="submit" class="btn w-100" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">
@@ -71,6 +110,18 @@
 <script>
 // Auto-submit form when filters change
 document.getElementById('categoryFilter').addEventListener('change', function() {
+    document.getElementById('filterForm').submit();
+});
+
+document.getElementById('sortFilter').addEventListener('change', function() {
+    document.getElementById('filterForm').submit();
+});
+
+document.getElementById('priceRangeFilter').addEventListener('change', function() {
+    document.getElementById('filterForm').submit();
+});
+
+document.getElementById('ratingFilter').addEventListener('change', function() {
     document.getElementById('filterForm').submit();
 });
 

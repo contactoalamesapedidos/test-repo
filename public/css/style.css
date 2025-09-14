@@ -1,28 +1,23 @@
-:root {
-  --primary-color: #ff6b35;    /* Color principal */
-  --secondary-color: #f7931e;  /* Color secundario */
-  --success-color: #00b300;    /* Verde más vibrante */
-  --danger-color: #dc3545;     /* Color de error */
-}
+@import url('variables.css');
 
 .client-mobile-nav-item.active i {
     color: var(--primary-color);
 }
 
-.hero-text .btn-primary:hover {
-  background-color: #e65c00 !important; /* Naranja un poco más oscuro */
-  border-color: #e65c00 !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+.hero-text .btn-primary {
+  background-color: #ff6600; /* Color naranja */
+  border-color: #ff6600;
+  border-radius: 25px; /* Bordes redondeados */
+  padding: 10px 25px;
+  font-weight: bold;
+  transition: all 0.3s ease;
 }
 
-.hero-text .btn-primary {
-  background-color: #ff6600 !important; /* Color naranja */
-  border-color: #ff6600 !important;
-  border-radius: 25px !important; /* Bordes redondeados */
-  padding: 10px 25px !important;
-  font-weight: bold !important;
-  transition: all 0.3s ease !important;
+.hero-text .btn-primary:hover {
+  background-color: #e65c00; /* Naranja un poco más oscuro */
+  border-color: #e65c00;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 body {
@@ -46,7 +41,7 @@ body {
 /* Mobile Navigation */
 .client-mobile-nav, .admin-mobile-nav {
     display: none; /* Hidden by default, shown only on mobile */
-    position: fixed !important;
+    position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
@@ -394,65 +389,23 @@ body {
     object-fit: cover;
 }
 
-.text-primary {
-    color: var(--primary-color) !important;
-}
+/* Utility classes - using specific selectors to avoid !important */
+.text-primary { color: var(--primary-color); }
+.text-secondary { color: var(--secondary-color); }
+.text-success { color: var(--success-color); }
+.text-danger { color: var(--danger-color); }
+.text-warning { color: #ffc107; }
+.text-info { color: #17a2b8; }
+.text-muted { color: #6c757d; }
 
-.text-secondary {
-    color: var(--secondary-color) !important;
-}
-
-.text-success {
-    color: var(--success-color) !important;
-}
-
-.text-danger {
-    color: var(--danger-color) !important;
-}
-
-.text-warning {
-    color: #ffc107 !important;
-}
-
-.text-info {
-    color: #17a2b8 !important;
-}
-
-.text-muted {
-    color: #6c757d !important;
-}
-
-.bg-primary {
-    background-color: var(--primary-color) !important;
-}
-
-.bg-secondary {
-    background-color: var(--secondary-color) !important;
-}
-
-.bg-success {
-    background-color: var(--success-color) !important;
-}
-
-.bg-danger {
-    background-color: var(--danger-color) !important;
-}
-
-.bg-warning {
-    background-color: #ffc107 !important;
-}
-
-.bg-info {
-    background-color: #17a2b8 !important;
-}
-
-.bg-light {
-    background-color: #f8f9fa !important;
-}
-
-.bg-dark {
-    background-color: #343a40 !important;
-}
+.bg-primary { background-color: var(--primary-color); }
+.bg-secondary { background-color: var(--secondary-color); }
+.bg-success { background-color: var(--success-color); }
+.bg-danger { background-color: var(--danger-color); }
+.bg-warning { background-color: #ffc107; }
+.bg-info { background-color: #17a2b8; }
+.bg-light { background-color: #f8f9fa; }
+.bg-dark { background-color: #343a40; }
 
 .btn-quantity-text {
     display: inline-block;
@@ -705,5 +658,35 @@ footer .social-links a:hover {
    Ocultar captions de todos los carouseles para evaluación visual.
    Quitar este bloque cuando ya no sea necesario. */
 .carousel-caption {
-    display: none !important;
+    display: none;
+}
+
+/* Ocultar scrollbars solo en productos del menú del restaurante */
+.menu-category .row::-webkit-scrollbar {
+    display: none;
+}
+
+.menu-category .row {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Sticky table header and first column for weekly payments table */
+.table-sticky-header thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa; /* Match table-light background */
+    z-index: 10;
+}
+
+.table-sticky-header .sticky-column {
+    position: sticky;
+    left: 0;
+    background-color: #f8f9fa; /* Match table-light background */
+    z-index: 11; /* Ensure it's above the sticky header when scrolling horizontally */
+}
+
+/* Adjust z-index for the top-left corner cell if needed */
+.table-sticky-header thead th.sticky-column {
+    z-index: 12;
 }

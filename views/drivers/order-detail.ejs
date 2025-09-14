@@ -1,0 +1,135 @@
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <div class="col-md-3">
+            <%- include('sidebar', { activePage: 'dashboard' }) %>
+        </div>
+        <div class="col-md-9">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Detalle del Pedido #<%= order.numero_pedido %></h5>
+                    <span class="badge bg-info"><%= order.estado.charAt(0).toUpperCase() + order.estado.slice(1).replace('_', ' ') %></span>
+                </div>
+                <div class="card-body">
+                    <div id="map" style="height: 300px; margin-bottom: 20px;"></div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-3">
+                        <button class="btn btn-success" id="markPickedUpBtn" data-order-id="<%= order.id %>" <%= order.estado === 'en_camino' || order.estado === 'entregado' ? 'disabled' : '' %>>
+                            <i class="fas fa-box me-2"></i> Marcar como Recogido
+                        </button>
+                        <button class="btn btn-primary" id="markDeliveredBtn" data-order-id="<%= order.id %>" <%= order.estado !== 'en_camino' ? 'disabled' : '' %>>
+                            <i class="fas fa-check-circle me-2"></i> Marcar como Entregado
+                        </button>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header">Restaurante</div>
+                                <div class="card-body">
+                                    <p><strong><%= order.restaurante_nombre %></strong></p>
+                                    <p><%= order.restaurante_direccion %></p>
+                                    <a href="tel:<%= order.restaurante_telefono %>" class="btn btn-sm btn-outline-secondary"><i class="fas fa-phone me-2"></i>Llamar</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header">Cliente</div>
+                                <div class="card-body">
+                                    <p><strong><%= order.cliente_nombre %> <%= order.cliente_apellido %></strong></p>
+                                    <p><%= order.direccion_entrega %></p>
+                                    <a href="tel:<%= order.cliente_telefono %>" class="btn btn-sm btn-outline-secondary"><i class="fas fa-phone me-2"></i>Llamar</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6>Productos del Pedido</h6>
+                    <ul class="list-group mb-3">
+                        <% items.forEach(item => { %>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <%= item.cantidad %> x <%= item.nombre %>
+                                <span>$<%= (item.precio_unitario * item.cantidad).toFixed(2) %></span>
+                            </li>
+                        <% }); %>
+                    </ul>
+
+                    <div class="text-end">
+                        <p class="mb-1">Subtotal: <strong>$<%= order.subtotal.toFixed(2) %></strong></p>
+                        <p class="mb-1">Envío: <strong>$<%= order.costo_delivery.toFixed(2) %></strong></p>
+                        <h5>Total: <strong class="text-primary">$<%= order.total.toFixed(2) %></strong></h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const order = <%- JSON.stringify(order) %>;
+    const driver = <%- JSON.stringify(user) %>;
+    let driverMarker;
+
+    const map = L.map('map');
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+
+    const restaurantLatLng = [order.restaurante_lat, order.restaurante_lng];
+    const clientLatLng = [order.latitud_entrega, order.longitud_entrega];
+
+    L.marker(restaurantLatLng).addTo(map).bindPopup(`<b>Restaurante:</b><br>${order.restaurante_nombre}`);
+    L.marker(clientLatLng).addTo(map).bindPopup(`<b>Cliente:</b><br>${order.cliente_nombre}`);
+
+    const bounds = L.latLngBounds(restaurantLatLng, clientLatLng);
+    map.fitBounds(bounds, { padding: [50, 50] });
+
+    const socket = io();
+
+    function updateDriverLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(position => {
+                const { latitude, longitude } = position.coords;
+                const driverLatLng = [latitude, longitude];
+
+                if (!driverMarker) {
+                    driverMarker = L.marker(driverLatLng).addTo(map).bindPopup('Mi ubicación');
+                }
+                driverMarker.setLatLng(driverLatLng);
+
+                socket.emit('update-driver-location', {
+                    driverId: driver.id,
+                    orderId: order.id,
+                    latitude,
+                    longitude
+                });
+            });
+        }
+    }
+
+    if (order.estado === 'en_camino') {
+        updateDriverLocation();
+        setInterval(updateDriverLocation, 10000); // Update every 10 seconds
+    }
+
+    document.getElementById('markPickedUpBtn').addEventListener('click', () => updateOrderStatus('en_camino'));
+    document.getElementById('markDeliveredBtn').addEventListener('click', () => updateOrderStatus('entregado'));
+
+    async function updateOrderStatus(status) {
+        const response = await fetch(`/drivers/orders/${order.id}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        const result = await response.json();
+        if (result.success) {
+            window.location.reload();
+        } else {
+            alert('Error al actualizar el estado del pedido.');
+        }
+    }
+});
+</script>

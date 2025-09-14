@@ -42,8 +42,14 @@ app.use(helmet({
 app.use(compression());
 
 // Configuración de body parsers con límites
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({
+  extended: true,
+  limit: '10mb',
+  parameterLimit: 50000, // Aumentado para evitar errores de 'too many parameters'
+  depth: 20, // Aumentado para evitar errores de 'exceeded the depth'
+  type: 'application/x-www-form-urlencoded' // Solo URL-encoded, dejar multipart para multer
+}));
 
 // HPP (HTTP Parameter Pollution)
 app.use(hpp());
@@ -53,11 +59,45 @@ const allowOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
   .map(o => o.trim())
   .filter(Boolean);
+
+// Agregar ngrok automáticamente si estamos en desarrollo
+if (process.env.NODE_ENV !== 'production') {
+  // Permitir ngrok (patrón común de ngrok)
+  allowOrigins.push(/^https:\/\/[a-z0-9]+\.ngrok-free\.app$/);
+  allowOrigins.push(/^https:\/\/[a-z0-9]+\.ngrok\.app$/);
+  // Permitir localhost para desarrollo
+  allowOrigins.push(/^http:\/\/localhost:\d+$/);
+  allowOrigins.push(/^https:\/\/localhost:\d+$/);
+}
+
+
+
 app.use(cors({
-  origin: allowOrigins.length ? allowOrigins : undefined,
+  origin: function (origin, callback) {
+    // Permitir requests sin origin (como mobile apps o curl)
+    if (!origin) return callback(null, true);
+
+    // Verificar si el origin está en la lista permitida
+    const isAllowed = allowOrigins.some(allowedOrigin => {
+      if (typeof allowedOrigin === 'string') {
+        return allowedOrigin === origin;
+      } else if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+      }
+      return false;
+    });
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.log('CORS bloqueado para origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: false,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  credentials: true, // IMPORTANTE: permitir cookies
+  optionsSuccessStatus: 200 // Para legacy browsers
 }));
 
 // Static files
@@ -72,6 +112,34 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads'), {
 
 // Configuración de logging (después de servir archivos estáticos)
 app.use(morgan('dev')); // Logging estándar
+
+// Middleware para manejar respuestas AJAX
+app.use((req, res, next) => {
+    // Guardar referencia al método render original
+    const _render = res.render;
+    
+    // Sobrescribir el método render
+    res.render = function(view, options, callback) {
+        // Verificar si es una petición AJAX
+        const isAjax = req.get('X-Requested-With') === 'XMLHttpRequest' || 
+                      (req.headers.accept && req.headers.accept.includes('application/json'));
+        
+        if (isAjax) {
+            // Si es AJAX, devolver JSON en lugar de renderizar la vista
+            const error = options.error || 'Error en la solicitud';
+            return res.status(400).json({ 
+                success: false, 
+                message: error 
+            });
+        }
+        
+        // Si no es AJAX, continuar con el render normal
+        _render.call(this, view, options, callback);
+    };
+    
+    next();
+});
+
 
 // View engine setup
 app.set('view engine', 'ejs');
@@ -160,12 +228,22 @@ const authLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Excluir la ruta de registro de repartidores del rate limiting
+    return req.path === '/register-driver';
+  }
 });
+
 const authSlowDown = slowDown({
   windowMs: 15 * 60 * 1000,
   delayAfter: 10,
   delayMs: 250,
+  skip: (req) => {
+    // Excluir la ruta de registro de repartidores del slow down
+    return req.path === '/register-driver';
+  }
 });
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
@@ -185,8 +263,17 @@ const paymentRoutes = require('./routes/payments');
 const adminRoutes = require('./routes/admin');
 const reviewRoutes = require('./routes/reviews');
 const cartSidebarTemplateRoutes = require('./routes/cartSidebarTemplate');
-const pushRoutes = require('./routes/push');
-const driverRoutes = require('./routes/drivers');
+const { router: pushRoutes } = require('./routes/push');
+const driverRoutes = require('./routes/drivers'); // New import
+const apiRoutes = require('./routes/api');
+
+// Debug route for push notifications
+app.get('/push-debug', (req, res) => {
+    res.render('push-debug', {
+        title: 'Debug Push Notifications - A la Mesa',
+        user: req.session.user || null
+    });
+});
 
 // Limitador para métodos que mutan estado
 const mutateLimiter = (req, res, next) => {
@@ -199,7 +286,6 @@ const mutateLimiter = (req, res, next) => {
 app.use(mutateLimiter);
 
 app.use('/', indexRoutes);
-app.use('/drivers', driverRoutes);
 // Rate limit y slow down para autenticación
 app.use('/auth', authSlowDown, authLimiter, authRoutes);
 app.use('/restaurants', restaurantRoutes);
@@ -212,13 +298,14 @@ app.get('/orders', (req, res) => {
 app.use('/orders', orderRoutes);
 app.use('/cart', cartRoutes);
 app.use('/dashboard', dashboardRoutes);
+app.use('/repartidores', driverRoutes); // New use statement
 app.use('/payments', paymentRoutes);
 app.use('/admin', adminRoutes);
 app.use('/reviews', reviewRoutes);
 app.use('/cart', cartSidebarTemplateRoutes);
 // Rate limit para APIs
 app.use('/api/push', apiLimiter, pushRoutes);
-app.use('/api/drivers', apiLimiter, driverRoutes);
+app.use('/api', apiRoutes);
 
 // Redirigir /profile a /auth/profile
 app.get('/profile', (req, res) => {
@@ -227,18 +314,116 @@ app.get('/profile', (req, res) => {
 
 // Socket.IO for real-time features
 io.on('connection', (socket) => {
-  console.log('Usuario conectado:', socket.id);
-  
   // Join restaurant room for notifications
   socket.on('join-restaurant', (restaurantId) => {
     socket.join(`restaurant-${restaurantId}`);
-    console.log(`Usuario se unió al restaurante ${restaurantId}`);
   });
 
   // Join user room for order updates
   socket.on('join-user', (userId) => {
     socket.join(`user-${userId}`);
-    console.log(`Usuario ${userId} se unió a su sala`);
+  });
+  
+  // Join order room for driver location updates
+  socket.on('join-order-updates', async ({ orderId }) => {
+    if (!orderId) {
+      console.error('Intento de unirse a actualizaciones sin orderId');
+      return;
+    }
+    
+    try {
+      // Verificar que el pedido existe y obtener información relevante
+      const [order] = await db.query('SELECT id, repartidor_id, estado FROM pedidos WHERE id = ?', [orderId]);
+      
+      if (!order || order.length === 0) {
+        console.error(`Pedido ${orderId} no encontrado`);
+        return;
+      }
+      
+      socket.join(`order-${orderId}`);
+      
+      // Enviar la última ubicación conocida del repartidor si está disponible
+      if (order[0].repartidor_id && order[0].estado === 'en_camino') {
+        const [driver] = await db.query(
+          'SELECT d.current_latitude as latitude, d.current_longitude as longitude FROM drivers d WHERE d.user_id = ?',
+          [order[0].repartidor_id]
+        );
+
+        if (driver && driver[0] && driver[0].latitude && driver[0].longitude) {
+          socket.emit('driver-location-update', {
+            orderId,
+            driverId: order[0].repartidor_id,
+            latitude: parseFloat(driver[0].latitude),
+            longitude: parseFloat(driver[0].longitude),
+            timestamp: new Date()
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error al unirse a actualizaciones del pedido:', error);
+    }
+  });
+  
+  // Handle driver location updates
+  socket.on('update-driver-location', async (data) => {
+    try {
+      const { orderId, driverId, latitude, longitude } = data;
+
+      // Validar datos básicos
+      if (latitude === undefined || longitude === undefined) {
+        console.error('Datos de ubicación inválidos:', data);
+        return;
+      }
+
+
+
+      // Si tenemos driverId, actualizar la ubicación del repartidor en la tabla drivers
+      if (driverId) {
+        const [result] = await db.query(
+          'UPDATE drivers SET current_latitude = ?, current_longitude = ? WHERE user_id = ?',
+          [latitude, longitude, driverId]
+        );
+
+        // Si tenemos orderId específico, enviar actualización a ese pedido
+        if (orderId) {
+          io.to(`order-${orderId}`).emit('driver-location-update', {
+            orderId,
+            driverId,
+            latitude,
+            longitude,
+            timestamp: new Date()
+          });
+        } else {
+          // Si no tenemos orderId específico, buscar pedidos activos de este repartidor
+          const [activeOrders] = await db.query(
+            'SELECT id FROM pedidos WHERE repartidor_id = ? AND estado = "en_camino"',
+            [driverId]
+          );
+
+          if (activeOrders.length > 0) {
+            // Enviar actualización a todos los pedidos activos de este repartidor
+            for (const order of activeOrders) {
+              io.to(`order-${order.id}`).emit('driver-location-update', {
+                orderId: order.id,
+                driverId,
+                latitude,
+                longitude,
+                timestamp: new Date()
+              });
+
+
+            }
+          }
+        }
+      }
+      // Si no tenemos ni orderId ni driverId, intentar buscar por socket ID o algo más
+      else {
+        // No hay acción específica para este caso
+      }
+
+    } catch (error) {
+      console.error('Error actualizando ubicación del repartidor:', error);
+    }
   });
 
   // New order notification
@@ -252,7 +437,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('Usuario desconectado:', socket.id);
+    // User disconnected
   });
 
   // CHAT DE PEDIDOS
@@ -260,21 +445,19 @@ io.on('connection', (socket) => {
     const { orderId, userId, userType } = data;
     const roomName = `order-${orderId}`;
     socket.join(roomName);
-    console.log(`${userType} ${userId} se unió a la sala de chat del pedido ${orderId}`);
 
     // Cargar historial de mensajes al unirse a la sala
     try {
         // Verificar si la tabla existe antes de consultar
         const [tables] = await db.execute(`
-            SELECT TABLE_NAME 
-            FROM information_schema.TABLES 
-            WHERE TABLE_SCHEMA = DATABASE() 
+            SELECT TABLE_NAME
+            FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA = DATABASE()
             AND TABLE_NAME = 'mensajes_pedido'
         `);
-        
+
         if (tables.length === 0) {
             // La tabla no existe, crearla
-            console.log('Creando tabla mensajes_pedido...');
             await db.execute(`
                 CREATE TABLE IF NOT EXISTS mensajes_pedido (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -291,10 +474,10 @@ io.on('connection', (socket) => {
             socket.emit('chat-history', { orderId, messages: [] });
             return;
         }
-        
+
         const [messages] = await db.execute(`
-            SELECT mp.*, 
-                   CASE 
+            SELECT mp.*,
+                   CASE
                        WHEN mp.remitente_tipo = 'cliente' THEN u.nombre
                        WHEN mp.remitente_tipo = 'restaurante' THEN r.nombre
                        WHEN mp.remitente_tipo = 'admin' THEN ua.nombre
@@ -307,8 +490,7 @@ io.on('connection', (socket) => {
             WHERE pedido_id = ?
             ORDER BY fecha_envio ASC
         `, [orderId]);
-        
-        console.log(`Enviando historial de chat para pedido ${orderId}: ${messages.length} mensajes`, messages);
+
         socket.emit('chat-history', { orderId, messages });
     } catch (error) {
         console.error('Error al cargar el historial de chat:', error);
@@ -321,8 +503,6 @@ io.on('connection', (socket) => {
     const { orderId, userId, userType, message } = data;
     const roomName = `order-${orderId}`;
 
-    console.log('DEBUG (server): Mensaje recibido para enviar:', { orderId, userId, userType, message });
-
     if (!orderId || !userId || !userType || !message) {
       console.error('Datos incompletos para enviar mensaje:', data);
       return;
@@ -331,15 +511,14 @@ io.on('connection', (socket) => {
     try {
       // Verificar si la tabla existe
       const [tables] = await db.execute(`
-          SELECT TABLE_NAME 
-          FROM information_schema.TABLES 
-          WHERE TABLE_SCHEMA = DATABASE() 
+          SELECT TABLE_NAME
+          FROM information_schema.TABLES
+          WHERE TABLE_SCHEMA = DATABASE()
           AND TABLE_NAME = 'mensajes_pedido'
       `);
-      
+
       if (tables.length === 0) {
           // La tabla no existe, crearla
-          console.log('Creando tabla mensajes_pedido para enviar mensaje...');
           await db.execute(`
               CREATE TABLE IF NOT EXISTS mensajes_pedido (
                   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -353,7 +532,7 @@ io.on('connection', (socket) => {
               ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
           `);
       }
-      
+
       let senderName;
       let normalizedUserType = userType; // Default to original userType
 
@@ -379,8 +558,6 @@ io.on('connection', (socket) => {
         senderName = 'Desconocido';
       }
 
-      console.log(`[CHAT] Sender determined: type=${userType}, id=${userId}, name=${senderName}`);
-
       // Guardar mensaje en la base de datos
       const [result] = await db.execute(`
         INSERT INTO mensajes_pedido (pedido_id, remitente_tipo, remitente_id, mensaje)
@@ -399,7 +576,13 @@ io.on('connection', (socket) => {
 
       // Emitir el mensaje a todos en la sala del pedido
       io.to(roomName).emit('chat-message', { orderId, message: newMessage });
-      console.log(`DEBUG (server): Mensaje enviado en pedido ${orderId} por ${normalizedUserType} ${userId}: ${message}`);
+
+      // Enviar confirmación de envío exitoso al emisor
+      socket.emit('message-sent', {
+        orderId,
+        messageId: result.insertId,
+        message: 'Mensaje enviado exitosamente'
+      });
 
       // Opcional: Notificar al otro lado (cliente/restaurante) si no están en la sala
       // Esto podría requerir lógica adicional para saber quién está en línea
@@ -407,33 +590,127 @@ io.on('connection', (socket) => {
     } catch (error) {
       console.error('Error al guardar o emitir mensaje de chat:', error);
       // Notificar al emisor que hubo un error
-      socket.emit('chat-error', { 
-          orderId, 
-          error: true, 
-          message: 'Error al enviar el mensaje' 
+      socket.emit('chat-error', {
+          orderId,
+          error: true,
+          message: 'Error al enviar el mensaje'
       });
     }
   });
+
+
+});
+
+// Middleware para manejar respuestas AJAX
+app.use((req, res, next) => {
+  // Guardar el método render original
+  const originalRender = res.render;
+  
+  // Sobrescribir el método render
+  res.render = function(view, options, callback) {
+    // Verificar si es una petición AJAX
+    const isAjax = req.get('X-Requested-With') === 'XMLHttpRequest' || 
+                  (req.headers.accept && req.headers.accept.includes('application/json')) ||
+                  req.is('application/json');
+    
+    if (isAjax) {
+      // Si es AJAX, devolver un error JSON
+      return res.status(500).json({
+        success: false,
+        message: 'Error en el servidor al procesar la solicitud'
+      });
+    }
+    
+    // Si no es AJAX, continuar con el render normal
+    return originalRender.call(this, view, options, callback);
+  };
+  
+  next();
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error en el servidor:', err.stack);
-  const user = req.session && req.session.user ? req.session.user : null;
   
-  res.status(500).render('error', {
-    title: 'Error del Servidor',
-    message: 'Algo salió mal. Por favor, intenta nuevamente.',
-    error: process.env.NODE_ENV === 'development' ? err : {},
-    user: user
+  // Verificar si es una petición AJAX
+  const isAjax = req.get('X-Requested-With') === 'XMLHttpRequest' || 
+                (req.headers.accept && req.headers.accept.includes('application/json')) ||
+                req.is('application/json');
+  
+  // Si es AJAX, responder con JSON
+  if (isAjax) {
+    // Mapear errores comunes a códigos de estado HTTP
+    let statusCode = 500;
+    let message = 'Error interno del servidor';
+    
+    if (err.status === 404) {
+      statusCode = 404;
+      message = 'Recurso no encontrado';
+    } else if (err.name === 'ValidationError') {
+      statusCode = 400;
+      message = err.message || 'Error de validación de datos';
+    } else if (err.name === 'UnauthorizedError') {
+      statusCode = 401;
+      message = 'No autorizado';
+    } else if (err.code === 'ER_DUP_ENTRY') {
+      statusCode = 409;
+      message = 'El registro ya existe';
+    }
+    
+    return res.status(statusCode).json({
+      success: false,
+      message: message,
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+  
+  // Si no es AJAX, continuar con el manejo de errores normal
+  
+  // Si es un error 404, renderizar la página de error 404
+  if (err.status === 404) {
+    return res.status(404).render('error/404', {
+      title: 'Página no encontrada',
+      error: err.message || 'La página que estás buscando no existe.'
+    });
+  }
+  
+  // Si es un error de validación, mostrar el mensaje de error
+  if (err.name === 'ValidationError') {
+    return res.status(400).render('error/400', {
+      title: 'Error de validación',
+      error: err.message || 'Error de validación de datos.'
+    });
+  }
+  
+  // Para errores de autenticación
+  if (err.name === 'UnauthorizedError') {
+    return res.status(401).render('error/401', {
+      title: 'No autorizado',
+      error: err.message || 'No tienes permiso para acceder a este recurso.'
+    });
+  }
+  
+  // Para errores de base de datos
+  if (err.code === 'ER_DUP_ENTRY') {
+    return res.status(400).render('error/400', {
+      title: 'Error de duplicado',
+      error: 'El registro ya existe en la base de datos.'
+    });
+  }
+  
+  // Para otros errores, renderizar la página de error 500
+  res.status(500).render('error/500', {
+    title: 'Error del servidor',
+    user: req.session && req.session.user ? req.session.user : null,
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Ha ocurrido un error en el servidor.'
   });
 });
 
 // 404 handler
 app.use((req, res) => {
-  console.log('Ruta no encontrada:', req.method, req.url);
   const user = req.session && req.session.user ? req.session.user : null;
-  
+
   res.status(404).render('error-404', {
     title: 'Página No Encontrada - A la Mesa',
     user: user
@@ -445,9 +722,6 @@ const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, HOST, () => {
   console.log(`🚀 Servidor A la Mesa corriendo en http://${HOST}:${PORT}`);
-  console.log(`📱 Acceso local: http://192.168.0.102:${PORT}`);
-  console.log(`📱 Acceso desde red: http://192.168.0.102:${PORT}`);
-  console.log(`🏪 Dashboard restaurante: http://192.168.0.102:${PORT}/dashboard`);
 });
 
 // Graceful shutdown

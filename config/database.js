@@ -1,8 +1,6 @@
+// Create connection pool
 const mysql = require('mysql2');
 
-
-// Create connection pool
-console.log('DB_HOST from process.env:', process.env.DB_HOST);
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
@@ -22,7 +20,7 @@ const promisePool = pool.promise();
 // Test connection
 promisePool.execute('SELECT 1 as test')
   .then(() => {
-    console.log('✅ Conexión a MySQL establecida correctamente');
+    // Conexión a MySQL establecida correctamente
   })
   .catch((err) => {
     console.error('❌ Error conectando a MySQL:', err.message);

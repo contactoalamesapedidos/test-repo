@@ -3,73 +3,55 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
-async function applyMigrations() {
-    const migrationsDir = __dirname;
-    const dbConfig = {
-        host: process.env.DB_HOST || 'localhost',
-        user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || '',
-        database: process.env.DB_NAME || 'a_la_mesa',
-        port: process.env.DB_PORT || 3306,
-        multipleStatements: true
-    };
+const dbConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'a_la_mesa',
+    port: process.env.DB_PORT || 3306,
+    multipleStatements: true
+};
 
+const runMigration = async () => {
     let connection;
     try {
-        console.log(`Attempting to connect to database: ${dbConfig.database} on ${dbConfig.host}:${dbConfig.port}`);
         connection = await mysql.createConnection(dbConfig);
-        console.log('Successfully connected to the database.');
+        console.log('Conectado a la base de datos.');
 
-        // Ensure migrations table exists
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS migrations (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(255) UNIQUE NOT NULL,
-                applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-        console.log('Migrations table ensured.');
+        const migrationFileName = process.argv[2]; // Get migration file name from command line argument
+        if (!migrationFileName) {
+            console.error('Error: No migration file specified. Usage: node apply-migration.js <migration_file_name>');
+            process.exit(1);
+        }
 
-        const [appliedMigrationsRows] = await connection.query('SELECT name FROM migrations');
-        const appliedMigrations = new Set(appliedMigrationsRows.map(row => row.name));
+        const migrationFile = path.join(__dirname, migrationFileName);
+        if (!fs.existsSync(migrationFile)) {
+            console.error(`Error: Migration file not found: ${migrationFileName}`);
+            process.exit(1);
+        }
 
-        const migrationFiles = fs.readdirSync(migrationsDir)
-            .filter(file => file.endsWith('.sql') && file !== path.basename(__filename))
-            .sort(); // Ensure migrations are applied in order
+        const sql = fs.readFileSync(migrationFile, 'utf8');
+        
+        const statements = sql.split(';').filter(s => s.trim().length > 0);
 
-        for (const file of migrationFiles) {
-            if (!appliedMigrations.has(file)) {
-                const filePath = path.join(migrationsDir, file);
-                const sql = fs.readFileSync(filePath, 'utf8');
-                console.log(`Applying migration: ${file}`);
-                try {
-                    await connection.query(sql);
-                    await connection.query('INSERT INTO migrations (name) VALUES (?)', [file]);
-                    console.log(`Migration ${file} applied successfully.`);
-                } catch (error) {
-                    if (error.code === 'ER_DUP_FIELDNAME' || error.code === 'ER_DUP_COLUMN') {
-                        console.warn(`Warning: Column in ${file} already exists. Marking as applied.`);
-                        await connection.query('INSERT INTO migrations (name) VALUES (?)', [file]);
-                    } else {
-                        throw error;
-                    }
-                }
-            } else {
-                console.log(`Migration ${file} already applied, skipping.`);
+        for (const statement of statements) {
+            const cleanStatement = statement.trim();
+            if (cleanStatement.length > 0) {
+                await connection.query(cleanStatement);
+                console.log(`Sentencia ejecutada exitosamente: ${cleanStatement.substring(0, 100)}...`);
             }
         }
 
-        console.log('All pending migrations applied.');
+        console.log(`Migración ${migrationFileName} completada exitosamente.`);
 
-    } catch (error) {
-        console.error('Error applying migrations:', error);
-        process.exit(1);
+    } catch (err) {
+        console.error('Error durante la migración:', err);
     } finally {
         if (connection) {
             await connection.end();
-            console.log('Database connection closed.');
+            console.log('Conexión cerrada.');
         }
     }
-}
+};
 
-applyMigrations();
+runMigration();

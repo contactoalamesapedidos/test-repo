@@ -1,72 +1,27 @@
-// Service Worker para notificaciones push
-const CACHE_NAME = 'a-la-mesa-v1';
-const urlsToCache = [
-    '/',
-    '/css/style.css',
-    '/js/app.js',
-    '/js/push-notifications.js'
-];
+// Service Worker para notificaciones push - Versión simplificada
+console.log('Service Worker cargado correctamente - Versión mejorada');
 
 // Instalar el service worker
 self.addEventListener('install', (event) => {
-    console.log('Service Worker instalado');
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('Cache abierto');
-                return cache.addAll(urlsToCache);
-            })
-    );
+    console.log('🔧 Service Worker instalándose...');
+    console.log('📍 Origen:', self.location.origin);
+    console.log('🔗 URL del SW:', self.location.href);
+    self.skipWaiting(); // Forzar activación inmediata
 });
 
 // Activar el service worker
 self.addEventListener('activate', (event) => {
-    console.log('Service Worker activado');
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheName !== CACHE_NAME) {
-                        console.log('Eliminando cache antiguo:', cacheName);
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
-    );
-});
-
-// Interceptar peticiones de red
-self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        fetch(event.request)
-            .then(async (response) => {
-                // Si la solicitud es exitosa, clonar la respuesta y guardarla en caché
-                const responseClone = response.clone();
-                const cache = await caches.open(CACHE_NAME);
-                cache.put(event.request, responseClone);
-                return response;
-            })
-            .catch(async () => {
-                // Si la solicitud de red falla, intentar servir desde la caché
-                const cachedResponse = await caches.match(event.request);
-                if (cachedResponse) {
-                    return cachedResponse;
-                }
-                // Si no hay caché y la red falla, puedes devolver una respuesta de fallback o un error
-                // Por ahora, simplemente logueamos el error y dejamos que falle
-                console.error('Fallo la solicitud de red y no hay respuesta en caché:', event.request.url);
-                // Puedes devolver una respuesta de error personalizada aquí si lo deseas
-                // return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
-                throw new Error('Network request failed and no cache available.');
-            })
-    );
+    console.log('🚀 Service Worker activándose...');
+    console.log('📊 Estado del SW:', self.serviceWorker ? 'Disponible' : 'No disponible');
+    event.waitUntil(self.clients.claim()); // Tomar control inmediato
 });
 
 // Manejar notificaciones push
 self.addEventListener('push', (event) => {
-    console.log('Notificación push recibida:', event);
-    
+    console.log('📨 Notificación push recibida');
+    console.log('📊 Datos del evento:', event);
+    console.log('📝 Datos de la notificación:', event.data ? event.data.text() : 'Sin datos');
+
     let notificationData = {
         title: 'A la Mesa',
         body: 'Tienes una nueva notificación',
@@ -74,6 +29,7 @@ self.addEventListener('push', (event) => {
         badge: '/images/logo-a-la-mesa.png',
         tag: 'a-la-mesa-notification',
         requireInteraction: true,
+        silent: false,
         actions: [
             {
                 action: 'view',
@@ -92,24 +48,42 @@ self.addEventListener('push', (event) => {
     if (event.data) {
         try {
             const data = event.data.json();
+            console.log('📋 Datos JSON parseados:', data);
             notificationData = {
                 ...notificationData,
                 ...data
             };
         } catch (error) {
-            console.error('Error parseando datos de notificación:', error);
+            console.error('❌ Error parseando datos de notificación:', error);
+            // Si no se puede parsear como JSON, intentar como texto plano
+            try {
+                const textData = event.data.text();
+                if (textData) {
+                    notificationData.body = textData;
+                }
+            } catch (textError) {
+                console.error('❌ Error obteniendo datos como texto:', textError);
+            }
         }
     }
 
+    console.log('🔔 Mostrando notificación con datos:', notificationData);
+
     event.waitUntil(
         self.registration.showNotification(notificationData.title, notificationData)
+            .then(() => {
+                console.log('✅ Notificación mostrada exitosamente');
+            })
+            .catch((error) => {
+                console.error('❌ Error mostrando notificación:', error);
+                console.error('❌ Detalles del error:', error.message);
+                console.error('❌ Stack trace:', error.stack);
+            })
     );
 });
 
 // Manejar clics en notificaciones
 self.addEventListener('notificationclick', (event) => {
-    console.log('Notificación clickeada:', event);
-    
     event.notification.close();
 
     if (event.action === 'close') {
@@ -164,14 +138,12 @@ self.addEventListener('notificationclick', (event) => {
 
 // Manejar cierre de notificaciones
 self.addEventListener('notificationclose', (event) => {
-    console.log('Notificación cerrada:', event);
+    // Notificación cerrada
 });
 
 // Manejar mensajes del cliente
 self.addEventListener('message', (event) => {
-    console.log('Mensaje recibido en Service Worker:', event.data);
-    
     if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
     }
-}); 
+});

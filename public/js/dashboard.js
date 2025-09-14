@@ -74,4 +74,148 @@ function showToast(message, type = 'success') {
         console.error('Error mostrando toast:', e);
         setTimeout(() => toastEl.remove(), 2000);
     }
-} 
+}
+
+// Push Notifications
+class PushNotificationService {
+    constructor() {
+        this.isSupported = 'serviceWorker' in navigator && 'PushManager' in window;
+        this.registration = null;
+        this.subscription = null;
+    }
+
+    async initialize() {
+        if (!this.isSupported) {
+            return false;
+        }
+
+        try {
+            this.registration = await navigator.serviceWorker.register('/sw.js');
+            this.subscription = await this.registration.pushManager.getSubscription();
+            return this.subscription !== null;
+        } catch (error) {
+            console.error('Error inicializando notificaciones push:', error);
+            return false;
+        }
+    }
+
+    async requestPermission() {
+        if (!this.isSupported) {
+            throw new Error('Las notificaciones push no están soportadas');
+        }
+
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                throw new Error('Permiso de notificación denegado');
+            }
+
+            const response = await fetch('/api/push/vapid-public-key');
+            if (!response.ok) {
+                throw new Error('Error obteniendo clave VAPID: ' + response.status);
+            }
+            const vapidPublicKey = await response.text();
+
+            const convertedVapidKey = this.urlBase64ToUint8Array(vapidPublicKey);
+
+            this.subscription = await this.registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: convertedVapidKey
+            });
+
+            await this.sendSubscriptionToServer(this.subscription);
+
+            return true;
+        } catch (error) {
+            console.error('Error solicitando permisos:', error);
+            throw error;
+        }
+    }
+
+    async sendSubscriptionToServer(subscription) {
+        try {
+            const response = await fetch('/api/push/subscribe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    subscription: subscription,
+                    userId: this.getUserId(),
+                    userType: this.getUserType()
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Error del servidor: ' + response.status);
+            }
+
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.message || 'Error guardando suscripción');
+            }
+            return true;
+        } catch (error) {
+            console.error('Error enviando suscripción al servidor:', error);
+            throw error;
+        }
+    }
+
+    isEnabled() {
+        return Notification.permission === 'granted' && this.subscription !== null;
+    }
+
+    getUserId() {
+        const userData = document.querySelector('script[data-user]');
+        if (userData && userData.textContent.trim() !== '') {
+            try {
+                const user = JSON.parse(userData.textContent);
+                return user.id;
+            } catch (error) {
+                console.error('Error parseando datos del usuario:', error);
+            }
+        }
+        return null;
+    }
+
+    getUserType() {
+        const userData = document.querySelector('script[data-user]');
+        if (userData && userData.textContent.trim() !== '') {
+            try {
+                const user = JSON.parse(userData.textContent);
+                return user.tipo_usuario;
+            } catch (error) {
+                console.error('Error parseando datos del usuario:', error);
+            }
+        }
+        return null;
+    }
+
+    urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding)
+            .replace(/-/g, '+')
+            .replace(/_/g, '/');
+
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+}
+
+window.pushNotificationService = new PushNotificationService();
+
+document.addEventListener('DOMContentLoaded', async function() {
+    if (window.pushNotificationService) {
+        await window.pushNotificationService.initialize();
+        if (!window.pushNotificationService.isEnabled()) {
+            // Automatically request permission if not granted
+            // window.enablePushNotifications();
+        }
+    }
+}); 

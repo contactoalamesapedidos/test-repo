@@ -249,3 +249,4 @@ WHERE restaurante_id = ? AND fecha_pedido BETWEEN ? AND ?
 **Estado**: ✅ COMPLETADO  
 **Tipo**: Nueva funcionalidad de administración masiva  
 **Impacto**: Automatización completa del proceso de generación de cobros
+

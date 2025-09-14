@@ -24,10 +24,54 @@ router.get('/beneficios-clientes', (req, res) => {
 // Home page
 router.get('/', async (req, res) => {
   try {
-    console.log('Iniciando consulta de restaurantes...');
+    // Check if user is logged in as restaurant owner
+    let userRestaurant = null;
+    if (req.session.user && req.session.user.tipo_usuario === 'restaurante') {
+      const [userRestaurants] = await db.execute(`
+        SELECT
+          r.id,
+          r.nombre,
+          r.descripcion,
+          r.imagen_logo,
+          r.imagen_banner,
+          r.direccion,
+          r.ciudad,
+          r.telefono,
+          r.email_contacto,
+          r.horario_apertura,
+          r.horario_cierre,
+          r.tiempo_entrega_min,
+          r.tiempo_entrega_max,
+          r.costo_delivery,
+          r.calificacion_promedio,
+          r.total_calificaciones,
+          r.activo,
+          r.verificado,
+          r.dias_operacion,
+          GROUP_CONCAT(DISTINCT cr.nombre) as categorias,
+          COUNT(DISTINCT p.id) as total_productos
+        FROM restaurantes r
+        LEFT JOIN restaurante_categorias rc ON r.id = rc.restaurante_id
+        LEFT JOIN categorias_restaurantes cr ON rc.categoria_id = cr.id
+        LEFT JOIN productos p ON r.id = p.restaurante_id AND p.disponible = 1
+        WHERE r.usuario_id = ? AND r.activo = 1
+        GROUP BY
+          r.id, r.nombre, r.descripcion, r.imagen_logo, r.imagen_banner,
+          r.direccion, r.ciudad, r.telefono, r.email_contacto,
+          r.horario_apertura, r.horario_cierre, r.tiempo_entrega_min,
+          r.tiempo_entrega_max, r.costo_delivery, r.calificacion_promedio,
+          r.total_calificaciones
+        LIMIT 1
+      `, [req.session.user.id]);
+
+      if (userRestaurants.length > 0) {
+        userRestaurant = processRestaurantList([userRestaurants[0]])[0];
+      }
+    }
+
     // Get featured restaurants
     const [restaurants] = await db.execute(`
-      SELECT 
+      SELECT
         r.id,
         r.nombre,
         r.descripcion,
@@ -53,35 +97,39 @@ router.get('/', async (req, res) => {
       LEFT JOIN categorias_restaurantes cr ON rc.categoria_id = cr.id
       LEFT JOIN productos p ON r.id = p.restaurante_id AND p.disponible = 1
       WHERE r.verificado = 1
-      GROUP BY 
+      GROUP BY
         r.id, r.nombre, r.descripcion, r.imagen_logo, r.imagen_banner,
         r.direccion, r.ciudad, r.telefono, r.email_contacto,
         r.horario_apertura, r.horario_cierre, r.tiempo_entrega_min,
         r.tiempo_entrega_max, r.costo_delivery, r.calificacion_promedio,
         r.total_calificaciones
       ORDER BY r.calificacion_promedio DESC
-      LIMIT 6
+      LIMIT 50
     `);
-    console.log('Restaurantes encontrados:', restaurants.length);
 
     let processedRestaurants = processRestaurantList(restaurants);
 
-    console.log('Iniciando consulta de categorías...');
-    // Get restaurant categories
-    const [categories] = await db.execute(`
-      SELECT * FROM categorias_restaurantes 
-      WHERE activa = 1 
-      ORDER BY orden_display ASC
-    `);
-    console.log('Categorías encontradas:', categories.length);
+    processedRestaurants.sort((a, b) => {
+      if (a.abierto && !b.abierto) return -1;
+      if (!a.abierto && b.abierto) return 1;
+      return b.calificacion_promedio - a.calificacion_promedio;
+    });
 
-    console.log('Renderizando página...');
+    const featuredRestaurants = processedRestaurants.slice(0, 6);
+
+    // Get product categories
+    const [categories] = await db.execute(`
+      SELECT nombre, COALESCE(orden_display, 999) as orden_display FROM categorias_productos
+      WHERE restaurante_id IS NULL AND activa = 1
+      ORDER BY orden_display ASC, nombre ASC
+    `);
     res.render('index', {
       title: 'A la Mesa - Delivery de Comida',
-      restaurants: processedRestaurants,
+      restaurants: featuredRestaurants,
       categories,
       user: req.session.user,
-      topRatedRestaurants: processedRestaurants.slice(0, 6),
+      topRatedRestaurants: featuredRestaurants,
+      userRestaurant: userRestaurant,
       CategoryIcons: CategoryIcons
     });
   } catch (error) {
@@ -104,7 +152,7 @@ router.get('/', async (req, res) => {
 // Search results
 router.get('/search', async (req, res) => {
   try {
-    const { q: query, category, location } = req.query;
+    const { q: query, category, location, sort, price_range, min_rating } = req.query;
     
     let sql = `
       SELECT 
@@ -164,38 +212,98 @@ router.get('/search', async (req, res) => {
       sql += ` AND (
         LOWER(cr.nombre) = LOWER(?) OR
         EXISTS (
-          SELECT 1 FROM productos p4 
+          SELECT 1 FROM productos p4
           JOIN categorias_productos cp3 ON p4.categoria_id = cp3.id
-          WHERE p4.restaurante_id = r.id 
-          AND p4.disponible = 1 
+          WHERE p4.restaurante_id = r.id
+          AND p4.disponible = 1
           AND LOWER(cp3.nombre) = LOWER(?)
         )
       )`;
       params.push(category, category);
     }
-    
-    sql += ` GROUP BY 
+
+    // Aplicar filtros adicionales después del GROUP BY
+    let havingClause = '';
+
+    if (price_range) {
+      // Filtro por rango de precio basado en productos disponibles
+      if (price_range === '0-50') {
+        havingClause += ' AND MIN(p.precio) >= 0 AND MIN(p.precio) <= 50';
+      } else if (price_range === '50-100') {
+        havingClause += ' AND MIN(p.precio) >= 50 AND MIN(p.precio) <= 100';
+      } else if (price_range === '100-200') {
+        havingClause += ' AND MIN(p.precio) >= 100 AND MIN(p.precio) <= 200';
+      } else if (price_range === '200+') {
+        havingClause += ' AND MIN(p.precio) >= 200';
+      }
+    }
+
+    if (min_rating) {
+      // Filtro por calificación mínima
+      havingClause += ` AND r.calificacion_promedio >= ${parseFloat(min_rating)}`;
+    }
+
+    // Agregar MIN(p.precio) al SELECT si hay filtros de precio
+    if (price_range) {
+      sql = sql.replace('COUNT(DISTINCT p.id) as total_productos',
+                       'COUNT(DISTINCT p.id) as total_productos, MIN(p.precio) as precio_minimo');
+    }
+
+    sql += ` GROUP BY
       r.id, r.nombre, r.descripcion, r.imagen_logo, r.imagen_banner,
       r.direccion, r.ciudad, r.telefono, r.email_contacto,
       r.horario_apertura, r.horario_cierre, r.tiempo_entrega_min,
       r.tiempo_entrega_max, r.costo_delivery, r.calificacion_promedio,
       r.total_calificaciones
-    ORDER BY r.calificacion_promedio DESC`;
+    ${havingClause}`;
+
+    // Aplicar ordenamiento según el parámetro sort
+    let orderBy = 'ORDER BY r.calificacion_promedio DESC'; // Default
+
+    if (sort) {
+      switch (sort) {
+        case 'relevance':
+          orderBy = 'ORDER BY r.calificacion_promedio DESC';
+          break;
+        case 'rating':
+          orderBy = 'ORDER BY r.calificacion_promedio DESC';
+          break;
+        case 'delivery_time':
+          orderBy = 'ORDER BY (r.tiempo_entrega_min + r.tiempo_entrega_max) / 2 ASC';
+          break;
+        case 'delivery_cost':
+          orderBy = 'ORDER BY r.costo_delivery ASC';
+          break;
+        case 'price_low':
+          orderBy = 'ORDER BY MIN(p.precio) ASC';
+          break;
+        case 'price_high':
+          orderBy = 'ORDER BY MIN(p.precio) DESC';
+          break;
+        case 'name':
+          orderBy = 'ORDER BY r.nombre ASC';
+          break;
+        case 'newest':
+          orderBy = 'ORDER BY r.id DESC';
+          break;
+        default:
+          orderBy = 'ORDER BY r.calificacion_promedio DESC';
+      }
+    }
+
+    sql += ` ${orderBy}`;
     
-    console.log('Ejecutando búsqueda mejorada con query:', query, 'categoría:', category);
     const [restaurants] = await db.execute(sql, params);
-    console.log('Restaurantes encontrados:', restaurants.length);
     
     // Usar la función centralizada para determinar si el restaurante está abierto
     processRestaurantList(restaurants);
     
     // Get categories for filter (solo categorías de productos)
     const [categories] = await db.execute(`
-      SELECT DISTINCT nombre FROM categorias_productos 
-      WHERE restaurante_id IS NULL
-      ORDER BY nombre ASC
+      SELECT nombre FROM categorias_productos
+      WHERE restaurante_id IS NULL AND activa = 1
+      ORDER BY COALESCE(orden_display, 999) ASC, nombre ASC
     `);
-    console.log('Categorías disponibles:', categories.length);
 
     res.render('search', {
       title: `Resultados de búsqueda${query ? ` para "${query}"` : ''}`,
@@ -203,6 +311,9 @@ router.get('/search', async (req, res) => {
       categories,
       searchQuery: query || '',
       selectedCategory: category || '',
+      sortBy: sort || 'relevance',
+      priceRange: price_range || '',
+      minRating: min_rating || '',
       user: req.session.user
     });
   } catch (error) {

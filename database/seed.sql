@@ -51,7 +51,8 @@ INSERT INTO usuarios (nombre, apellido, email, password, telefono, tipo_usuario,
 ('La', 'Nonna', 'restaurante4@alamesa.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567896', 'restaurante', 'rest4.jpg', 'Buenos Aires'),
 ('El', 'Rincon', 'restaurante5@alamesa.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567897', 'restaurante', 'rest5.jpg', 'Buenos Aires'),
 ('Carlos', 'Repartidor', 'carlos.repartidor@email.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567898', 'repartidor', 'delivery1.jpg', 'Buenos Aires'),
-('Ana', 'Delivery', 'ana.delivery@email.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567899', 'repartidor', 'delivery2.jpg', 'Buenos Aires');
+('Ana', 'Delivery', 'ana.delivery@email.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567899', 'repartidor', 'delivery2.jpg', 'Buenos Aires'),
+('Hamburgueseria', 'Colon', 'tiendanexus.info@gmail.com', '$2a$12$G7AYExh29tgUcPJSSo.IwuZ5KfiZgirGvDWnxOPVOj.w8g.SxfRQ2', '+1234567800', 'restaurante', 'hamburgueseria-logo.jpg', 'Buenos Aires');
 
 
 -- Insertar direcciones de ejemplo
@@ -74,7 +75,8 @@ INSERT INTO restaurantes (usuario_id, nombre, descripcion, imagen_logo, imagen_b
 (5, 'Pizza Master', 'Pizzas artesanales con el mejor sabor', 'pizzamaster-logo.jpg', 'pizzamaster-banner.jpg', 'Av. Siempre Viva 742', 'Buenos Aires', '+5411-8765-4321', 'info@pizzamaster.com', -34.604945, -58.382234, '18:00:00', '00:00:00', '[1,2,3,4,5,6,7]', 20, 35, 2.50, 15.00, 4.6, 120, TRUE),
 (6, 'Sandwicheria Express', 'Los sandwiches más rápidos y deliciosos', 'sandwich-logo.jpg', 'sandwich-banner.jpg', 'Rivadavia 456', 'Buenos Aires', '+5411-9876-5432', 'contacto@sandwichexpress.com', -34.605722, -58.383592, '10:00:00', '20:00:00', '[2,3,4,5,6]', 25, 40, 2.00, 8.00, 4.5, 90, TRUE),
 (7, 'La Nonna Trattoria', 'Auténtica cocina italiana con pastas caseras', 'lanonna-logo.jpg', 'lanonna-banner.jpg', 'Av. Italia 100', 'Buenos Aires', '+5411-1111-2222', 'contacto@lanonna.com', -34.600000, -58.390000, '12:00:00', '23:00:00', '[1,2,3,4,5,6,7]', 30, 45, 4.00, 20.00, 4.7, 75, TRUE),
-(8, 'El Rincón del Sabor', 'Variedad de platos caseros e internacionales', 'elrincon-logo.jpg', 'elrincon-banner.jpg', 'Calle Principal 500', 'Buenos Aires', '+5411-3333-4444', 'contacto@elrincon.com', -34.610000, -58.400000, '09:00:00', '21:00:00', '[1,2,3,4,5,6,7]', 35, 50, 5.00, 12.00, 4.4, 60, TRUE);
+(8, 'El Rincón del Sabor', 'Variedad de platos caseros e internacionales', 'elrincon-logo.jpg', 'elrincon-banner.jpg', 'Calle Principal 500', 'Buenos Aires', '+5411-3333-4444', 'contacto@elrincon.com', -34.610000, -58.400000, '09:00:00', '21:00:00', '[1,2,3,4,5,6,7]', 35, 50, 5.00, 12.00, 4.4, 60, TRUE),
+(11, 'Hamburgueseria Colon', 'Las mejores hamburguesas artesanales de la ciudad', 'hamburgueseria-logo.jpg', 'hamburgueseria-banner.jpg', 'Av. Colon 1234', 'Buenos Aires', '+5411-4444-5555', 'tiendanexus.info@gmail.com', -34.620000, -58.410000, '11:00:00', '23:00:00', '[1,2,3,4,5,6,7]', 25, 40, 3.50, 15.00, 4.9, 85, TRUE);
 
 
 -- Insertar relación restaurante-categorías
@@ -83,7 +85,8 @@ INSERT INTO restaurante_categorias (restaurante_id, categoria_id) VALUES
 (2, 2), -- Pizza Master -> Pizzas
 (3, 3), -- Sandwicheria Express -> Sandwiches
 (4, 4), -- La Nonna Trattoria -> Pastas
-(5, 5); -- El Rincón del Sabor -> Otros
+(5, 5), -- El Rincón del Sabor -> Otros
+(6, 3); -- Hamburgueseria Colon -> Hamburguesas (usando categoría existente de Sandwiches)
 
 INSERT INTO categorias_productos (restaurante_id, nombre, descripcion, orden_display, activa)
 SELECT NULL, 'Pizzas', 'Variedad de pizzas para todos los gustos', 10, 1 FROM DUAL
@@ -92,6 +95,10 @@ WHERE NOT EXISTS (SELECT 1 FROM categorias_productos WHERE nombre = 'Pizzas' AND
 INSERT INTO categorias_productos (restaurante_id, nombre, descripcion, orden_display, activa)
 SELECT NULL, 'Empanadas', 'Las mejores empanadas de la ciudad', 20, 1 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM categorias_productos WHERE nombre = 'Empanadas' AND restaurante_id IS NULL);
+
+INSERT INTO categorias_productos (restaurante_id, nombre, descripcion, orden_display, activa)
+SELECT NULL, 'Hamburguesas', 'Deliciosas hamburguesas y combos', 25, 1 FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM categorias_productos WHERE nombre = 'Hamburguesas' AND restaurante_id IS NULL);
 
 INSERT INTO categorias_productos (restaurante_id, nombre, descripcion, orden_display, activa)
 SELECT NULL, 'Sandwiches', 'Deliciosos sandwiches y wraps', 30, 1 FROM DUAL
@@ -124,7 +131,13 @@ INSERT INTO productos (restaurante_id, categoria_id, nombre, descripcion, precio
 (5, 11, 'Milanesa con Papas Fritas', 'Clásica milanesa de ternera con guarnición', 14.00, '/uploads/productos/milanesa-fritas.jpg', 'Milanesa de ternera, papas, huevo, pan rallado', 900, 20, TRUE, 0),
 (5, 11, 'Ensalada Caesar con Pollo', 'Ensalada fresca con pollo a la parrilla', 12.00, '/uploads/productos/ensalada-caesar-pollo.jpg', 'Lechuga, pollo, crutones, parmesano, aderezo Caesar', 400, 15, FALSE, 0),
 (5, 12, 'Porción de Papas Fritas', 'Crujientes papas fritas', 4.00, '/uploads/productos/papas-fritas.jpg', 'Papas, aceite, sal', 350, 10, FALSE, 0),
-(5, 13, 'Gaseosa Regular', 'Variedad de sabores (Coca-Cola, Sprite, etc.)', 3.00, '/uploads/productos/gaseosa.jpg', 'Agua carbonatada, azúcar, saborizantes', 150, 2, FALSE, 0);
+(5, 13, 'Gaseosa Regular', 'Variedad de sabores (Coca-Cola, Sprite, etc.)', 3.00, '/uploads/productos/gaseosa.jpg', 'Agua carbonatada, azúcar, saborizantes', 150, 2, FALSE, 0),
+-- Hamburgueseria Colon (Restaurante ID 6)
+(6, 14, 'Hamburguesa Clásica', 'Hamburguesa con carne, lechuga, tomate, cebolla y queso', 12.00, '/uploads/productos/hamburguesa-clasica.jpg', 'Carne 180g, lechuga, tomate, cebolla, queso cheddar, pan artesanal', 650, 15, TRUE, 0),
+(6, 14, 'Hamburguesa Completa', 'Hamburguesa con huevo, jamón, panceta y doble queso', 16.00, '/uploads/productos/hamburguesa-completa.jpg', 'Carne 180g, huevo, jamón, panceta, doble queso cheddar, lechuga, tomate, cebolla', 850, 20, TRUE, 0),
+(6, 15, 'Hamburguesa BBQ', 'Hamburguesa con salsa BBQ, cebolla caramelizada y panceta', 15.00, '/uploads/productos/hamburguesa-bbq.jpg', 'Carne 180g, salsa BBQ, cebolla caramelizada, panceta, queso cheddar', 700, 18, FALSE, 0),
+(6, 16, 'Papas Fritas Grandes', 'Porción grande de papas fritas crujientes', 6.00, '/uploads/productos/papas-fritas-grandes.jpg', 'Papas, aceite, sal', 400, 8, FALSE, 0),
+(6, 17, 'Coca-Cola 500ml', 'Refresco Coca-Cola de 500ml', 3.50, '/uploads/productos/coca-cola-500ml.jpg', 'Agua carbonatada, azúcar, cafeína, colorante', 200, 2, FALSE, 0);
 
 
 -- Insertar opciones de productos

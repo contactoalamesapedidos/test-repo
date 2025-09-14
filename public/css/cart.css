@@ -20,7 +20,7 @@
     left: 0;
     width: 100%;
     height: 100vh;
-    z-index: 3998 !important; /* por encima de navs y otros elementos */
+    z-index: 3998; /* por encima de navs y otros elementos */
     pointer-events: none; /* deshabilitado por defecto */
 }
 
@@ -33,7 +33,7 @@ body .cart-overlay, body #cartOverlay {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 3999 !important; /* debajo del sidebar pero sobre el resto */
+    z-index: 3999; /* debajo del sidebar pero sobre el resto */
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
@@ -53,32 +53,32 @@ body .cart-sidebar, body #cartSidebar {
     right: -400px;
     width: 400px;
     height: 100vh;
-    background: #ffffff !important; /* asegurar fondo blanco */
+    background: #ffffff; /* asegurar fondo blanco */
     box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-    z-index: 4002 !important; /* por encima del overlay */
+    z-index: 4002; /* por encima del overlay */
     transition: right 0.3s ease-in-out;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     pointer-events: auto;
-    transform: none !important; /* neutralizar reglas de style.css */
+    transform: none; /* neutralizar reglas de style.css */
 }
 
 body .cart-sidebar.show, body #cartSidebar.show {
     right: 0;
-    z-index: 4002 !important;
-    transform: none !important; /* asegurar que no use translateX */
+    z-index: 4002;
+    transform: none; /* asegurar que no use translateX */
 }
 
 /* Bloquear scroll del body cuando el carrito está abierto */
 body.cart-open {
-    overflow: hidden !important;
+    overflow: hidden;
     touch-action: none;
 }
 
 /* Cuando el carrito está abierto, permitir interacción dentro del contenedor */
 body.cart-open .cart-container {
-    pointer-events: auto !important;
+    pointer-events: auto;
 }
 
 /* Header del carrito */
@@ -90,8 +90,8 @@ body.cart-open .cart-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    transform: none !important; /* neutralizar transform heredados */
-    position: relative !important; /* asegurar stacking */
+    transform: none; /* neutralizar transform heredados */
+    position: relative; /* asegurar stacking */
 }
 
 .cart-sidebar-header h3, .cart-sidebar-title, .cart-title {

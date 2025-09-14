@@ -1,1 +1,0 @@
-ALTER TABLE pedidos MODIFY COLUMN estado ENUM('pendiente', 'pagado', 'pendiente_pago', 'confirmado', 'preparando', 'listo', 'en_camino', 'entregado', 'cancelado', 'pago_cancelado') DEFAULT 'pendiente';

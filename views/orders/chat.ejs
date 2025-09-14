@@ -6,7 +6,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
                             <i class="fas fa-comments me-2"></i>
-                            Chat del Pedido #<%= order.numero_pedido %>
+                            Chat del Pedido #<%= order.numero_pedido || 'N/A' %>
                         </h5>
                         <a href="/orders/<%= order.id %>" class="btn btn-sm btn-back-order">
                             <i class="fas fa-arrow-left me-2"></i> Volver al Pedido
@@ -15,18 +15,11 @@
                 </div>
                 <div class="card-body p-0 d-flex flex-column" style="height: 60vh;">
                     <div id="chat-messages" class="p-3 overflow-auto flex-grow-1">
-                        <% if (messages && messages.length > 0) { %>
-                            <% messages.forEach(message => { %>
-                                <div class="message <%= message.remitente_tipo === 'cliente' ? 'sent' : 'received' %>">
-                                    <div class="message-content">
-                                        <p class="message-text"><%= message.mensaje %></p>
-                                        <span class="message-time"><%= new Date(message.fecha_envio).toLocaleTimeString() %></span>
-                                    </div>
-                                </div>
-                            <% }); %>
-                        <% } else { %>
-                            <p class="text-center text-muted py-5">Aún no hay mensajes en este chat.</p>
-                        <% } %>
+                        <!-- Los mensajes se cargarán dinámicamente desde Socket.IO -->
+                        <div id="loading-messages" class="text-center text-muted py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                            <p>Cargando mensajes...</p>
+                        </div>
                     </div>
                     <form id="chat-form" class="chat-input border-top p-3 bg-light d-flex align-items-center">
                         <input type="text" id="chat-message-input" class="form-control me-2" placeholder="Escribe un mensaje...">

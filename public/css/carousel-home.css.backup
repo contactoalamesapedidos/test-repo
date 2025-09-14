@@ -1,0 +1,335 @@
+/* Carrusel horizontal - Móviles */
+@media (max-width: 768px) {
+  .categories-scroll {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 15px;
+    padding: 20px 15px;
+    min-width: 1400px !important; /* Ajustado para 8 categorías */
+    width: auto;
+    scroll-behavior: smooth;
+    position: relative !important;
+  }
+
+  .categories-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .category-item {
+    flex: 0 0 auto !important;
+    min-width: 140px !important;
+    max-width: 160px !important;
+    width: 150px !important;
+    margin-right: 10px;
+  }
+
+  .category-card {
+    height: 160px !important;
+    padding: 15px 10px !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .category-icon-img {
+    width: 100px !important;
+    height: 100px !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 50% !important;
+  }
+
+  .category-name {
+    font-size: 1rem !important;
+    margin-bottom: 0 !important;
+    margin-top: 10px !important;
+    line-height: 1.2 !important;
+    font-weight: 600 !important;
+    color: #343a40 !important;
+    position: relative !important;
+    z-index: 2 !important;
+    transition: color 0.4s ease !important;
+    text-align: center !important;
+    display: block !important;
+    width: 100% !important;
+    font-family: inherit !important;
+    letter-spacing: normal !important;
+    word-wrap: break-word !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    text-overflow: clip !important;
+  }
+
+  /* Additional specificity for mobile text */
+  .categories-section .category-item .category-card .category-icon-wrapper .category-name {
+    font-size: 1rem !important;
+    color: #343a40 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 10 !important;
+  }
+
+  .categories-carousel-container,
+  .categories-scroll-container {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Carrusel horizontal - Desktop */
+@media (min-width: 769px) {
+  .categories-scroll {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    -ms-overflow-style: auto;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 20px;
+    padding: 30px 20px;
+    min-width: 2000px; /* Aumentado para desktop */
+    width: auto;
+    scroll-behavior: smooth;
+  }
+
+  .categories-scroll::-webkit-scrollbar {
+    height: 6px;
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+
+  .categories-scroll::-webkit-scrollbar-thumb {
+    background: #ff6b35;
+    border-radius: 3px;
+  }
+
+  .categories-scroll::-webkit-scrollbar-thumb:hover {
+    background: #e55a2b;
+  }
+
+  .category-item {
+    flex: 0 0 auto !important;
+    min-width: 180px !important;
+    max-width: 200px !important;
+    width: 190px !important;
+    margin-right: 15px;
+  }
+
+  .category-card {
+    height: 180px !important;
+    padding: 25px 20px !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  .category-icon-img {
+    width: 110px !important;
+    height: 110px !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 50% !important;
+  }
+
+  .category-name {
+    font-size: 1.2rem !important;
+    font-weight: 600 !important;
+    color: #343a40 !important;
+    position: relative !important;
+    z-index: 2 !important;
+    transition: color 0.4s ease !important;
+    text-align: center !important;
+    margin-top: 15px !important;
+    font-family: inherit !important;
+    letter-spacing: normal !important;
+    word-wrap: break-word !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .categories-carousel-container,
+  .categories-scroll-container {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    position: relative !important;
+  }
+
+
+
+  /* Estilos para las flechas de navegación creadas con JavaScript */
+  .category-nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid #ff6b35;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: #ff6b35;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    opacity: 0.7;
+  }
+
+  .category-nav-left {
+    left: 10px;
+  }
+
+  .category-nav-right {
+    right: 10px;
+  }
+
+  .category-nav-arrow:hover {
+    background: #ff6b35;
+    color: white;
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 4px 16px rgba(255,107,53,0.3);
+    opacity: 1;
+  }
+
+  .category-nav-arrow:active {
+    transform: translateY(-50%) scale(0.95);
+  }
+}
+/* Oculta la barra de scroll horizontal pero permite el scroll táctil en móviles */
+@media (max-width: 768px) {
+  #restaurantPromoCarousel .carousel-inner {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+  #restaurantPromoCarousel .carousel-inner::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
+}
+/* Global category name visibility fix */
+.category-name {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: #343a40 !important;
+}
+
+/* Global category icon background fix */
+.category-icon-img {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 50% !important;
+}
+
+/* Force text visibility for all category names in mobile */
+@media (max-width: 768px) {
+  .category-name {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: #343a40 !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    margin-top: 10px !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    height: auto !important;
+    position: relative !important;
+    z-index: 15 !important;
+  }
+
+  /* Ensure parent containers don't hide text */
+  .category-icon-wrapper {
+    position: relative !important;
+    overflow: visible !important;
+  }
+
+  .category-card {
+    overflow: visible !important;
+  }
+
+  .category-item {
+    overflow: visible !important;
+  }
+}
+
+/* Estilos modernos para el carrusel de inicio */
+#restaurantPromoCarousel {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  border-radius: 18px;
+  overflow: hidden;
+}
+#restaurantPromoCarousel .carousel-item img {
+  border-radius: 0;
+  transition: transform 0.5s cubic-bezier(.4,0,.2,1);
+}
+#restaurantPromoCarousel .carousel-item.active img {
+  transform: scale(1.04);
+}
+#restaurantPromoCarousel .carousel-caption {
+  background: rgba(30,30,30,0.7);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+}
+#restaurantPromoCarousel .carousel-caption h4 {
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+#restaurantPromoCarousel .carousel-caption p {
+  color: #f8f9fa;
+  font-size: 1.15rem;
+}
+#restaurantPromoCarousel .carousel-control-prev-icon,
+#restaurantPromoCarousel .carousel-control-next-icon {
+  background-color: #198754;
+  border-radius: 50%;
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+#restaurantPromoCarousel .carousel-indicators [data-bs-target] {
+  background-color: #198754;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin: 0 6px;
+}
+@media (max-width: 768px) {
+  #restaurantPromoCarousel .carousel-caption {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
+  #restaurantPromoCarousel .carousel-caption h4 {
+    font-size: 1.2rem;
+  }
+  #restaurantPromoCarousel .carousel-caption p {
+    font-size: 0.95rem;
+  }
+}

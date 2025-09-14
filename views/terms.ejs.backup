@@ -1,0 +1,75 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-success text-white">
+          <h1 class="h3 mb-0">
+            <i class="fas fa-store me-2"></i>
+            Términos y Condiciones para Restaurantes – A la Mesa
+          </h1>
+        </div>
+        <div class="card-body p-4">
+          <section class="mb-4">
+            <h2 class="h5 text-success">A La Mesa: Términos y Condiciones del Servicio</h2>
+            <p class="mb-1"><strong>Última actualización:</strong> 26 de agosto de 2025</p>
+            <p>Bienvenido a <strong>A La Mesa</strong>. Al acceder y utilizar nuestra plataforma, aceptas los siguientes términos y condiciones. Por favor, léelos detenidamente antes de realizar un pedido.</p>
+          </section>
+          <section class="mb-4">
+            <h3 class="h6 text-primary">1. Sobre el Servicio</h3>
+            <p>A La Mesa es una plataforma intermediaria que conecta a clientes con restaurantes para la compra y entrega de comida a domicilio. No producimos alimentos ni controlamos su manipulación. La responsabilidad exclusiva de la calidad, preparación, precios y condiciones de los productos es de cada Restaurante Asociado.</p>
+          </section>
+          <section class="mb-4">
+            <h3 class="h6 text-primary">2. Cuentas de Usuario</h3>
+            <ul>
+              <li>El uso de nuestra plataforma requiere que proporciones datos reales y actualizados.</li>
+              <li>No se permite realizar prácticas fraudulentas.</li>
+              <li>A La Mesa se reserva el derecho de suspender, sancionar o inhabilitar cuentas si se incumplen estos términos.</li>
+            </ul>
+          </section>
+          <section class="mb-4">
+            <h3 class="h6 text-primary">3. Obligaciones y Responsabilidades</h3>
+            <h4 class="fw-bold">Clientes</h4>
+            <ul>
+              <li><strong>Datos y Recepción:</strong> Proporciona datos correctos y está disponible para recibir el pedido.</li>
+              <li><strong>Conducta:</strong> Usa la plataforma de forma responsable y no realices pedidos fraudulentos.</li>
+              <li><strong>Cancelaciones:</strong> Si realizaste más de 10 pedidos, no canceles más del 20%.</li>
+            </ul>
+            <h4 class="fw-bold mt-3">Restaurantes Asociados</h4>
+            <ul>
+              <li><strong>Servicio y Calidad:</strong> Responsable de la calidad, higiene y preparación de los alimentos.</li>
+              <li><strong>Logística:</strong> Debes contar con tu propio servicio de delivery.</li>
+              <li><strong>Gestión de Pedidos:</strong> Acepta/rechaza pedidos en tiempo razonable y prepáralos en el tiempo acordado.</li>
+              <li><strong>Entrega:</strong> Entrega el pedido completo y en buen estado.</li>
+              <li><strong>Cancelaciones:</strong> No canceles pedidos injustificadamente. Si recibiste más de 10 pedidos, no canceles más del 10%. Cancelaciones reiteradas pueden implicar sanciones.</li>
+            </ul>
+          </section>
+          <section class="mb-4">
+            <h3 class="h6 text-primary">4. Políticas Financieras</h3>
+            <ul>
+              <li><strong>Comisión:</strong> A La Mesa percibe una comisión del 10% sobre el valor de cada pedido. Sujeta a modificaciones notificadas previamente.</li>
+              <li><strong>Pagos y Descuentos:</strong> Los clientes pueden pagar por Mercado Pago, efectivo o transferencia. Los restaurantes ofrecen un 5% de descuento por pago en efectivo o transferencia.</li>
+              <li><strong>Pagos del Restaurante:</strong> Los restaurantes deben pagar las comisiones semanalmente y de forma puntual.</li>
+            </ul>
+          </section>
+          <section class="mb-4">
+            <h3 class="h6 text-primary">5. Política de Comunicación</h3>
+            <p>No se pueden compartir datos de contacto entre clientes y restaurantes a través de la plataforma. El incumplimiento puede implicar sanciones.</p>
+          </section>
+          <section class="mb-4">
+            <h3 class="h6 text-primary">6. Política de Cancelación de Pedidos</h3>
+            <ul>
+              <li>Un pedido puede ser cancelado solo antes de que el restaurante lo confirme.</li>
+              <li>Si el pedido ya fue aceptado y comenzó la preparación, no habrá reembolso salvo acuerdo directo con el local.</li>
+              <li>Si un pedido cobrado no puede ser cumplido por el restaurante, este debe emitir un reembolso total al cliente por el mismo medio de pago.</li>
+              <li>El restaurante no puede cancelar un pedido que ya ha confirmado.</li>
+            </ul>
+          </section>
+          <section class="mb-2">
+            <h3 class="h6 text-primary">7. Modificación de los Términos</h3>
+            <p>Estos Términos y Condiciones pueden ser modificados en cualquier momento. Los cambios entrarán en vigor al ser publicados en la plataforma. Es tu responsabilidad revisarlos periódicamente. El uso continuado implica aceptación de las nuevas condiciones.</p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

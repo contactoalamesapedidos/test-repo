@@ -24,7 +24,14 @@
                         <div class="col-md-6 col-lg-4 mb-4">
                             <div class="card h-100 border-0 shadow-sm">
                                 <% if (product.imagen) { %>
-                                    <% const imgSrc = product.imagen.startsWith('/') ? product.imagen : ('/uploads/' + product.imagen); %>
+                                    <% let imgSrc = product.imagen; %>
+                                    <% if (product.imagen.startsWith('/')) { %>
+                                        <% imgSrc = product.imagen; %>
+                                    <% } else if (product.imagen.startsWith('http')) { %>
+                                        <% imgSrc = product.imagen; %>
+                                    <% } else { %>
+                                        <% imgSrc = '/uploads/productos/' + product.imagen; %>
+                                    <% } %>
                                     <img src="<%= imgSrc %>" class="card-img-top" alt="<%= product.nombre %>"
                                          style="height: 200px; object-fit: cover;"
                                          onerror="this.src='/images/defaults/product.jpeg'">
@@ -36,10 +43,15 @@
                                 <% } %>
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h5 class="card-title mb-0"><%= product.nombre %></h5>
+                                        <div class="d-flex align-items-center">
+                                            <h5 class="card-title mb-0 me-2"><%= product.nombre %></h5>
+                                            <% if (product.destacado == 1) { %>
+                                                <i class="fas fa-star text-warning" data-bs-toggle="tooltip" title="Producto Destacado" style="display: none;"></i>
+                                            <% } %>
+                                        </div>
                                         <div class="form-check form-switch">
-                                            <input class="form-check-input availability-toggle" type="checkbox" 
-                                                   id="disponible_<%= product.id %>" 
+                                            <input class="form-check-input availability-toggle" type="checkbox"
+                                                   id="disponible_<%= product.id %>"
                                                    data-id="<%= product.id %>"
                                                    <%= product.disponible ? 'checked' : '' %>
                                                    data-bs-toggle="tooltip"
@@ -48,8 +60,21 @@
                                     </div>
                                     <p class="card-text"><%= product.descripcion %></p>
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <p class="text-primary fw-bold mb-0">$<%= Number(product.precio).toFixed(2) %></p>
+                                        <div>
+                                            <% if (product.precio_descuento && product.precio_descuento > 0 && product.precio_descuento < product.precio) { %>
+                                                <p class="text-success fw-bold mb-0">$<%= Number(product.precio_descuento).toFixed(2) %></p>
+                                                <small class="text-muted text-decoration-line-through">$<%= Number(product.precio).toFixed(2) %></small>
+                                            <% } else { %>
+                                                <p class="text-dark fw-bold mb-0">$<%= Number(product.precio).toFixed(2) %></p>
+                                            <% } %>
+                                        </div>
                                         <div class="btn-group">
+                                            <button type="button" class="btn btn-sm d-none <%= product.destacado == 1 ? 'btn-warning' : 'btn-outline-warning' %> toggle-featured"
+                                                    data-id="<%= product.id %>"
+                                                    data-bs-toggle="tooltip"
+                                                    title="<%= product.destacado == 1 ? 'Quitar destacado' : 'Marcar como destacado' %>">
+                                                <i class="<%= product.destacado == 1 ? 'fas' : 'far' %> fa-star"></i>
+                                            </button>
                                             <button type="button" class="btn btn-sm edit-product"
                                                     data-id="<%= product.id %>"
                                                     data-bs-toggle="tooltip"
@@ -83,71 +108,173 @@
 </div>
 
 <!-- Product Modal -->
-<div class="modal fade" id="productModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Nuevo Producto</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="modal fade" id="productModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-plus-circle me-2"></i>
+                    <span id="modalTitle">Nuevo Producto</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form id="productForm" enctype="multipart/form-data">
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <div class="row">
-                        <div class="col-md-8">
-                            <div class="mb-3">
-                                <label for="nombre" class="form-label">Nombre del Producto *</label>
-                                <input type="text" class="form-control" id="nombre" name="nombre" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="descripcion" class="form-label">Descripción</label>
-                                <textarea class="form-control" id="descripcion" name="descripcion" rows="3"></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label for="precio" class="form-label">Precio *</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" class="form-control" id="precio" name="precio" step="0.01" min="0" required>
+                        <!-- Columna Izquierda - Información Principal -->
+                        <div class="col-lg-8">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-4">
+                                        <label for="nombre" class="form-label fw-bold text-dark">
+                                            <i class="fas fa-tag me-1 text-primary"></i>Nombre del Producto *
+                                        </label>
+                                        <input type="text" class="form-control form-control-lg border-2"
+                                               id="nombre" name="nombre" required
+                                               placeholder="Ej: Pizza Margherita">
+                                        <div class="form-text">Nombre descriptivo del producto</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-4">
+                                        <label for="categoria_id" class="form-label fw-bold text-dark">
+                                            <i class="fas fa-folder me-1 text-success"></i>Categoría *
+                                        </label>
+                                        <select class="form-select form-select-lg border-2" id="categoria_id" name="categoria_id" required>
+                                            <option value="">Selecciona una categoría</option>
+                                            <% if (globalCategories && globalCategories.length > 0) { %>
+                                                <% globalCategories.forEach(function(categoria) { %>
+                                                    <option value="<%= categoria.id %>"><%= categoria.nombre %></option>
+                                                <% }); %>
+                                            <% } %>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="mb-3">
-                                <label for="categoria_id" class="form-label">Categoría *</label>
-                                <select class="form-select" id="categoria_id" name="categoria_id" required>
-                                    <option value="">Selecciona una categoría</option>
-                                    <% if (globalCategories && globalCategories.length > 0) { %>
-                                        <% globalCategories.forEach(function(categoria) { %>
-                                            <option value="<%= categoria.id %>"><%= categoria.nombre %></option>
-                                        <% }); %>
-                                    <% } %>
-                                </select>
+
+                            <div class="mb-4">
+                                <label for="descripcion" class="form-label fw-bold text-dark">
+                                    <i class="fas fa-align-left me-1 text-info"></i>Descripción
+                                </label>
+                                <textarea class="form-control border-2" id="descripcion" name="descripcion" rows="3"
+                                          placeholder="Describe los detalles del producto, ingredientes principales, etc."></textarea>
+                                <div class="form-text">Máximo 500 caracteres</div>
                             </div>
-                            <div class="mb-3">
-                                <label for="ingredientes" class="form-label">Ingredientes</label>
-                                <textarea class="form-control" id="ingredientes" name="ingredientes" rows="2" 
-                                          placeholder="Lista de ingredientes principales (opcional)"></textarea>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-4">
+                                        <label for="precio" class="form-label fw-bold text-dark">
+                                            <i class="fas fa-dollar-sign me-1 text-success"></i>Precio *
+                                        </label>
+                                        <div class="input-group input-group-lg">
+                                            <span class="input-group-text bg-light border-2">$</span>
+                                            <input type="number" class="form-control border-2"
+                                                   id="precio" name="precio" step="0.01" min="0" required
+                                                   placeholder="0.00">
+                                        </div>
+                                        <div class="form-text">Precio en pesos argentinos</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-4">
+                                        <label for="precio_descuento" class="form-label fw-bold text-dark">
+                                            <i class="fas fa-percent me-1 text-warning"></i>Precio con Descuento
+                                        </label>
+                                        <div class="input-group input-group-lg">
+                                            <span class="input-group-text bg-light border-2">$</span>
+                                            <input type="number" class="form-control border-2"
+                                                   id="precio_descuento" name="precio_descuento" step="0.01" min="0"
+                                                   placeholder="0.00">
+                                        </div>
+                                        <div class="form-text">Opcional - precio promocional</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="disponible" name="disponible" checked>
-                                    <label class="form-check-label" for="disponible">Producto disponible</label>
+
+                            <div class="mb-4">
+                                <label for="ingredientes" class="form-label fw-bold text-dark">
+                                    <i class="fas fa-list me-1 text-secondary"></i>Ingredientes
+                                </label>
+                                <textarea class="form-control border-2" id="ingredientes" name="ingredientes" rows="2"
+                                          placeholder="Ej: Tomate, mozzarella, albahaca, aceite de oliva"></textarea>
+                                <div class="form-text">Separa los ingredientes con comas</div>
+                            </div>
+
+                            <!-- Opciones Avanzadas -->
+                            <div class="card border-2 mb-4">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0 fw-bold">
+                                        <i class="fas fa-cogs me-1 text-primary"></i>Opciones Avanzadas
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-check form-switch mb-3">
+                                                <input class="form-check-input" type="checkbox" id="disponible" name="disponible" checked>
+                                                <label class="form-check-label fw-bold" for="disponible">
+                                                    <i class="fas fa-check-circle me-1 text-success"></i>Producto Disponible
+                                                </label>
+                                            </div>
+                                            <div class="form-check form-switch d-none">
+                                                <input class="form-check-input" type="checkbox" id="destacado" name="destacado">
+                                                <label class="form-check-label fw-bold" for="destacado">
+                                                    <i class="fas fa-star me-1 text-warning"></i>Producto Destacado
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="imagen" class="form-label">Imagen del Producto</label>
-                                <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*">
-                                <div class="form-text">Formatos: JPG, PNG. Máx: 5MB</div>
-                                <div id="imagePreview" class="mt-2 text-center" style="display: none;">
-                                    <img src="" alt="Vista previa" class="img-thumbnail" style="max-height: 200px;">
+
+                        <!-- Columna Derecha - Imagen y Vista Previa -->
+                        <div class="col-lg-4">
+                            <div class="card border-2 h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0 fw-bold">
+                                        <i class="fas fa-image me-1 text-primary"></i>Imagen del Producto
+                                    </h6>
+                                </div>
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <div id="imageDropZone" class="border-2 border-dashed border-primary rounded p-4"
+                                             style="cursor: pointer; transition: all 0.3s ease;">
+                                            <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                                            <p class="mb-2 fw-bold">Arrastra una imagen aquí</p>
+                                            <p class="text-muted small">o haz clic para seleccionar</p>
+                                            <input type="file" class="d-none" id="imagen" name="imagen" accept="image/*">
+                                        </div>
+                                        <div class="form-text text-center">
+                                            <small class="text-muted">Formatos: JPG, PNG, WEBP. Máx: 5MB</small>
+                                        </div>
+                                    </div>
+
+                                    <div id="imagePreview" class="mt-3" style="display: none;">
+                                        <div class="position-relative d-inline-block">
+                                            <img src="" alt="Vista previa" class="img-fluid rounded shadow"
+                                                 style="max-height: 200px; width: 100%; object-fit: cover;">
+                                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
+                                                    id="removeImage" style="border-radius: 50%;">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; border: none;">
-                        <span class="spinner-border spinner-border-sm d-none" id="productSpinner" role="status" aria-hidden="true"></span>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-outline-secondary btn-lg px-4" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-lg px-4 text-white fw-bold"
+                            style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); border: none; box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);">
+                        <span class="spinner-border spinner-border-sm d-none me-2" id="productSpinner" role="status" aria-hidden="true"></span>
+                        <i class="fas fa-save me-2"></i>
                         <span id="productBtnText">Guardar Producto</span>
                     </button>
                 </div>
@@ -155,6 +282,51 @@
         </div>
     </div>
 </div>
+
+<!-- Estilos adicionales para el modal -->
+<style>
+.modal-xl { max-width: 1200px; }
+
+.border-2 { border-width: 2px !important; }
+
+.border-dashed {
+    border-style: dashed !important;
+}
+
+#imageDropZone:hover {
+    background-color: rgba(255, 107, 53, 0.05);
+    border-color: #ff6b35 !important;
+}
+
+#imageDropZone.dragover {
+    background-color: rgba(255, 107, 53, 0.1);
+    border-color: #ff6b35 !important;
+    transform: scale(1.02);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #ff6b35;
+    box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+.gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+</style>
 
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -171,11 +343,493 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Variable global para mantener referencia al archivo seleccionado
+    let selectedFile = null;
+
     // Asegurar que el dropdown de usuario funcione
     const userDropdown = document.getElementById('userDropdown');
     if (userDropdown && typeof bootstrap !== 'undefined') {
         new bootstrap.Dropdown(userDropdown);
     }
+
+    // Funcionalidad del modal de productos
+    const productModal = document.getElementById('productModal');
+    const productForm = document.getElementById('productForm');
+    const imageDropZone = document.getElementById('imageDropZone');
+    const imageInput = document.getElementById('imagen');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImg = imagePreview.querySelector('img');
+    const removeImageBtn = document.getElementById('removeImage');
+    const modalTitle = document.getElementById('modalTitle');
+
+    // Limpiar formulario cuando se abre el modal
+    productModal.addEventListener('show.bs.modal', function() {
+        productForm.reset();
+        imagePreview.style.display = 'none';
+        modalTitle.textContent = 'Nuevo Producto';
+        imageDropZone.innerHTML = `
+            <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+            <p class="mb-2 fw-bold">Arrastra una imagen aquí</p>
+            <p class="text-muted small">o haz clic para seleccionar</p>
+            <input type="file" class="d-none" id="imagen" name="imagen" accept="image/*">
+        `;
+    });
+
+    // Funcionalidad de drag & drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        imageDropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        imageDropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        imageDropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+        imageDropZone.classList.add('dragover');
+    }
+
+    function unhighlight(e) {
+        imageDropZone.classList.remove('dragover');
+    }
+
+    imageDropZone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+
+        if (files.length > 0) {
+            handleFiles(files);
+        }
+    }
+
+    // Click para seleccionar imagen
+    imageDropZone.addEventListener('click', function() {
+        imageInput.click();
+    });
+
+    imageInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            handleFiles(this.files);
+        }
+    });
+
+    function handleFiles(files) {
+        const file = files[0];
+        if (file && file.type.startsWith('image/')) {
+            // Guardar referencia al archivo seleccionado
+            selectedFile = file;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                imagePreview.style.display = 'block';
+                imageDropZone.innerHTML = `
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <p class="mb-2 fw-bold text-success">Imagen seleccionada</p>
+                    <p class="text-muted small">${file.name}</p>
+                    <input type="file" class="d-none" id="imagen" name="imagen" accept="image/*">
+                `;
+
+                // Re-asignar el archivo al nuevo input (esto es crucial)
+                const newImageInput = imageDropZone.querySelector('#imagen');
+                if (newImageInput) {
+                    // Crear un nuevo DataTransfer para asignar el archivo
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    newImageInput.files = dt.files;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // Remover imagen
+    removeImageBtn.addEventListener('click', function() {
+        imageInput.value = '';
+        imagePreview.style.display = 'none';
+        imageDropZone.innerHTML = `
+            <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+            <p class="mb-2 fw-bold">Arrastra una imagen aquí</p>
+            <p class="text-muted small">o haz clic para seleccionar</p>
+            <input type="file" class="d-none" id="imagen" name="imagen" accept="image/*">
+        `;
+    });
+
+    // Vista previa de imagen al seleccionar archivo normalmente
+    imageInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                imagePreview.style.display = 'block';
+            };
+            reader.readAsDataURL(this.files[0]);
+        }
+    });
+
+    // Validación y envío del formulario
+    productForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const nombre = document.getElementById('nombre').value.trim();
+        const precio = document.getElementById('precio').value;
+        const categoria = document.getElementById('categoria_id').value;
+
+        if (!nombre) {
+            alert('El nombre del producto es obligatorio');
+            return;
+        }
+
+        if (!precio || precio <= 0) {
+            alert('El precio debe ser mayor a 0');
+            return;
+        }
+
+        if (!categoria) {
+            alert('Debe seleccionar una categoría');
+            return;
+        }
+
+        // Mostrar spinner de carga
+        const productBtnText = document.getElementById('productBtnText');
+        const productSpinner = document.getElementById('productSpinner');
+        if (productBtnText && productSpinner) {
+            productBtnText.textContent = 'Guardando...';
+            productSpinner.classList.remove('d-none');
+        }
+
+        // Crear FormData para enviar archivos
+        const formData = new FormData(this);
+
+        // Enviar la petición
+        fetch(this.action, {
+            method: this.method,
+            body: formData
+        })
+        .then(response => {
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Cerrar modal
+                const modal = bootstrap.Modal.getInstance(productModal);
+                modal.hide();
+
+                // Mostrar mensaje de éxito y recargar después de 2 segundos
+                alert('Producto guardado exitosamente. La página se recargará para mostrar los cambios.');
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } else {
+                alert('Error al guardar el producto: ' + (data.message || 'Error desconocido'));
+            }
+        })
+        .catch(error => {
+            console.error('Error al guardar producto:', error);
+            alert('Error al guardar el producto: ' + error.message);
+        })
+        .finally(() => {
+            // Ocultar spinner
+            if (productBtnText && productSpinner) {
+                productBtnText.textContent = 'Guardar Producto';
+                productSpinner.classList.add('d-none');
+            }
+        });
+    });
+
+    // Funcionalidad de editar producto
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.edit-product')) {
+            e.preventDefault();
+            const button = e.target.closest('.edit-product');
+            const productId = button.getAttribute('data-id');
+
+            console.log('Editando producto:', productId);
+
+            // Mostrar el modal primero
+            const modal = new bootstrap.Modal(productModal);
+            modal.show();
+
+            // Esperar a que el modal esté completamente cargado
+            setTimeout(() => {
+                // Obtener referencias a los elementos del modal
+                const modalTitle = document.getElementById('modalTitle');
+                const productForm = document.getElementById('productForm');
+                const previewImg = document.querySelector('#imagePreview img');
+                const imagePreview = document.getElementById('imagePreview');
+                const imageDropZone = document.getElementById('imageDropZone');
+
+                // Verificar que los elementos del modal existan
+                if (!modalTitle || !productForm || !previewImg || !imagePreview || !imageDropZone) {
+                    console.error('Elementos del modal no encontrados:', {
+                        modalTitle: !!modalTitle,
+                        productForm: !!productForm,
+                        previewImg: !!previewImg,
+                        imagePreview: !!imagePreview,
+                        imageDropZone: !!imageDropZone
+                    });
+                    alert('Error: Elementos del modal no encontrados. Revisa la consola para más detalles.');
+                    return;
+                }
+
+                // Cambiar título del modal
+                modalTitle.textContent = 'Editar Producto';
+
+                // Mostrar spinner de carga
+                const productBtnText = document.getElementById('productBtnText');
+                const productSpinner = document.getElementById('productSpinner');
+                if (productBtnText && productSpinner) {
+                    productBtnText.textContent = 'Cargando...';
+                    productSpinner.classList.remove('d-none');
+                }
+
+                // Hacer petición AJAX para obtener datos del producto
+                fetch(`/dashboard/products/${productId}`)
+                    .then(response => {
+                        console.log('Respuesta del servidor:', response);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Datos del producto:', data);
+                        if (data.success) {
+                            const product = data.product;
+
+                            // Función para llenar campos de forma segura
+                            function setFieldValue(fieldId, value) {
+                                const field = document.getElementById(fieldId);
+                                if (field) {
+                                    if (field.type === 'checkbox') {
+                                        field.checked = value == 1 || value === true;
+                                        console.log(`Checkbox ${fieldId} establecido a:`, field.checked);
+                                    } else {
+                                        field.value = value || '';
+                                        console.log(`Campo ${fieldId} establecido a:`, field.value);
+                                    }
+                                } else {
+                                    console.warn(`Campo ${fieldId} no encontrado`);
+                                }
+                            }
+
+                            // Llenar el formulario con los datos del producto
+                            setFieldValue('nombre', product.nombre);
+                            setFieldValue('descripcion', product.descripcion);
+                            setFieldValue('precio', product.precio);
+                            // Asegurar que precio_descuento se maneje correctamente
+                            if (product.precio_descuento && product.precio_descuento > 0) {
+                                setFieldValue('precio_descuento', product.precio_descuento);
+                            } else {
+                                setFieldValue('precio_descuento', '');
+                            }
+                            setFieldValue('categoria_id', product.categoria_id);
+                            setFieldValue('ingredientes', product.ingredientes);
+                            setFieldValue('disponible', product.disponible);
+                            setFieldValue('destacado', product.destacado);
+
+                            // Cambiar la acción del formulario para edición
+                            productForm.action = `/dashboard/products/edit/${productId}`;
+                            productForm.method = 'POST';
+
+                            // Agregar campo hidden para el método PUT (si es necesario)
+                            let methodField = productForm.querySelector('input[name="_method"]');
+                            if (!methodField) {
+                                methodField = document.createElement('input');
+                                methodField.type = 'hidden';
+                                methodField.name = '_method';
+                                methodField.value = 'PUT';
+                                productForm.appendChild(methodField);
+                            }
+
+                            // Mostrar imagen si existe
+                            if (product.imagen) {
+                                let imgSrc = product.imagen;
+                                if (product.imagen.startsWith('/')) {
+                                    imgSrc = product.imagen;
+                                } else if (product.imagen.startsWith('http')) {
+                                    imgSrc = product.imagen;
+                                } else {
+                                    imgSrc = '/uploads/productos/' + product.imagen;
+                                }
+                                console.log('Mostrando imagen:', imgSrc);
+                                previewImg.src = imgSrc;
+                                imagePreview.style.display = 'block';
+                                imageDropZone.innerHTML = `
+                                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                    <p class="mb-2 fw-bold text-success">Imagen actual</p>
+                                    <p class="text-muted small">Cambiar imagen (opcional)</p>
+                                `;
+                            } else {
+                                // Si no hay imagen, resetear el drop zone
+                                imagePreview.style.display = 'none';
+                                imageDropZone.innerHTML = `
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                                    <p class="mb-2 fw-bold">Arrastra una imagen aquí</p>
+                                    <p class="text-muted small">o haz clic para seleccionar</p>
+                                `;
+                            }
+
+                            // Ocultar spinner y mostrar modal
+                            if (productBtnText && productSpinner) {
+                                productBtnText.textContent = 'Actualizar Producto';
+                                productSpinner.classList.add('d-none');
+                            }
+
+                        } else {
+                            alert('Error al cargar los datos del producto: ' + (data.message || 'Error desconocido'));
+                            // Ocultar spinner en caso de error
+                            if (productBtnText && productSpinner) {
+                                productBtnText.textContent = 'Guardar Producto';
+                                productSpinner.classList.add('d-none');
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error al cargar producto:', error);
+                        alert('Error al cargar los datos del producto: ' + error.message);
+                        // Ocultar spinner en caso de error
+                        if (productBtnText && productSpinner) {
+                            productBtnText.textContent = 'Guardar Producto';
+                            productSpinner.classList.add('d-none');
+                        }
+                    });
+            }, 300); // Esperar 300ms para que el modal se cargue completamente
+        }
+    });
+
+    // Funcionalidad de eliminar producto
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-product')) {
+            const button = e.target.closest('.delete-product');
+            const productId = button.getAttribute('data-id');
+
+            if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+                // Aquí iría la lógica para eliminar el producto
+                console.log('Eliminar producto:', productId);
+            }
+        }
+    });
+
+    // Toggle de disponibilidad
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('availability-toggle')) {
+            const checkbox = e.target;
+            const productId = checkbox.getAttribute('data-id');
+            const disponible = checkbox.checked ? 1 : 0;
+
+            // Aquí iría la lógica para actualizar la disponibilidad
+            console.log('Cambiar disponibilidad:', productId, disponible);
+        }
+    });
+
+    // Toggle de producto destacado
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.toggle-featured')) {
+            e.preventDefault();
+            const button = e.target.closest('.toggle-featured');
+            const productId = button.getAttribute('data-id');
+            const isCurrentlyFeatured = button.classList.contains('btn-warning');
+            const newState = isCurrentlyFeatured ? 0 : 1;
+
+            console.log('Toggle destacado:', productId, 'Nuevo estado:', newState);
+
+            // Actualizar visualmente primero
+            const icon = button.querySelector('i');
+            const card = button.closest('.card');
+            const starIcon = card.querySelector('.card-title + i');
+
+            if (newState) {
+                icon.className = 'fas fa-star';
+                button.classList.remove('btn-outline-warning');
+                button.classList.add('btn-warning');
+
+                if (starIcon) {
+                    starIcon.style.display = 'inline';
+                } else {
+                    const title = card.querySelector('.card-title');
+                    const newStar = document.createElement('i');
+                    newStar.className = 'fas fa-star text-warning ms-2';
+                    newStar.setAttribute('data-bs-toggle', 'tooltip');
+                    newStar.setAttribute('title', 'Producto Destacado');
+                    title.insertAdjacentElement('afterend', newStar);
+                }
+            } else {
+                icon.className = 'far fa-star';
+                button.classList.remove('btn-warning');
+                button.classList.add('btn-outline-warning');
+
+                if (starIcon) {
+                    starIcon.style.display = 'none';
+                }
+            }
+
+            // Actualizar tooltip
+            button.setAttribute('title', newState ? 'Quitar destacado' : 'Marcar como destacado');
+
+            // Hacer petición AJAX para actualizar en el backend
+            fetch(`/dashboard/products/${productId}/featured`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ destacado: newState })
+            })
+            .then(response => {
+                console.log('Respuesta del servidor:', response);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Datos de respuesta:', data);
+                if (!data.success) {
+                    // Revertir cambios visuales si hay error
+                    if (newState) {
+                        icon.className = 'far fa-star';
+                        button.classList.remove('btn-warning');
+                        button.classList.add('btn-outline-warning');
+                        if (starIcon) starIcon.style.display = 'none';
+                    } else {
+                        icon.className = 'fas fa-star';
+                        button.classList.remove('btn-outline-warning');
+                        button.classList.add('btn-warning');
+                        if (starIcon) starIcon.style.display = 'inline';
+                    }
+                    alert('Error al actualizar el estado destacado: ' + (data.message || 'Error desconocido'));
+                } else {
+                    console.log('Estado destacado actualizado exitosamente');
+                }
+            })
+            .catch(error => {
+                console.error('Error al actualizar destacado:', error);
+                // Revertir cambios visuales si hay error
+                if (newState) {
+                    icon.className = 'far fa-star';
+                    button.classList.remove('btn-warning');
+                    button.classList.add('btn-outline-warning');
+                    if (starIcon) starIcon.style.display = 'none';
+                } else {
+                    icon.className = 'fas fa-star';
+                    button.classList.remove('btn-outline-warning');
+                    button.classList.add('btn-warning');
+                    if (starIcon) starIcon.style.display = 'inline';
+                }
+                alert('Error al actualizar el estado destacado: ' + error.message);
+            });
+        }
+    });
 });
 </script>
 

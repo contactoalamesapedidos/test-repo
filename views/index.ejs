@@ -1,7 +1,9 @@
-<link rel="stylesheet" href="/css/carousel-home.css">
+a<link rel="stylesheet" href="/css/carousel-home.css">
 <%- contentFor('body') %>
 
-<!-- Slider Promocional Restaurante -->
+
+
+<!-- Slider Promocional General -->
 <div id="restaurantPromoCarousel" class="carousel slide mb-5" data-bs-ride="carousel">
   <!-- Indicadores -->
   <div class="carousel-indicators">
@@ -10,7 +12,7 @@
     <button type="button" data-bs-target="#restaurantPromoCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
     <button type="button" data-bs-target="#restaurantPromoCarousel" data-bs-slide-to="3" aria-label="Slide 4"></button>
   </div>
-  
+
   <div class="carousel-inner">
     <div class="carousel-item active">
       <img src="/images/slider1.jpeg" class="d-block w-100" alt="Slider 1" style="max-height:350px;object-fit:cover;">
@@ -95,7 +97,7 @@
                                 <div class="category-card">
                                     <div class="category-icon-wrapper">
                                         <img src="<%= locals.CategoryIcons.getCategoryImagePath(category.nombre) %>" alt="<%= category.nombre %> icon" class="category-icon-img">
-                                        <div class="category-name text-center mt-2 fw-bold" style="font-size: 1.1rem; color: #333;"> <%= category.nombre %> </div>
+                                        <div class="category-name text-center mt-2 fw-bold" style="color: #343a40 !important; display: block !important; visibility: visible !important; font-weight: 600 !important; font-size: inherit !important;"> <%= category.nombre %> </div>
                                     </div>
                                 </div>
                             </a>
@@ -127,593 +129,19 @@
     </div>
 <% } %>
 
+        <!-- Botón Ver Más Restaurantes -->
+        <div class="text-center mt-4">
+            <a href="/search" class="btn btn-lg px-4 py-3 text-white fw-bold"
+               style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); border: none; box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);">
+                <i class="fas fa-utensils me-2"></i>Ver Más Restaurantes
+            </a>
+        </div>
     </div>
 </section>
 
 
 
-    <style>
-    .hero-text .btn-primary:hover {
-        background-color: #e65c00; /* Naranja un poco más oscuro */
-        border-color: #e65c00;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
 
-    .categories-carousel-container {
-        position: relative;
-        padding: 0 20px;
-        max-width: 100%;
-        margin: 0 auto;
-        overflow-x: hidden;
-        overflow-y: hidden;
-    }
-
-    .categories-scroll-container {
-        overflow-x: auto;
-        overflow-y: hidden;
-        border-radius: 15px;
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(10px);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        scrollbar-width: thin; /* Firefox */
-        -ms-overflow-style: auto; /* IE and Edge */
-        position: relative;
-        margin-bottom: 10px;
-    }
-    .categories-scroll-container::-webkit-scrollbar {
-        height: 8px;
-        background: #eee;
-        border-radius: 8px;
-    }
-    .categories-scroll-container::-webkit-scrollbar-thumb {
-        background: #ff6b35;
-        border-radius: 8px;
-    }
-    .categories-scroll {
-        gap: 0;
-        padding: 30px 30px;
-        overflow-x: auto;
-        scroll-behavior: smooth;
-        -webkit-overflow-scrolling: touch;
-        min-width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: stretch;
-        overscroll-behavior-x: contain;
-        touch-action: pan-x;
-    }
-    @media (max-width: 1200px) {
-        .categories-scroll {
-            min-width: 900px;
-        }
-    }
-    @media (max-width: 768px) {
-        .categories-scroll {
-            min-width: 700px;
-            padding: 20px 10px;
-            gap: 0;
-        }
-        .category-item {
-            min-width: 180px;
-            max-width: 220px;
-            width: 200px;
-            padding: 0 10px;
-        }
-    }
-    @media (max-width: 576px) {
-        .categories-scroll {
-            min-width: 500px;
-            padding: 15px 5px;
-            gap: 0;
-        }
-        .category-item {
-            min-width: 150px;
-            max-width: 180px;
-            width: 160px;
-            padding: 0 7.5px;
-        }
-    }
-
-    .category-item {
-        flex: 0 0 auto;
-        min-width: 200px;
-        max-width: 250px;
-        width: 220px;
-    }
-
-    .category-link {
-        text-decoration: none;
-        color: inherit;
-        display: block;
-        height: 100%;
-    }
-
-    .category-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        border: 2px solid transparent;
-        border-radius: 20px;
-        padding: 30px 25px;
-        text-align: center;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        height: 200px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        width: 100%;
-    }
-
-    .category-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-        opacity: 0;
-        transition: opacity 0.4s ease;
-        z-index: 1;
-    }
-
-    .category-card:hover {
-        transform: translateY(-8px) scale(1.02);
-        border-color: #ff6b35;
-        box-shadow: 0 12px 40px rgba(255, 107, 53, 0.2);
-    }
-
-    .category-card:hover::before {
-        opacity: 0.05;
-    }
-
-    .category-icon-img {
-        width: 120px;
-        height: 120px;
-        object-fit: cover;
-        border-radius: 50%;
-        margin: 0 auto 15px;
-        display: block;
-        transition: all 0.4s ease;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    }
-
-    .category-card:hover .category-icon-img {
-        transform: scale(1.1);
-        box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
-    }
-
-    .category-icon-wrapper {
-        position: relative;
-        z-index: 2;
-        margin-bottom: 15px;
-        text-align: center;
-    }
-
-    .category-icon {
-        font-size: 2.5rem;
-        color: #ff6b35;
-        transition: all 0.4s ease;
-        display: block;
-    }
-
-    .category-card:hover .category-icon {
-        color: #e55a2b;
-        transform: scale(1.1) rotate(5deg);
-    }
-
-    .category-name {
-        font-weight: 600;
-        font-size: 1rem;
-        color: #343a40;
-        margin-bottom: 10px;
-        position: relative;
-        z-index: 2;
-        transition: color 0.4s ease;
-    }
-
-    .category-card:hover .category-name {
-        color: #2c3135;
-    }
-
-    .category-stats {
-        position: relative;
-        z-index: 2;
-        margin-bottom: 10px;
-    }
-
-    .category-count {
-        font-size: 0.75rem;
-        color: #6c757d;
-        font-weight: 500;
-        transition: color 0.4s ease;
-    }
-
-    .category-card:hover .category-count {
-        color: #495057;
-    }
-
-    .count-number {
-        font-weight: 600;
-        color: #ff6b35;
-    }
-
-    /* Indicadores de scroll visual */
-    .categories-scroll-container::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 30px;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8));
-        pointer-events: none;
-        z-index: 5;
-    }
-
-    .categories-scroll-container::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 30px;
-        height: 100%;
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), transparent);
-        pointer-events: none;
-        z-index: 5;
-    }
-
-    /* Estados de scroll */
-    .categories-scroll-container:not(.scrolled-left)::before {
-        opacity: 0;
-    }
-
-    .categories-scroll-container:not(.scrolled-right)::after {
-        opacity: 0;
-    }
-
-    /* Animaciones adicionales */
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .category-item {
-        animation: fadeInUp 0.6s ease forwards;
-    }
-
-    .category-item:nth-child(1) { animation-delay: 0.1s; }
-    .category-item:nth-child(2) { animation-delay: 0.2s; }
-    .category-item:nth-child(3) { animation-delay: 0.3s; }
-    .category-item:nth-child(4) { animation-delay: 0.4s; }
-    .category-item:nth-child(5) { animation-delay: 0.5s; }
-    .category-item:nth-child(6) { animation-delay: 0.6s; }
-    .category-item:nth-child(7) { animation-delay: 0.7s; }
-    .category-item:nth-child(8) { animation-delay: 0.8s; }
-
-    /* Efectos de hover mejorados */
-    .category-card::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-        transition: left 0.6s ease;
-    }
-
-    .category-card:hover::after {
-        left: 100%;
-    }
-
-    /* Mejoras para el scroll */
-    .categories-scroll {
-        cursor: grab;
-    }
-
-    .categories-scroll:active {
-        cursor: grabbing;
-    }
-
-    /* Indicador de scroll suave */
-    .categories-scroll-container {
-        position: relative;
-    }
-
-    .categories-scroll-container::before,
-    .categories-scroll-container::after {
-        transition: opacity 0.3s ease;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .categories-carousel-container {
-            padding: 0 15px;
-            overflow-x: scroll; /* Prevents content from overflowing */
-            overflow-y: hidden;
-            height: 200px;
-        }
-        
-        .category-item {
-            min-width: 180px;
-            max-width: 200px;
-            width: 190px;
-        }
-        
-        .category-card {
-            padding: 25px 20px;
-            height: 180px;
-            width: 150px;
-        }
-        
-        .category-icon {
-            font-size: 2.2rem;
-        }
-        
-        .category-name {
-            font-size: 0.95rem;
-        }
-    }
-
-    @media (max-width: 576px) {
-        .categories-carousel-container {
-            padding: 0 10px;
-            overflow-x: scroll;
-            overflow-y: hidden;
-        }
-        
-        .category-item {
-            min-width: 160px;
-            max-width: 180px;
-            width: 170px;
-        }
-        
-        .category-card {
-            padding: 20px 15px;
-            height: 160px;
-        }
-        
-        .category-icon {
-            font-size: 2rem;
-        }
-        
-        .category-name {
-            font-size: 0.9rem;
-        }
-        
-        .category-count {
-            font-size: 0.75rem;
-        }
-    }
-
-    /* Efectos de carga y estados */
-    .category-card.loading {
-        position: relative;
-        overflow: hidden;
-    }
-
-    .category-card.loading::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-        animation: loading 1.5s infinite;
-    }
-
-    @keyframes loading {
-        0% { left: -100%; }
-        100% { left: 100%; }
-    }
-
-    /* Mejoras para accesibilidad */
-    .category-link:focus {
-        outline: 2px solid #ff6b35;
-        outline-offset: 2px;
-        border-radius: 20px;
-    }
-
-    .category-link:focus .category-card {
-        transform: scale(1.02);
-    }
-
-    /* Efectos de partículas en hover */
-    .category-card:hover {
-        position: relative;
-    }
-
-    .category-card:hover::before {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: -2px;
-        right: -2px;
-        bottom: -2px;
-        background: linear-gradient(45deg, #ff6b35, #f7931e, #ff6b35);
-        border-radius: 22px;
-        z-index: -1;
-        animation: borderGlow 2s ease-in-out infinite alternate;
-    }
-
-    @keyframes borderGlow {
-        0% { opacity: 0.5; }
-        100% { opacity: 1; }
-    }
-
-    /* Estilos generales */
-    .hero-section {
-        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-        min-height: 50vh;
-    }
-
-    .hero-bg {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        opacity: 0.1;
-        background-image: url('/images/hero-pattern.png');
-        background-size: cover;
-        background-position: center;
-    }
-
-    .min-vh-75 {
-        min-height: 50vh;
-    }
-
-    .hero-image {
-        max-height: 250px;
-        width: auto;
-        object-fit: contain;
-        filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3));
-    }
-
-    .card-hover {
-        transition: all 0.3s ease;
-    }
-
-    .card-hover:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
-    }
-
-    .restaurant-image {
-        height: 200px;
-        object-fit: cover;
-    }
-
-    .restaurant-card {
-        transition: all 0.3s ease;
-    }
-
-    .restaurant-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
-    }
-
-    .category-icon {
-        transition: transform 0.3s ease;
-    }
-
-    .card-hover:hover .category-icon {
-        transform: scale(1.1);
-    }
-
-    .feature-icon {
-        transition: transform 0.3s ease;
-    }
-
-    .feature-icon:hover {
-        transform: scale(1.1);
-    }
-
-    .address-suggestions {
-        top: 100%;
-        left: 0;
-        right: 0;
-        border-radius: 0.375rem;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-    }
-
-    /* Ajuste para dispositivos móviles */
-    @media (max-width: 768px) {
-        .hero-image {
-            max-height: 180px;
-        }
-        
-        .hero-section {
-            min-height: 40vh;
-        }
-        
-        .min-vh-75 {
-            min-height: 40vh;
-        }
-    }
-
-    /* Nav móvil fijo abajo y body con padding para no tapar contenido */
-    @media (max-width: 768px) {
-      .mobile-nav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100vw;
-        z-index: 1050;
-        background: #fff;
-        border-top: 1px solid #eee;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-      }
-      body {
-        padding-bottom: 70px !important;
-      }
-    }
-
-    .categories-arrow {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 10;
-        background: rgba(255,255,255,0.9);
-        border: none;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-        cursor: pointer;
-        transition: background 0.2s, box-shadow 0.2s;
-        font-size: 1.3rem;
-        color: #ff6b35;
-        opacity: 0.85;
-    }
-    .categories-arrow.left {
-        left: 0;
-    }
-    .categories-arrow.right {
-        right: 0;
-    }
-    .categories-arrow:hover {
-        background: #ff6b35;
-        color: #fff;
-        box-shadow: 0 4px 16px rgba(255,107,53,0.18);
-        opacity: 1;
-    }
-    @media (max-width: 991px) {
-        .categories-arrow {
-            display: none !important;
-        }
-    }
-
-    /* Estilos para el botón Ver Menú en la sección hero */
-    .hero-text .btn-primary {
-      background-color: #ff6600; /* Color naranja */
-      border-color: #ff6600;
-      border-radius: 25px; /* Bordes redondeados */
-      padding: 10px 25px;
-      font-weight: bold;
-      transition: all 0.3s ease;
-    }
-
-    .hero-text .btn-primary:hover {
-      background-color: #e65c00; /* Naranja un poco más oscuro */
-      border-color: #e65c00;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
-    </style>
 
 
 <script>
@@ -761,12 +189,12 @@ document.addEventListener('DOMContentLoaded', function() {
 function enhanceScrollExperience() {
     const scroll = document.getElementById('categoriesScroll');
     if (!scroll) return;
-    
+
     // Agregar indicador visual de scroll
     scroll.addEventListener('scroll', () => {
         const scrollLeft = scroll.scrollLeft;
         const maxScroll = scroll.scrollWidth - scroll.clientWidth;
-        
+
         // Mostrar/ocultar indicadores de borde según la posición
         const container = scroll.parentElement;
         if (scrollLeft > 0) {
@@ -774,7 +202,7 @@ function enhanceScrollExperience() {
         } else {
             container.classList.remove('scrolled-left');
         }
-        
+
         if (scrollLeft < maxScroll) {
             container.classList.add('scrolled-right');
         } else {
@@ -783,64 +211,277 @@ function enhanceScrollExperience() {
     });
 }
 
+// Función para controlar las flechas de navegación
+function setupCategoryNavigation() {
+    const container = document.querySelector('.categories-carousel-container');
+    const scrollElement = document.getElementById('categoriesScroll');
+
+    if (!container || !scrollElement) {
+        console.warn('Category navigation elements not found');
+        return;
+    }
+
+    // Crear flechas para desktop y móviles (pero ocultar en móviles con CSS)
+    console.log('Window width:', window.innerWidth);
+    console.log('Creating navigation arrows');
+
+    // Limpiar flechas existentes si las hay
+    const existingArrows = container.querySelectorAll('.category-nav-arrow');
+    existingArrows.forEach(arrow => arrow.remove());
+
+    // Flecha izquierda
+    const leftArrow = document.createElement('div');
+    leftArrow.className = 'category-nav-arrow category-nav-left';
+    leftArrow.innerHTML = '‹';
+    leftArrow.style.cursor = 'pointer';
+    leftArrow.title = 'Desplazar a la izquierda';
+    leftArrow.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Left arrow clicked');
+        if (scrollElement) {
+            const currentScroll = scrollElement.scrollLeft;
+            const scrollAmount = window.innerWidth <= 768 ? 200 : 300; // Menos en móviles
+            scrollElement.scrollTo({
+                left: Math.max(0, currentScroll - scrollAmount),
+                behavior: 'smooth'
+            });
+        }
+    });
+
+    // Flecha derecha
+    const rightArrow = document.createElement('div');
+    rightArrow.className = 'category-nav-arrow category-nav-right';
+    rightArrow.innerHTML = '›';
+    rightArrow.style.cursor = 'pointer';
+    rightArrow.title = 'Desplazar a la derecha';
+    rightArrow.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Right arrow clicked');
+        if (scrollElement) {
+            const currentScroll = scrollElement.scrollLeft;
+            const scrollAmount = window.innerWidth <= 768 ? 200 : 300; // Menos en móviles
+            const maxScroll = scrollElement.scrollWidth - scrollElement.clientWidth;
+            scrollElement.scrollTo({
+                left: Math.min(maxScroll, currentScroll + scrollAmount),
+                behavior: 'smooth'
+            });
+        }
+    });
+
+    // Agregar flechas al contenedor
+    container.appendChild(leftArrow);
+    container.appendChild(rightArrow);
+
+    // Mostrar/ocultar flechas según el scroll
+    function updateArrows() {
+        if (!scrollElement || !leftArrow || !rightArrow) return;
+
+        const scrollLeft = scrollElement.scrollLeft;
+        const maxScroll = scrollElement.scrollWidth - scrollElement.clientWidth;
+
+        // Solo mostrar flechas si hay contenido para desplazar
+        const hasOverflow = scrollElement.scrollWidth > scrollElement.clientWidth;
+
+        if (hasOverflow) {
+            leftArrow.style.display = window.innerWidth >= 769 ? 'flex' : 'none'; // Solo desktop
+            rightArrow.style.display = window.innerWidth >= 769 ? 'flex' : 'none'; // Solo desktop
+
+            if (window.innerWidth >= 769) {
+                leftArrow.style.opacity = scrollLeft > 10 ? '1' : '0.3';
+                rightArrow.style.opacity = scrollLeft < (maxScroll - 10) ? '1' : '0.3';
+            }
+        } else {
+            leftArrow.style.display = 'none';
+            rightArrow.style.display = 'none';
+        }
+    }
+
+    // Actualizar flechas cuando cambie el tamaño de la ventana
+    window.addEventListener('resize', updateArrows);
+
+    scrollElement.addEventListener('scroll', updateArrows);
+    updateArrows(); // Inicial
+
+    // Mostrar flechas al hacer hover en el contenedor (solo desktop)
+    if (window.innerWidth >= 769) {
+        container.addEventListener('mouseenter', () => {
+            if (leftArrow && rightArrow && leftArrow.style.display !== 'none') {
+                leftArrow.style.opacity = '1';
+                rightArrow.style.opacity = '1';
+            }
+        });
+
+        container.addEventListener('mouseleave', () => {
+            updateArrows(); // Volver al estado original
+        });
+    }
+
+    console.log('Navigation arrows setup complete');
+}
+
+// Función para forzar la visibilidad del texto en móviles
+function forceMobileTextVisibility() {
+    console.log('Window width check:', window.innerWidth);
+    if (window.innerWidth <= 768) {
+        console.log('Forcing mobile text visibility - START');
+
+        // Buscar todas las categorías
+        const categoryItems = document.querySelectorAll('.category-item');
+        console.log('Found category items:', categoryItems.length);
+
+        categoryItems.forEach((item, index) => {
+            const nameElement = item.querySelector('.category-name');
+            if (nameElement) {
+                console.log(`Category ${index}:`, nameElement.textContent);
+
+                // Aplicar estilos agresivos
+                nameElement.style.setProperty('display', 'block', 'important');
+                nameElement.style.setProperty('visibility', 'visible', 'important');
+                nameElement.style.setProperty('opacity', '1', 'important');
+                nameElement.style.setProperty('color', '#343a40', 'important');
+                nameElement.style.setProperty('font-size', '1rem', 'important');
+                nameElement.style.setProperty('font-weight', '600', 'important');
+                nameElement.style.setProperty('text-align', 'center', 'important');
+                nameElement.style.setProperty('width', '100%', 'important');
+                nameElement.style.setProperty('margin', '10px auto 0 auto', 'important');
+                nameElement.style.setProperty('margin-top', '10px', 'important');
+                nameElement.style.setProperty('position', 'relative', 'important');
+                nameElement.style.setProperty('z-index', '100', 'important');
+                nameElement.style.setProperty('height', 'auto', 'important');
+                nameElement.style.setProperty('overflow', 'visible', 'important');
+                nameElement.style.setProperty('white-space', 'normal', 'important');
+                nameElement.style.setProperty('background', 'rgba(255,255,255,0.8)', 'important');
+                nameElement.style.setProperty('padding', '2px 4px', 'important');
+                nameElement.style.setProperty('border-radius', '3px', 'important');
+
+                // Forzar que sea visible quitando clases problemáticas
+                nameElement.classList.remove('d-none', 'd-md-none', 'd-lg-none', 'd-xl-none');
+                nameElement.classList.add('d-block');
+
+                console.log(`Forced visibility for category ${index}:`, nameElement.textContent);
+
+                // Debug: Check computed styles
+                const computedStyle = window.getComputedStyle(nameElement);
+
+                // Also force parent visibility
+                const parent = nameElement.parentElement;
+                if (parent) {
+                    parent.style.setProperty('overflow', 'visible', 'important');
+                    parent.style.setProperty('display', 'block', 'important');
+                    parent.style.setProperty('visibility', 'visible', 'important');
+                }
+
+                // Force grandparent visibility too
+                const grandparent = parent ? parent.parentElement : null;
+                if (grandparent) {
+                    grandparent.style.setProperty('overflow', 'visible', 'important');
+                    grandparent.style.setProperty('display', 'block', 'important');
+                    grandparent.style.setProperty('visibility', 'visible', 'important');
+                }
+            } else {
+                console.log(`No name element found for category ${index}`);
+            }
+        });
+
+        console.log('Forcing mobile text visibility - END');
+    } else {
+        console.log('Not mobile, skipping text forcing');
+    }
+}
+
 // Inicializar carrusel de categorías cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
     const scroll = document.getElementById('categoriesScroll');
     if (scroll) {
         // Mejorar experiencia de scroll
         enhanceScrollExperience();
-        
+
+        // Inicializar flechas de navegación
+        setupCategoryNavigation();
+
         // Scroll horizontal con mouse/touch
         const categoriesScroll = document.getElementById('categoriesScroll');
-        
+
         // --- DRAG & TOUCH SCROLL (REMOVED) ---
-        
+
         // Cargar estadísticas de categorías
         loadCategoryStats();
+
+        // Forzar visibilidad del texto en móviles después de un pequeño delay
+        setTimeout(forceMobileTextVisibility, 100);
+        setTimeout(forceMobileTextVisibility, 500);
+        setTimeout(forceMobileTextVisibility, 1000);
     }
-    
+
     // Inicializar event listeners del carrito móvil
     initializeMobileCartEvents();
-    
+
     // Inicializar event listeners del menú de usuario móvil
     initializeMobileUserMenuEvents();
+
+    // Ensure carousel is working
+    const carousel = document.getElementById('restaurantPromoCarousel');
+    if (carousel && typeof bootstrap !== 'undefined') {
+        try {
+            const bsCarousel = new bootstrap.Carousel(carousel, {
+                interval: 5000,
+                wrap: true,
+                touch: true
+            });
+            console.log('Carousel initialized successfully');
+        } catch (error) {
+            console.error('Error initializing carousel:', error);
+        }
+    }
 });
 
-// Función para cargar estadísticas de categorías
+// Función para cargar estadísticas de categorías (deshabilitada por ahora)
 function loadCategoryStats() {
-    const categoryItems = document.querySelectorAll('.category-item');
-    
-    categoryItems.forEach((item, index) => {
-        const categoryName = item.querySelector('.category-name').textContent;
-        const countElement = item.querySelector('.count-number');
-        
-        // Simular carga de datos (en una implementación real, esto sería una llamada a la API)
-        setTimeout(() => {
-            const randomCount = Math.floor(Math.random() * 15) + 3; // 3-17 restaurantes
-            countElement.textContent = randomCount;
-            
-            // Animación de contador
-            animateCounter(countElement, 0, randomCount, 1000);
-        }, 500 + (index * 200));
-    });
+    // Esta función está deshabilitada porque los elementos .count-number no existen en el HTML
+    // const categoryItems = document.querySelectorAll('.category-item');
+
+    // categoryItems.forEach((item, index) => {
+    //     const categoryName = item.querySelector('.category-name').textContent;
+    //     const countElement = item.querySelector('.count-number');
+
+    //     if (countElement) {
+    //         // Simular carga de datos (en una implementación real, esto sería una llamada a la API)
+    //         setTimeout(() => {
+    //             const randomCount = Math.floor(Math.random() * 15) + 3; // 3-17 restaurantes
+    //             countElement.textContent = randomCount;
+
+    //             // Animación de contador
+    //             animateCounter(countElement, 0, randomCount, 1000);
+    //         }, 500 + (index * 200));
+    //     }
+    // });
 }
 
 // Función para animar contadores
 function animateCounter(element, start, end, duration) {
+    if (!element) {
+        console.warn('animateCounter: element is null or undefined');
+        return;
+    }
+
     const startTime = performance.now();
-    
+
     function updateCounter(currentTime) {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        
+
         const current = Math.floor(start + (end - start) * progress);
-        element.textContent = current;
-        
+        if (element) {
+            element.textContent = current;
+        }
+
         if (progress < 1) {
             requestAnimationFrame(updateCounter);
         }
     }
-    
+
     requestAnimationFrame(updateCounter);
 }
 

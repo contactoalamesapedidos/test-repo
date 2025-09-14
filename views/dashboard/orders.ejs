@@ -318,7 +318,7 @@
                 <h5 class="modal-title">Detalles del Pedido</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" id="orderDetailModalBody"></div>
+            <div class="modal-body order-scroll" id="orderDetailModalBody" style="max-height: 70vh; overflow: scroll; overflow-x: auto; overflow-y: auto;"></div>
         </div>
     </div>
 </div>
@@ -341,6 +341,16 @@
 
 
 
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" crossorigin="" />
+
+<!-- Socket.IO -->
+<script src="/socket.io/socket.io.js"></script>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+<script src="/js/dashboard/order-tracking-map.js"></script>
 <script src="/js/dashboard-orders.js"></script>
 <script src="/js/dashboard-orders-chat.js"></script>
 

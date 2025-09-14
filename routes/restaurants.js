@@ -211,8 +211,8 @@ router.get('/:id', async (req, res) => {
       SELECT c.*, u.nombre, u.apellido, u.imagen_perfil
       FROM calificaciones c
       JOIN usuarios u ON c.cliente_id = u.id
-      WHERE c.restaurante_id = ?
-      ORDER BY c.fecha_calificacion DESC
+      WHERE c.restaurante_id = ? AND c.resena_dejada = TRUE
+      ORDER BY c.fecha_resena DESC
       LIMIT 5
     `, [restaurantId]);
     

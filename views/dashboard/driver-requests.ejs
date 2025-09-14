@@ -1,0 +1,104 @@
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-3 col-lg-2">
+            <%- include('./partials/sidebar', { activePage: 'driver-requests' }) %>
+        </div>
+
+        <div class="col-md-9 col-lg-10">
+            <h1 class="mb-4">Solicitudes de Repartidores</h1>
+
+            <% if (pendingDrivers && pendingDrivers.length > 0) { %>
+                <div class="row">
+                    <% pendingDrivers.forEach(driver => { %>
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card shadow-sm h-100" id="driver-card-<%= driver.id %>">
+                                <div class="card-body d-flex flex-column">
+                                    <div class="text-center mb-3">
+                                        <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                            <i class="fas fa-user fa-lg"></i>
+                                        </div>
+                                    </div>
+
+                                    <h5 class="card-title text-center mb-2"><%= driver.nombre %> <%= driver.apellido %></h5>
+
+                                    <div class="card-text mb-3">
+                                        <div class="mb-2">
+                                            <i class="fas fa-envelope text-muted me-2"></i>
+                                            <small class="text-muted"><%= driver.email %></small>
+                                        </div>
+                                        <div class="mb-2">
+                                            <i class="fas fa-phone text-muted me-2"></i>
+                                            <small class="text-muted"><%= driver.telefono || 'No especificado' %></small>
+                                        </div>
+                                        <div class="mb-2">
+                                            <i class="fas fa-calendar text-muted me-2"></i>
+                                            <small class="text-muted">Solicitado: <%= driver.fecha_registro ? new Date(driver.fecha_registro).toLocaleDateString('es-ES') : 'Fecha no disponible' %></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-auto">
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-success approve-btn" data-driver-id="<%= driver.id %>">
+                                                <i class="fas fa-check me-2"></i>Aprobar
+                                            </button>
+                                            <button class="btn btn-outline-danger reject-btn" data-driver-id="<%= driver.id %>">
+                                                <i class="fas fa-times me-2"></i>Rechazar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } else { %>
+                <div class="alert alert-info">
+                    No hay solicitudes de repartidores pendientes en este momento.
+                </div>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.body.addEventListener('click', async (e) => {
+            const approveBtn = e.target.closest('.approve-btn');
+            const rejectBtn = e.target.closest('.reject-btn');
+
+            if (!approveBtn && !rejectBtn) return;
+
+            const button = approveBtn || rejectBtn;
+            const action = approveBtn ? 'approve' : 'reject';
+            const driverId = button.dataset.driverId;
+
+            if (!confirm(`¿Estás seguro de que quieres ${action === 'approve' ? 'aprobar' : 'rechazar'} a este repartidor?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/dashboard/driver-requests/${driverId}/${action}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    alert(data.message);
+                    document.getElementById(`driver-card-${driverId}`).remove();
+                } else {
+                    alert(data.message || 'Error al procesar la solicitud.');
+                }
+            } catch (error) {
+                console.error('Error en la solicitud:', error);
+                alert('Error de conexión o interno del servidor.');
+            }
+        });
+    });
+</script>
+
+<%- include('../partials/footer') %>

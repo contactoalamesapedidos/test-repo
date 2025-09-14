@@ -1,0 +1,288 @@
+<div class="admin-layout">
+    <%- include('partials/sidebar', { activePage: 'pedidos' }) %>
+
+    <!-- Main Content -->
+    <div class="admin-content">
+        <!-- Top Bar -->
+        <div class="admin-topbar bg-white shadow-sm px-4 py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0">Detalle del Pedido #<%= pedido.numero_pedido %></h5>
+                <small class="text-muted">Información completa del pedido</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/admin/pedidos" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Volver
+                </a>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-4">
+            <!-- Información del Pedido -->
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-shopping-cart me-2"></i>Información del Pedido
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Número de Pedido:</strong> #<%= pedido.numero_pedido %></p>
+                                    <p><strong>Estado:</strong>
+                                        <span class="badge <%= pedido.estado === 'entregado' ? 'bg-success' :
+                                                             pedido.estado === 'cancelado' ? 'bg-danger' :
+                                                             pedido.estado === 'en_camino' ? 'bg-info' :
+                                                             pedido.estado === 'listo' ? 'bg-primary' :
+                                                             pedido.estado === 'preparando' ? 'bg-warning' :
+                                                             pedido.estado === 'confirmado' ? 'bg-secondary' : 'bg-light' %>">
+                                            <%= pedido.estado %>
+                                        </span>
+                                    </p>
+                                    <p><strong>Método de Pago:</strong> <%= pedido.metodo_pago %></p>
+                                    <p><strong>Fecha del Pedido:</strong> <%= new Date(pedido.fecha_pedido).toLocaleString('es-AR') %></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Restaurante:</strong> <%= pedido.restaurante_nombre %></p>
+                                    <p><strong>Cliente:</strong> <%= pedido.cliente_nombre %> <%= pedido.cliente_apellido %></p>
+                                    <p><strong>Email:</strong> <%= pedido.cliente_email %></p>
+                                    <p><strong>Teléfono:</strong> <%= pedido.cliente_telefono %></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-dollar-sign me-2"></i>Total del Pedido
+                            </h6>
+                        </div>
+                        <div class="card-body text-center">
+                            <h2 class="text-primary mb-0">$<%= pedido.total.toLocaleString('es-AR', {minimumFractionDigits: 2}) %></h2>
+                            <small class="text-muted">Total a pagar</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items del Pedido -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-utensils me-2"></i>Productos del Pedido
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <% if (itemsPedido && itemsPedido.length > 0) { %>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Cantidad</th>
+                                        <th>Precio Unitario</th>
+                                        <th>Subtotal</th>
+                                        <th>Opciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% itemsPedido.forEach(item => { %>
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <% if (item.producto_imagen) { %>
+                                                        <img src="/uploads/<%= item.producto_imagen %>"
+                                                             alt="<%= item.producto_nombre %>"
+                                                             class="rounded me-2" width="40" height="40"
+                                                             onerror="this.src='/images/no-image.png'">
+                                                    <% } %>
+                                                    <div>
+                                                        <div class="fw-bold"><%= item.producto_nombre %></div>
+                                                        <% if (item.descripcion) { %>
+                                                            <small class="text-muted"><%= item.descripcion %></small>
+                                                        <% } %>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td><%= item.cantidad %></td>
+                                            <td>$<%= item.precio_unitario.toLocaleString('es-AR', {minimumFractionDigits: 2}) %></td>
+                                            <td>$<%= (item.cantidad * item.precio_unitario).toLocaleString('es-AR', {minimumFractionDigits: 2}) %></td>
+                                            <td>
+                                                <% if (item.opciones_seleccionadas) { %>
+                                                    <small class="text-muted"><%= item.opciones_seleccionadas %></small>
+                                                <% } else { %>
+                                                    <span class="text-muted">-</span>
+                                                <% } %>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    <% } else { %>
+                        <div class="text-center py-4">
+                            <i class="fas fa-shopping-basket fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No hay productos en este pedido</p>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Acciones del Pedido -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-cogs me-2"></i>Acciones del Pedido
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Cambiar Estado del Pedido</h6>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <% const estados = ['pendiente', 'confirmado', 'preparando', 'listo', 'en_camino', 'entregado', 'cancelado']; %>
+                                <% estados.forEach(estado => { %>
+                                    <% if (estado !== pedido.estado) { %>
+                                        <button class="btn btn-sm <%= estado === 'entregado' ? 'btn-success' :
+                                                                     estado === 'cancelado' ? 'btn-danger' :
+                                                                     estado === 'en_camino' ? 'btn-info' :
+                                                                     estado === 'listo' ? 'btn-primary' :
+                                                                     estado === 'preparando' ? 'btn-warning' :
+                                                                     estado === 'confirmado' ? 'btn-secondary' : 'btn-outline-secondary' %>"
+                                                onclick="cambiarEstado('<%= estado %>')">
+                                            <%= estado.charAt(0).toUpperCase() + estado.slice(1) %>
+                                        </button>
+                                    <% } %>
+                                <% }); %>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Acciones Adicionales</h6>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a href="/admin/pedidos/<%= pedido.id %>/chat" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-comments me-1"></i>Ver Chat
+                                </a>
+                                <button class="btn btn-sm btn-outline-info" onclick="imprimirPedido()">
+                                    <i class="fas fa-print me-1"></i>Imprimir
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="exportarPedido()">
+                                    <i class="fas fa-download me-1"></i>Exportar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// Función para cambiar el estado del pedido
+function cambiarEstado(nuevoEstado) {
+    const estadosTexto = {
+        'pendiente': 'Pendiente',
+        'confirmado': 'Confirmado',
+        'preparando': 'Preparando',
+        'listo': 'Listo',
+        'en_camino': 'En Camino',
+        'entregado': 'Entregado',
+        'cancelado': 'Cancelado'
+    };
+
+    Swal.fire({
+        title: '¿Cambiar estado del pedido?',
+        text: `¿Estás seguro de cambiar el estado a "${estadosTexto[nuevoEstado]}"?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, cambiar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Aquí iría la lógica para cambiar el estado
+            fetch(`/admin/pedidos/<%= pedido.id %>/estado`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ estado: nuevoEstado })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire(
+                        '¡Estado actualizado!',
+                        `El pedido ha sido marcado como ${estadosTexto[nuevoEstado]}.`,
+                        'success'
+                    ).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire(
+                        'Error',
+                        'No se pudo cambiar el estado del pedido.',
+                        'error'
+                    );
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire(
+                    'Error',
+                    'Ocurrió un error al cambiar el estado.',
+                    'error'
+                );
+            });
+        }
+    });
+}
+
+// Función para imprimir el pedido
+function imprimirPedido() {
+    window.print();
+}
+
+// Función para exportar el pedido
+function exportarPedido() {
+    const pedidoData = {
+        numero_pedido: '<%= pedido.numero_pedido %>',
+        fecha: '<%= pedido.fecha_pedido %>',
+        cliente: '<%= pedido.cliente_nombre %> <%= pedido.cliente_apellido %>',
+        restaurante: '<%= pedido.restaurante_nombre %>',
+        total: <%= pedido.total %>,
+        estado: '<%= pedido.estado %>',
+        metodo_pago: '<%= pedido.metodo_pago %>',
+        items: <%= JSON.stringify(itemsPedido || []) %>
+    };
+
+    const dataStr = JSON.stringify(pedidoData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+
+    const exportFileDefaultName = `pedido_<%= pedido.numero_pedido %>.json`;
+
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+}
+
+// Inicializar tooltips si existen
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar tooltips de Bootstrap
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+
+<%- include('../partials/footer') %>

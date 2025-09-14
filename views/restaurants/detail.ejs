@@ -70,7 +70,7 @@
                     <% if (productsByCategory[categoryName].length > 0) { %>
                         <div class="menu-category mb-5" id="category-<%= categoryName.replace(/\s+/g, '-').toLowerCase() %>">
                             <h3 class="category-title mb-3">
-                                <i class="fas fa-utensils text-primary"></i>
+                                <i class="fas fa-utensils" style="color: #ff6b35;"></i>
                                 <%= categoryName %>
                             </h3>
                             
@@ -108,11 +108,11 @@
                                                                         <span class="text-muted text-decoration-line-through small">
                                                                             $<%= product.precio %>
                                                                         </span>
-                                                                        <strong class="text-primary">
+                                                                        <strong style="color: #000;">
                                                                             $<%= product.precio_descuento %>
                                                                         </strong>
                                                                     <% } else { %>
-                                                                        <strong class="text-primary">
+                                                                        <strong style="color: #000;">
                                                                             $<%= product.precio %>
                                                                         </strong>
                                                                     <% } %>
@@ -153,23 +153,23 @@
                                     <div class="card">
                                         <div class="card-body">
                                             <div class="d-flex align-items-center mb-2">
-                                                <img src="<%= review.imagen_perfil ? resolveImg(review.imagen_perfil, '/images/defaults/user.png') : '/images/defaults/user.png' %>" 
-                                                     alt="<%= review.nombre %>" 
-                                                     class="user-image rounded-circle me-2" 
+                                                <img src="<%= review.imagen_perfil ? resolveImg(review.imagen_perfil, '/images/defaults/user.png') : '/images/defaults/user.png' %>"
+                                                     alt="<%= review.nombre %>"
+                                                     class="user-image rounded-circle me-2"
                                                      width="40" height="40"
                                                      onerror="this.src='/images/defaults/user.png'">
                                                 <div>
                                                     <h6 class="mb-0"><%= review.nombre %> <%= review.apellido %></h6>
                                                     <div class="rating">
                                                         <% for (let i = 1; i <= 5; i++) { %>
-                                                            <i class="fas fa-star <%= i <= (review.calificacion_restaurante || review.calificacion) ? 'text-warning' : 'text-muted' %>"></i>
+                                                            <i class="fas fa-star <%= i <= review.calificacion_restaurante ? 'text-warning' : 'text-muted' %>"></i>
                                                         <% } %>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <p class="card-text"><%= review.comentario_restaurante %></p>
+                                            <p class="card-text"><%= review.comentario_restaurante || 'Sin comentario' %></p>
                                             <small class="text-muted">
-                                                <%= new Date(review.fecha_calificacion).toLocaleDateString('es-AR') %>
+                                                <%= new Date(review.fecha_resena).toLocaleDateString('es-AR') %>
                                             </small>
                                         </div>
                                     </div>
@@ -184,6 +184,7 @@
                         </div>
                     <% } %>
                 </div>
+            </div>
             </div>
         </div>
     </div>
