@@ -20,17 +20,23 @@ if (process.env.DATABASE_URL) {
     database: url.pathname.substring(1), // Remove leading slash
     port: parseInt(url.port),
     waitForConnections: true,
-    connectionLimit: process.env.NODE_ENV === 'production' ? 2 : 10,
+    connectionLimit: process.env.NODE_ENV === 'production' ? 1 : 10, // Solo 1 conexión en producción
     queueLimit: 0,
     enableKeepAlive: true,
     keepAliveInitialDelay: 0,
-    acquireTimeout: 60000, // 60 segundos para Railway
-    timeout: 60000, // 60 segundos para Railway
-    connectTimeout: 60000, // Timeout de conexión inicial
+    acquireTimeout: 120000, // 2 minutos para adquirir conexión
+    timeout: 120000, // 2 minutos de timeout de query
+    connectTimeout: 120000, // 2 minutos para conectar inicialmente
     ssl: { rejectUnauthorized: false },
     // Configuración adicional para Railway
     reconnect: true,
-    reconnectDelay: 5000
+    reconnectDelay: 10000, // 10 segundos entre reintentos
+    // Configuración específica para serverless
+    multipleStatements: false,
+    namedPlaceholders: false,
+    dateStrings: true,
+    supportBigNumbers: true,
+    bigNumberStrings: true
   };
 } else {
   // Fallback to individual environment variables
