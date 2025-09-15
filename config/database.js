@@ -1,5 +1,5 @@
 
-rao// Create connection pool
+// Create connection pool
 const mysql = require('mysql2');
 
 console.log('🔧 Configuración de base de datos:');
