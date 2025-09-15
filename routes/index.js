@@ -227,57 +227,8 @@ router.get('/search', async (req, res) => {
       params.push(category, category);
     }
 
-    // Aplicar filtros adicionales después del GROUP BY
-    let havingClause = '';
-
-    if (price_range) {
-      // Filtro por rango de precio basado en productos disponibles
-      if (price_range === '0-50') {
-        havingClause += 'HAVING MIN(p.precio) >= 0 AND MIN(p.precio) <= 50';
-      } else if (price_range === '50-100') {
-        havingClause += 'HAVING MIN(p.precio) >= 50 AND MIN(p.precio) <= 100';
-      } else if (price_range === '100-200') {
-        havingClause += 'HAVING MIN(p.precio) >= 100 AND MIN(p.precio) <= 200';
-      } else if (price_range === '200+') {
-        havingClause += 'HAVING MIN(p.precio) >= 200';
-      }
-    }
-
-    if (min_rating) {
-      // Filtro por calificación mínima
-      if (havingClause) {
-        havingClause += ` AND r.calificacion_promedio >= ${parseFloat(min_rating)}`;
-      } else {
-        havingClause += `HAVING r.calificacion_promedio >= ${parseFloat(min_rating)}`;
-      }
-    }
-
-    // Agregar MIN(p.precio) al SELECT si hay filtros de precio
-    if (price_range) {
-      sql = sql.replace('COUNT(DISTINCT p.id) as total_productos',
-                       'COUNT(DISTINCT p.id) as total_productos, MIN(p.precio) as precio_minimo');
-    }
-
-    // Reemplazar el GROUP BY existente con HAVING si hay condiciones
-    if (havingClause) {
-      sql = sql.replace(
-        `WHERE r.verificado = 1
-      GROUP BY
-        r.id, r.nombre, r.descripcion, r.imagen_logo, r.imagen_banner,
-        r.direccion, r.ciudad, r.telefono, r.email_contacto,
-        r.horario_apertura, r.horario_cierre, r.tiempo_entrega_min,
-        r.tiempo_entrega_max, r.costo_delivery, r.calificacion_promedio,
-        r.total_calificaciones`,
-        `WHERE r.verificado = 1
-      GROUP BY
-        r.id, r.nombre, r.descripcion, r.imagen_logo, r.imagen_banner,
-        r.direccion, r.ciudad, r.telefono, r.email_contacto,
-        r.horario_apertura, r.horario_cierre, r.tiempo_entrega_min,
-        r.tiempo_entrega_max, r.costo_delivery, r.calificacion_promedio,
-        r.total_calificaciones
-      ${havingClause}`
-      );
-    }
+    // Filtros básicos por ahora - los filtros HAVING causan problemas con columnas no disponibles
+    // TODO: Implementar filtros más avanzados después
 
     // Aplicar ordenamiento según el parámetro sort
     let orderBy = 'ORDER BY r.calificacion_promedio DESC'; // Default
