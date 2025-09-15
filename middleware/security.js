@@ -233,9 +233,12 @@ class SecurityLogger {
     }
 
     ensureLogDirectory() {
-        const logDir = path.dirname(this.logFile);
-        if (!fs.existsSync(logDir)) {
-            fs.mkdirSync(logDir, { recursive: true });
+        // Solo crear directorio de logs en desarrollo, no en producción (Vercel)
+        if (process.env.NODE_ENV !== 'production') {
+            const logDir = path.dirname(this.logFile);
+            if (!fs.existsSync(logDir)) {
+                fs.mkdirSync(logDir, { recursive: true });
+            }
         }
     }
 
