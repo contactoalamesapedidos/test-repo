@@ -23,6 +23,12 @@ function csrfProtection(req, res, next) {
         return next();
     }
 
+    // Skip CSRF for authentication routes (login, register, etc.)
+    const authRoutes = ['/auth/login', '/auth/register', '/auth/register-restaurant', '/auth/register-driver'];
+    if (authRoutes.includes(req.path)) {
+        return next();
+    }
+
     const token = req.body._csrf || req.headers['x-csrf-token'] || req.headers['csrf-token'];
 
     if (!token) {
