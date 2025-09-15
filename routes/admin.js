@@ -523,7 +523,7 @@ router.get('/restaurantes', requireAdmin, async (req, res) => {
     const { search, estado, categoria } = req.query;
     
     let sql = `
-      SELECT 
+      SELECT
         r.id,
         r.nombre,
         r.descripcion,
@@ -542,10 +542,13 @@ router.get('/restaurantes', requireAdmin, async (req, res) => {
         r.total_calificaciones,
         r.activo,
         r.verificado,
+        u.nombre as propietario_nombre,
+        u.apellido as propietario_apellido,
         GROUP_CONCAT(DISTINCT cr.nombre) as categorias,
         COUNT(DISTINCT p.id) as total_productos,
         COUNT(DISTINCT o.id) as total_pedidos
       FROM restaurantes r
+      LEFT JOIN usuarios u ON r.usuario_id = u.id
       LEFT JOIN restaurante_categorias rc ON r.id = rc.restaurante_id
       LEFT JOIN categorias_restaurantes cr ON rc.categoria_id = cr.id
       LEFT JOIN productos p ON r.id = p.restaurante_id
@@ -628,13 +631,11 @@ router.get('/restaurantes', requireAdmin, async (req, res) => {
     const totalRestaurants = totalCountResult[0].total_count;
     const totalPages = Math.ceil(totalRestaurants / limit);
     
-    // Get categories for filter (remove duplicates)
+    // Get categories for filter (show all active categories)
     const [categorias] = await db.execute(`
-      SELECT DISTINCT cr.id, cr.nombre, cr.imagen
+      SELECT cr.id, cr.nombre, cr.imagen
       FROM categorias_restaurantes cr
-      INNER JOIN restaurante_categorias rc ON cr.id = rc.categoria_id
-      INNER JOIN restaurantes r ON rc.restaurante_id = r.id
-      WHERE cr.activa = 1 AND r.activo = 1
+      WHERE cr.activa = 1
       ORDER BY cr.nombre
     `);
 

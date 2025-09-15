@@ -1,10 +1,7 @@
-<% 
-    // Helper para normalizar rutas de imágenes
-    function resolveImg(p, fallback) { 
-      if (!p || typeof p !== 'string') return fallback; 
-      const trimmed = p.trim();
-      if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/')) return trimmed; 
-      return '/uploads/' + trimmed; 
+<%
+    // Helper simple para imágenes
+    function getImageUrl(img, fallback) {
+      return img ? '/uploads/' + img : fallback;
     }
 %>
 <div class="container mt-4">
@@ -15,7 +12,7 @@
     <% } %>
     <!-- Restaurant Banner -->
     <div class="restaurant-banner mb-4 position-relative">
-        <img src="<%= restaurant.imagen_banner ? resolveImg(restaurant.imagen_banner, '/images/defaults/restaurant-banner-default.jpg') : (restaurant.imagen_logo ? resolveImg(restaurant.imagen_logo, '/images/defaults/restaurant-banner-default.jpg') : '/images/defaults/restaurant-banner-default.jpg') %>"
+        <img src="<%= restaurant.imagen_banner ? getImageUrl(restaurant.imagen_banner, '/images/defaults/restaurant-banner-default.jpg') : (restaurant.imagen_logo ? getImageUrl(restaurant.imagen_logo, '/images/defaults/restaurant-banner-default.jpg') : '/images/defaults/restaurant-banner-default.jpg') %>"
              alt="Banner de <%= restaurant.nombre %>"
              class="img-fluid rounded"
              style="width: 100%; height: 300px; object-fit: cover;"
@@ -84,8 +81,8 @@
                                         <div class="card h-100 product-card">
                                             <div class="row g-0 h-100">
                                                 <div class="col-5">
-                                                    <img src="<%= product.imagen ? resolveImg(product.imagen, '/images/defaults/product.jpeg') : '/images/defaults/product.jpeg' %>" 
-                                                         class="product-image img-fluid rounded-start object-cover" 
+                                                    <img src="<%= product.imagen ? getImageUrl(product.imagen, '/images/defaults/product.jpeg') : '/images/defaults/product.jpeg' %>"
+                                                         class="product-image img-fluid rounded-start object-cover"
                                                          alt="<%= product.nombre %>"
                                                          onerror="this.onerror=null;this.src='/images/defaults/product.jpeg';">
                                                 </div>
@@ -161,7 +158,7 @@
                                     <div class="card">
                                         <div class="card-body">
                                             <div class="d-flex align-items-center mb-2">
-                                                <img src="<%= review.imagen_perfil ? resolveImg(review.imagen_perfil, '/images/defaults/user.png') : '/images/defaults/user.png' %>"
+                                                <img src="<%= review.imagen_perfil ? getImageUrl(review.imagen_perfil, '/images/defaults/user.png') : '/images/defaults/user.png' %>"
                                                      alt="<%= review.nombre %>"
                                                      class="user-image rounded-circle me-2"
                                                      width="40" height="40"
