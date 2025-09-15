@@ -50,6 +50,9 @@
     <!-- Toast Container Global -->
     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;"></div>
 
+    <!-- Global CSRF Token for AJAX requests -->
+    <input type="hidden" id="csrfToken" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+
     <!-- Navegación móvil general o dashboard según usuario y ruta -->
     <% if (user && user.tipo_usuario && user.tipo_usuario === 'restaurante' && ((typeof isDashboardPage !== 'undefined' && isDashboardPage) || (currentPath && (currentPath.startsWith('/dashboard') || currentPath.startsWith('/dashboard/orders'))))) { %>
       <!-- Menú móvil dashboard restaurante -->

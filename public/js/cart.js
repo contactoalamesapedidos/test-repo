@@ -6,6 +6,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearCartBtn = document.querySelector('.clear-cart-btn');
     const cartEmptyMessage = document.querySelector('.text-center.py-5');
 
+    // Función para obtener el token CSRF
+    function getCsrfToken() {
+        const tokenInput = document.getElementById('csrfToken');
+        return tokenInput ? tokenInput.value : '';
+    }
+
     // Función para mostrar notificaciones (si no existe ya)
     if (typeof showNotification === 'undefined') {
         window.showNotification = function(message, type = 'info') {
@@ -62,7 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const response = await fetch('/cart/update', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'x-csrf-token': getCsrfToken()
                         },
                         body: JSON.stringify({ productId, change })
                     });
@@ -91,7 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const response = await fetch('/cart/remove', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'x-csrf-token': getCsrfToken()
                         },
                         body: JSON.stringify({ productId })
                     });
@@ -120,7 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             try {
                 const response = await fetch('/cart/clear', {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: {
+                        'x-csrf-token': getCsrfToken()
+                    }
                 });
                 const data = await response.json();
 
