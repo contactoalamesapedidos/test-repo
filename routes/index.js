@@ -263,8 +263,12 @@ router.get('/search', async (req, res) => {
       r.direccion, r.ciudad, r.telefono, r.email_contacto,
       r.horario_apertura, r.horario_cierre, r.tiempo_entrega_min,
       r.tiempo_entrega_max, r.costo_delivery, r.calificacion_promedio,
-      r.total_calificaciones
-    ${havingClause}`;
+      r.total_calificaciones`;
+
+    // Agregar HAVING si hay condiciones
+    if (havingClause) {
+      sql += ` ${havingClause}`;
+    }
 
     // Aplicar ordenamiento según el parámetro sort
     let orderBy = 'ORDER BY r.calificacion_promedio DESC'; // Default
