@@ -233,19 +233,23 @@ router.get('/search', async (req, res) => {
     if (price_range) {
       // Filtro por rango de precio basado en productos disponibles
       if (price_range === '0-50') {
-        havingClause += ' AND MIN(p.precio) >= 0 AND MIN(p.precio) <= 50';
+        havingClause += 'HAVING MIN(p.precio) >= 0 AND MIN(p.precio) <= 50';
       } else if (price_range === '50-100') {
-        havingClause += ' AND MIN(p.precio) >= 50 AND MIN(p.precio) <= 100';
+        havingClause += 'HAVING MIN(p.precio) >= 50 AND MIN(p.precio) <= 100';
       } else if (price_range === '100-200') {
-        havingClause += ' AND MIN(p.precio) >= 100 AND MIN(p.precio) <= 200';
+        havingClause += 'HAVING MIN(p.precio) >= 100 AND MIN(p.precio) <= 200';
       } else if (price_range === '200+') {
-        havingClause += ' AND MIN(p.precio) >= 200';
+        havingClause += 'HAVING MIN(p.precio) >= 200';
       }
     }
 
     if (min_rating) {
       // Filtro por calificación mínima
-      havingClause += ` AND r.calificacion_promedio >= ${parseFloat(min_rating)}`;
+      if (havingClause) {
+        havingClause += ` AND r.calificacion_promedio >= ${parseFloat(min_rating)}`;
+      } else {
+        havingClause += `HAVING r.calificacion_promedio >= ${parseFloat(min_rating)}`;
+      }
     }
 
     // Agregar MIN(p.precio) al SELECT si hay filtros de precio
