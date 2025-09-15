@@ -138,6 +138,10 @@ app.use((req, res, next) => {
 // Cart middleware
 app.use(cartMiddleware);
 
+// CSRF token middleware (global)
+const { setCSRFToken } = require('./middleware/security');
+app.use(setCSRFToken);
+
 // Routes
 const indexRoutes = require('./routes/index');
 const authRoutes = require('./routes/auth');
