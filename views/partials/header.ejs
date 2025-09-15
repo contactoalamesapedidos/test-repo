@@ -22,7 +22,7 @@
         <!-- Botones en Desktop -->
         <div class="d-none d-lg-flex align-items-center ms-auto">
             <!-- Icono del carrito (solo para clientes) -->
-            <% if (user && user.tipo_usuario !== 'restaurante' && user.tipo_usuario !== 'admin') { %>
+            <% if (user && user.tipo_usuario && user.tipo_usuario !== 'restaurante' && user.tipo_usuario !== 'admin') { %>
                 <div class="cart-icon-container me-3" style="cursor:pointer; position: relative;" title="Ver carrito">
                     <i class="fas fa-shopping-cart fa-lg"></i>
                     <span class="cart-badge bg-danger text-white" id="cartCountDesktop" data-cart-count style="position: absolute; top: -10px; right: -10px; font-size: 0.7em; padding: 0.3em 0.5em; border-radius: 50%; display: flex; align-items: center; justify-content: center; min-width: 18px; min-height: 18px;">0</span>

@@ -51,7 +51,7 @@
     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;"></div>
 
     <!-- Navegación móvil general o dashboard según usuario y ruta -->
-    <% if (user && user.tipo_usuario === 'restaurante' && ((typeof isDashboardPage !== 'undefined' && isDashboardPage) || (currentPath && (currentPath.startsWith('/dashboard') || currentPath.startsWith('/dashboard/orders'))))) { %>
+    <% if (user && user.tipo_usuario && user.tipo_usuario === 'restaurante' && ((typeof isDashboardPage !== 'undefined' && isDashboardPage) || (currentPath && (currentPath.startsWith('/dashboard') || currentPath.startsWith('/dashboard/orders'))))) { %>
       <!-- Menú móvil dashboard restaurante -->
       <% const currentActivePage = typeof activePage !== 'undefined' ? activePage : ''; %>
       <nav class="mobile-nav mobile-only dashboard-mobile-nav d-md-none d-lg-none d-xl-none">
@@ -110,10 +110,10 @@
           </a>
         </div>
       </div>
-    <% } else if (user && user.tipo_usuario === 'admin') { %>
+    <% } else if (user && user.tipo_usuario && user.tipo_usuario === 'admin') { %>
       <!-- Menú móvil admin -->
       <%- include('partials/admin-mobile-nav', { currentPath: currentPath, user: user }) %>
-    <% } else if (user && user.tipo_usuario === 'repartidor') { %>
+    <% } else if (user && user.tipo_usuario && user.tipo_usuario === 'repartidor') { %>
       <!-- Menú móvil repartidor -->
       <%- include('drivers/mobile-nav', { currentPath: currentPath, user: user }) %>
     <% } else if (!(currentPath && currentPath.startsWith('/dashboard'))) { %>
@@ -239,7 +239,7 @@
     <script src="/js/cookie-consent.js"></script>
 
     <!-- GPS Tracker for Drivers -->
-    <% if (user && user.tipo_usuario === 'repartidor') { %>
+    <% if (user && user.tipo_usuario && user.tipo_usuario === 'repartidor') { %>
     <script src="/js/driver-gps-tracker.js"></script>
     <% } %>
     
