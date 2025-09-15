@@ -283,15 +283,18 @@ class SecurityLogger {
             userAgent: details.userAgent || 'unknown'
         };
 
-        const logLine = JSON.stringify(logEntry) + '\n';
+        // In production (Vercel), don't write to file system, only log to console
+        if (process.env.NODE_ENV !== 'production') {
+            const logLine = JSON.stringify(logEntry) + '\n';
 
-        try {
-            fs.appendFileSync(this.logFile, logLine);
-        } catch (error) {
-            console.error('Error writing to security log:', error);
+            try {
+                fs.appendFileSync(this.logFile, logLine);
+            } catch (error) {
+                console.error('Error writing to security log:', error);
+            }
         }
 
-        // Also log to console for immediate visibility
+        // Always log to console for immediate visibility
         console.log(`[${level.toUpperCase()}] ${message}`, details);
     }
 
