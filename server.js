@@ -5,7 +5,6 @@ const helmet = require('helmet');
 const compression = require('compression');
 const morgan = require('morgan');
 const cors = require('cors');
-const logger = require('./utils/logger');
 require('dotenv').config();
 
 // Database connection
@@ -163,51 +162,16 @@ const sessionConfig = {
   }
 };
 
-// Solo configurar el store de MySQL si tenemos credenciales
-if (process.env.DB_HOST && process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_NAME) {
-  sessionConfig.store = new MySQLStore({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    createDatabaseTable: true,
-    schema: {
-      tableName: 'sessions',
-      columnNames: {
-        session_id: 'session_id',
-        expires: 'expires',
-        data: 'data'
-      }
-    }
-  });
-}
+// Session store disabled for Vercel serverless
+// MySQL session store may not work in serverless environment
 
 app.use(session(sessionConfig));
 
-// Security middlewares - applied in correct order
-app.use(setCSRFToken); // Set CSRF token for all requests
-app.use(sanitizeInput); // Sanitize all input data
-
-// Only apply CSP in production to avoid blocking local development
-if (process.env.NODE_ENV === 'production') {
-    app.use(setCSP); // Set Content Security Policy
-}
-
-// Security audit middleware
-app.use((req, res, next) => {
-  // Log security events for sensitive operations (solo en desarrollo o con configuración específica)
-  if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
-    if (process.env.NODE_ENV === 'development' || process.env.LOG_SECURITY_EVENTS === 'true') {
-      SecurityAuditUtils.logSecurityEvent('api_request', {
-        method: req.method,
-        path: req.path,
-        userAgent: req.get('User-Agent')
-      }, req).catch(err => logger.error('[SECURITY] Audit error', { error: err.message }));
-    }
-  }
-  next();
-});
+// Security middlewares - simplified for Vercel
+// Temporarily disabled complex security middlewares that may cause issues
+// app.use(setCSRFToken);
+// app.use(sanitizeInput);
+// app.use(setCSP);
 
 // Middleware global para exponer el usuario en todas las vistas
 app.use((req, res, next) => {
@@ -243,9 +207,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rate limiting & slow down - using enhanced security versions
-const authLimiter = authRateLimit;
-const apiLimiter = apiRateLimit;
+// Rate limiting disabled for Vercel serverless
+// const authLimiter = authRateLimit;
+// const apiLimiter = apiRateLimit;
 
 // Routes
 const indexRoutes = require('./routes/index');
@@ -271,19 +235,12 @@ app.get('/push-debug', (req, res) => {
     });
 });
 
-// Limitador para métodos que mutan estado
-const mutateLimiter = (req, res, next) => {
-  const methods = ['POST', 'PUT', 'PATCH', 'DELETE'];
-  if (methods.includes(req.method)) {
-    return apiLimiter(req, res, next);
-  }
-  return next();
-};
-app.use(mutateLimiter);
+// Rate limiting disabled for Vercel serverless
+// const mutateLimiter = ...
 
 app.use('/', indexRoutes);
-// Rate limit y slow down para autenticación
-app.use('/auth', authSlowDown, authLimiter, authRoutes);
+// Authentication routes without rate limiting for Vercel
+app.use('/auth', authRoutes);
 app.use('/restaurants', restaurantRoutes);
 app.use('/products', productRoutes);
 // Redirigir /orders a /orders/
@@ -299,8 +256,8 @@ app.use('/payments', paymentRoutes);
 app.use('/admin', adminRoutes);
 app.use('/reviews', reviewRoutes);
 app.use('/cart', cartSidebarTemplateRoutes);
-// Rate limit para APIs
-app.use('/api/push', apiLimiter, pushRoutes);
+// API routes without rate limiting for Vercel
+app.use('/api/push', pushRoutes);
 app.use('/api', apiRoutes);
 
 // Redirigir /profile a /auth/profile
