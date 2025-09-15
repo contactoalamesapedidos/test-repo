@@ -258,9 +258,25 @@ router.get('/search', async (req, res) => {
                        'COUNT(DISTINCT p.id) as total_productos, MIN(p.precio) as precio_minimo');
     }
 
-    // Agregar HAVING si hay condiciones (después del GROUP BY existente)
+    // Reemplazar el GROUP BY existente con HAVING si hay condiciones
     if (havingClause) {
-      sql += ` ${havingClause}`;
+      sql = sql.replace(
+        `WHERE r.verificado = 1
+      GROUP BY
+        r.id, r.nombre, r.descripcion, r.imagen_logo, r.imagen_banner,
+        r.direccion, r.ciudad, r.telefono, r.email_contacto,
+        r.horario_apertura, r.horario_cierre, r.tiempo_entrega_min,
+        r.tiempo_entrega_max, r.costo_delivery, r.calificacion_promedio,
+        r.total_calificaciones`,
+        `WHERE r.verificado = 1
+      GROUP BY
+        r.id, r.nombre, r.descripcion, r.imagen_logo, r.imagen_banner,
+        r.direccion, r.ciudad, r.telefono, r.email_contacto,
+        r.horario_apertura, r.horario_cierre, r.tiempo_entrega_min,
+        r.tiempo_entrega_max, r.costo_delivery, r.calificacion_promedio,
+        r.total_calificaciones
+      ${havingClause}`
+      );
     }
 
     // Aplicar ordenamiento según el parámetro sort
