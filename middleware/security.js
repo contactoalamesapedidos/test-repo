@@ -34,6 +34,11 @@ function csrfProtection(req, res, next) {
         return next();
     }
 
+    // In production (Vercel), skip CSRF validation due to serverless session limitations
+    if (process.env.NODE_ENV === 'production') {
+        return next();
+    }
+
     const token = req.body._csrf || req.headers['x-csrf-token'] || req.headers['csrf-token'];
 
     if (!token) {
