@@ -67,8 +67,10 @@ function csrfProtection(req, res, next) {
 
 // Middleware to set CSRF token
 function setCSRFToken(req, res, next) {
-    // Always generate a fresh token for each request to prevent stale tokens
-    req.session.csrfToken = generateCSRFToken();
+    // Only generate token if it doesn't exist
+    if (!req.session.csrfToken) {
+        req.session.csrfToken = generateCSRFToken();
+    }
     res.locals.csrfToken = req.session.csrfToken;
     next();
 }

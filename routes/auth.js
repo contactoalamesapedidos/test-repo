@@ -142,8 +142,7 @@ router.post('/login', [
             req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 24 hours
         }
 
-        // Regenerar token CSRF después del login para evitar problemas
-        req.session.csrfToken = require('../middleware/security').generateCSRFToken();
+
 
         // Redirigir según el tipo de usuario
         if (user.tipo_usuario === 'admin') {
