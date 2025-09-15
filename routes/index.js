@@ -394,6 +394,29 @@ router.get('/bienvenido', (req, res) => {
   });
 });
 
+// Health check endpoint
+router.get('/health', async (req, res) => {
+  try {
+    // Test database connection
+    const [result] = await db.execute('SELECT 1 as test, NOW() as time');
+    res.json({
+      status: 'OK',
+      database: 'connected',
+      timestamp: result[0].time,
+      environment: process.env.NODE_ENV,
+      db_host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost'
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(500).json({
+      status: 'ERROR',
+      database: 'disconnected',
+      error: error.message,
+      environment: process.env.NODE_ENV
+    });
+  }
+});
+
 // 404 error page
 router.get('/error-404', (req, res) => {
   res.status(404).render('error-404', {

@@ -1,34 +1,12 @@
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
-const MySQLStore = require('express-mysql-session')(session);
 const helmet = require('helmet');
 const compression = require('compression');
 const morgan = require('morgan');
-const http = require('http');
-const socketIo = require('socket.io');
 const cors = require('cors');
-const hpp = require('hpp');
-const rateLimit = require('express-rate-limit');
-const slowDown = require('express-slow-down');
-const multer = require('multer');
 const logger = require('./utils/logger');
 require('dotenv').config();
-
-// Security imports
-const {
-    csrfProtection,
-    setCSRFToken,
-    sanitizeInput,
-    authRateLimit,
-    apiRateLimit,
-    fileUploadRateLimit,
-    authSlowDown,
-    validateFileUpload,
-    setCSP,
-    SecurityLogger
-} = require('./middleware/security');
-const { SecurityAuditUtils } = require('./utils/security');
 
 // Database connection
 const db = require('./config/database');
@@ -39,11 +17,9 @@ const { getCategoryIcon, getCategoryImagePath } = require('./utils/categoryIcons
 const cartMiddleware = require('./middleware/cart')(db);
 
 const app = express();
-const server = http.createServer(app);
-const io = socketIo(server);
 
-// Make io accessible to routes
-app.set('io', io);
+// Socket.IO disabled for Vercel (serverless)
+// const io = null;
 
 // Middleware
 app.disable('x-powered-by');
@@ -332,294 +308,8 @@ app.get('/profile', (req, res) => {
     res.redirect('/auth/profile');
 });
 
-// Socket.IO for real-time features
-io.on('connection', (socket) => {
-  // Join restaurant room for notifications
-  socket.on('join-restaurant', (restaurantId) => {
-    socket.join(`restaurant-${restaurantId}`);
-  });
-
-  // Join user room for order updates
-  socket.on('join-user', (userId) => {
-    socket.join(`user-${userId}`);
-  });
-  
-  // Join order room for driver location updates
-  socket.on('join-order-updates', async ({ orderId }) => {
-    if (!orderId) {
-      console.error('Intento de unirse a actualizaciones sin orderId');
-      return;
-    }
-    
-    try {
-      // Verificar que el pedido existe y obtener información relevante
-      const [order] = await db.query('SELECT id, repartidor_id, estado FROM pedidos WHERE id = ?', [orderId]);
-      
-      if (!order || order.length === 0) {
-        console.error(`Pedido ${orderId} no encontrado`);
-        return;
-      }
-      
-      socket.join(`order-${orderId}`);
-      
-      // Enviar la última ubicación conocida del repartidor si está disponible
-      if (order[0].repartidor_id && order[0].estado === 'en_camino') {
-        const [driver] = await db.query(
-          'SELECT d.current_latitude as latitude, d.current_longitude as longitude FROM drivers d WHERE d.user_id = ?',
-          [order[0].repartidor_id]
-        );
-
-        if (driver && driver[0] && driver[0].latitude && driver[0].longitude) {
-          socket.emit('driver-location-update', {
-            orderId,
-            driverId: order[0].repartidor_id,
-            latitude: parseFloat(driver[0].latitude),
-            longitude: parseFloat(driver[0].longitude),
-            timestamp: new Date()
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error al unirse a actualizaciones del pedido:', error);
-    }
-  });
-  
-  // Handle driver location updates
-  socket.on('update-driver-location', async (data) => {
-    try {
-      const { orderId, driverId, latitude, longitude } = data;
-
-      // Validar datos básicos
-      if (latitude === undefined || longitude === undefined) {
-        console.error('Datos de ubicación inválidos:', data);
-        return;
-      }
-
-
-
-      // Si tenemos driverId, actualizar la ubicación del repartidor en la tabla drivers
-      if (driverId) {
-        const [result] = await db.query(
-          'UPDATE drivers SET current_latitude = ?, current_longitude = ? WHERE user_id = ?',
-          [latitude, longitude, driverId]
-        );
-
-        // Si tenemos orderId específico, enviar actualización a ese pedido
-        if (orderId) {
-          io.to(`order-${orderId}`).emit('driver-location-update', {
-            orderId,
-            driverId,
-            latitude,
-            longitude,
-            timestamp: new Date()
-          });
-        } else {
-          // Si no tenemos orderId específico, buscar pedidos activos de este repartidor
-          const [activeOrders] = await db.query(
-            'SELECT id FROM pedidos WHERE repartidor_id = ? AND estado = "en_camino"',
-            [driverId]
-          );
-
-          if (activeOrders.length > 0) {
-            // Enviar actualización a todos los pedidos activos de este repartidor
-            for (const order of activeOrders) {
-              io.to(`order-${order.id}`).emit('driver-location-update', {
-                orderId: order.id,
-                driverId,
-                latitude,
-                longitude,
-                timestamp: new Date()
-              });
-
-
-            }
-          }
-        }
-      }
-      // Si no tenemos ni orderId ni driverId, intentar buscar por socket ID o algo más
-      else {
-        // No hay acción específica para este caso
-      }
-
-    } catch (error) {
-      console.error('Error actualizando ubicación del repartidor:', error);
-    }
-  });
-
-  // New order notification
-  socket.on('new-order', (data) => {
-    io.to(`restaurant-${data.restaurantId}`).emit('new-order-notification', data);
-  });
-
-  // Order status update
-  socket.on('order-status-update', (data) => {
-    io.to(`user-${data.userId}`).emit('order-status-changed', data);
-  });
-
-  socket.on('disconnect', () => {
-    // User disconnected
-  });
-
-  // CHAT DE PEDIDOS
-  socket.on('join-order-chat', async (data) => {
-    const { orderId, userId, userType } = data;
-    const roomName = `order-${orderId}`;
-    socket.join(roomName);
-
-    // Cargar historial de mensajes al unirse a la sala
-    try {
-        // Verificar si la tabla existe antes de consultar
-        const [tables] = await db.execute(`
-            SELECT TABLE_NAME
-            FROM information_schema.TABLES
-            WHERE TABLE_SCHEMA = DATABASE()
-            AND TABLE_NAME = 'mensajes_pedido'
-        `);
-
-        if (tables.length === 0) {
-            // La tabla no existe, crearla
-            await db.execute(`
-                CREATE TABLE IF NOT EXISTS mensajes_pedido (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    pedido_id INT NOT NULL,
-                    remitente_tipo ENUM('cliente', 'restaurante', 'admin') NOT NULL,
-                    remitente_id INT NOT NULL,
-                    mensaje TEXT NOT NULL,
-                    fecha_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX (pedido_id),
-                    FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-            `);
-            // Enviar historial vacío
-            socket.emit('chat-history', { orderId, messages: [] });
-            return;
-        }
-
-        const [messages] = await db.execute(`
-            SELECT mp.*,
-                   CASE
-                       WHEN mp.remitente_tipo = 'cliente' THEN u.nombre
-                       WHEN mp.remitente_tipo = 'restaurante' THEN r.nombre
-                       WHEN mp.remitente_tipo = 'admin' THEN ua.nombre
-                       ELSE 'Desconocido'
-                   END as remitente_nombre
-            FROM mensajes_pedido mp
-            LEFT JOIN usuarios u ON mp.remitente_id = u.id AND mp.remitente_tipo = 'cliente'
-            LEFT JOIN restaurantes r ON mp.remitente_id = r.usuario_id AND mp.remitente_tipo = 'restaurante'
-            LEFT JOIN usuarios ua ON mp.remitente_id = ua.id AND mp.remitente_tipo = 'admin'
-            WHERE pedido_id = ?
-            ORDER BY fecha_envio ASC
-        `, [orderId]);
-
-        socket.emit('chat-history', { orderId, messages });
-    } catch (error) {
-        console.error('Error al cargar el historial de chat:', error);
-        // Enviar respuesta de error para que el cliente pueda manejarlo
-        socket.emit('chat-history', { orderId, error: true, message: 'Error al cargar el historial' });
-    }
-  });
-
-  socket.on('send-chat-message', async (data) => {
-    const { orderId, userId, userType, message } = data;
-    const roomName = `order-${orderId}`;
-
-    if (!orderId || !userId || !userType || !message) {
-      console.error('Datos incompletos para enviar mensaje:', data);
-      return;
-    }
-
-    try {
-      // Verificar si la tabla existe
-      const [tables] = await db.execute(`
-          SELECT TABLE_NAME
-          FROM information_schema.TABLES
-          WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'mensajes_pedido'
-      `);
-
-      if (tables.length === 0) {
-          // La tabla no existe, crearla
-          await db.execute(`
-              CREATE TABLE IF NOT EXISTS mensajes_pedido (
-                  id INT AUTO_INCREMENT PRIMARY KEY,
-                  pedido_id INT NOT NULL,
-                  remitente_tipo ENUM('cliente', 'restaurante', 'admin') NOT NULL,
-                  remitente_id INT NOT NULL,
-                  mensaje TEXT NOT NULL,
-                  fecha_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                  INDEX (pedido_id),
-                  FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE
-              ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-          `);
-      }
-
-      let senderName;
-      let normalizedUserType = userType; // Default to original userType
-
-      // Normalize userType to match enum values if necessary
-      if (userType === 'restaurante') {
-        normalizedUserType = 'restaurante';
-      } else if (userType === 'cliente') {
-        normalizedUserType = 'cliente';
-      } else if (userType === 'admin') {
-        normalizedUserType = 'admin';
-      }
-
-      if (userType === 'cliente') {
-        const [user] = await db.execute('SELECT nombre FROM usuarios WHERE id = ?', [userId]);
-        senderName = user.length > 0 ? user[0].nombre : 'Cliente';
-      } else if (userType === 'restaurante') {
-        const [restaurant] = await db.execute('SELECT nombre FROM restaurantes WHERE usuario_id = ?', [userId]);
-        senderName = restaurant.length > 0 ? restaurant[0].nombre : 'Restaurante';
-      } else if (userType === 'admin') {
-        const [adminUser] = await db.execute('SELECT nombre FROM usuarios WHERE id = ?', [userId]);
-        senderName = adminUser.length > 0 ? adminUser[0].nombre : 'Admin';
-      } else {
-        senderName = 'Desconocido';
-      }
-
-      // Guardar mensaje en la base de datos
-      const [result] = await db.execute(`
-        INSERT INTO mensajes_pedido (pedido_id, remitente_tipo, remitente_id, mensaje)
-        VALUES (?, ?, ?, ?)
-      `, [orderId, normalizedUserType, userId, message]);
-
-      const newMessage = {
-        id: result.insertId,
-        pedido_id: orderId,
-        remitente_tipo: normalizedUserType,
-        remitente_id: userId,
-        mensaje: message,
-        fecha_envio: new Date(),
-        remitente_nombre: senderName
-      };
-
-      // Emitir el mensaje a todos en la sala del pedido
-      io.to(roomName).emit('chat-message', { orderId, message: newMessage });
-
-      // Enviar confirmación de envío exitoso al emisor
-      socket.emit('message-sent', {
-        orderId,
-        messageId: result.insertId,
-        message: 'Mensaje enviado exitosamente'
-      });
-
-      // Opcional: Notificar al otro lado (cliente/restaurante) si no están en la sala
-      // Esto podría requerir lógica adicional para saber quién está en línea
-
-    } catch (error) {
-      console.error('Error al guardar o emitir mensaje de chat:', error);
-      // Notificar al emisor que hubo un error
-      socket.emit('chat-error', {
-          orderId,
-          error: true,
-          message: 'Error al enviar el mensaje'
-      });
-    }
-  });
-
-
-});
+// Socket.IO disabled for Vercel (serverless)
+// Real-time features will need alternative implementation
 
 // Middleware para manejar respuestas AJAX
 app.use((req, res, next) => {
@@ -742,21 +432,30 @@ app.use((req, res) => {
   });
 });
 
-const HOST = process.env.HOST || '0.0.0.0';
-const PORT = process.env.PORT || 3000;
+// Export for Vercel serverless functions
+module.exports = app;
 
-server.listen(PORT, HOST, () => {
-  console.log(`🚀 Servidor A la Mesa corriendo en http://${HOST}:${PORT}`);
-});
+// For local development
+if (require.main === module) {
+  const HOST = process.env.HOST || '0.0.0.0';
+  const PORT = process.env.PORT || 3000;
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('🛑 Cerrando servidor...');
-  server.close(() => {
-    console.log('✅ Servidor cerrado correctamente');
-    process.exit(0);
+  const http = require('http');
+  const server = http.createServer(app);
+
+  server.listen(PORT, HOST, () => {
+    console.log(`🚀 Servidor A la Mesa corriendo en http://${HOST}:${PORT}`);
   });
-});
+
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('🛑 Cerrando servidor...');
+    server.close(() => {
+      console.log('✅ Servidor cerrado correctamente');
+      process.exit(0);
+    });
+  });
+}
 
 app.locals.getCategoryIcon = getCategoryIcon;
 app.locals.getCategoryImagePath = getCategoryImagePath;
