@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
@@ -155,7 +154,7 @@ router.get('/search', async (req, res) => {
     const { q: query, category, location, sort, price_range, min_rating } = req.query;
     
     let sql = `
-      SELECT 
+      SELECT
         r.id,
         r.nombre,
         r.descripcion,
@@ -181,6 +180,12 @@ router.get('/search', async (req, res) => {
       LEFT JOIN productos p ON r.id = p.restaurante_id AND p.disponible = 1
       LEFT JOIN categorias_productos cp ON p.categoria_id = cp.id
       WHERE r.verificado = 1
+      GROUP BY
+        r.id, r.nombre, r.descripcion, r.imagen_logo, r.imagen_banner,
+        r.direccion, r.ciudad, r.telefono, r.email_contacto,
+        r.horario_apertura, r.horario_cierre, r.tiempo_entrega_min,
+        r.tiempo_entrega_max, r.costo_delivery, r.calificacion_promedio,
+        r.total_calificaciones
     `;
     
     const params = [];

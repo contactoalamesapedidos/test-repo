@@ -171,7 +171,7 @@
 .admin-content, .main-content {
     flex: 1;
     /* margin-left: 250px; */
-    padding-top: 56px; /* Altura del navbar */
+    padding-top: 48px; /* Altura del navbar */
     min-height: 100vh;
     background-color: #f8f9fa;
     transition: all 0.3s ease;
@@ -203,7 +203,7 @@
     right: 0;
     left: 280px;
     z-index: 1030;
-    height: 56px;
+    height: 48px;
     background-color: #fff;
     border-bottom: 1px solid #dee2e6;
     transition: all 0.3s ease;

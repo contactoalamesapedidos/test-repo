@@ -290,9 +290,7 @@
                             <i class="fas fa-arrows-alt me-1"></i>
                             Arrastra los pedidos para reordenar tu ruta de entrega<br>
                             <i class="fas fa-mouse-pointer me-1"></i>
-                            Haz clic en los marcadores del mapa para mover pedidos al final<br>
-                            <i class="fas fa-hand-pointer me-1"></i>
-                            Haz clic en cualquier lugar del mapa para mover la ubicación del repartidor
+                            Haz clic en los marcadores del mapa para mover pedidos al final
                         </div>
                     <% } else { %>
                         <div class="text-center py-4">
@@ -410,53 +408,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
 
-    // Agregar funcionalidad de clic en el mapa para mover el repartidor
-    map.on('click', async function(e) {
-        const clickedCoords = [e.latlng.lat, e.latlng.lng];
-
-        // Mover o crear marcador del repartidor
-        if (!driverMarker) {
-            driverMarker = createDriverMarker(clickedCoords[0], clickedCoords[1], '¡Aquí estoy! (Ubicación de prueba)')
-                .addTo(map);
-        } else {
-            driverMarker.setLatLng(clickedCoords);
-            driverMarker.setPopupContent('¡Aquí estoy! (Ubicación de prueba)');
-        }
-
-        // ENVIAR ACTUALIZACIÓN GPS AL SERVIDOR PARA QUE LLEGUE A LOS CLIENTES
-        try {
-            const response = await fetch('/repartidores/update-location', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    latitude: clickedCoords[0],
-                    longitude: clickedCoords[1]
-                })
-            });
-
-            const result = await response.json();
-            if (result.success) {
-
-            } else {
-
-            }
-        } catch (error) {
-
-        }
-
-        // Actualizar rutas desde la nueva ubicación usando el orden guardado
-        if (currentRoutes.length > 0) {
-            await updateRoutesInRealTime();
-        } else if (driverData.pedidos.length > 0) {
-            // Si no hay rutas aún, crearlas desde la nueva ubicación
-            await createInitialRoutesWithRealLocation(clickedCoords);
-        }
-
-        // Mostrar mensaje de confirmación
-        showToast('Ubicación del repartidor actualizada y enviada a clientes', 'success');
-    });
+    // Funcionalidad de clic en el mapa removida - solo seguimiento GPS en tiempo real
 
 
 

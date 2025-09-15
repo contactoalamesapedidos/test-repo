@@ -630,7 +630,12 @@ router.get('/restaurantes', requireAdmin, async (req, res) => {
     
     // Get categories for filter (remove duplicates)
     const [categorias] = await db.execute(`
-      SELECT DISTINCT id, nombre, imagen FROM categorias_restaurantes WHERE activa = 1 ORDER BY nombre
+      SELECT DISTINCT cr.id, cr.nombre, cr.imagen
+      FROM categorias_restaurantes cr
+      INNER JOIN restaurante_categorias rc ON cr.id = rc.categoria_id
+      INNER JOIN restaurantes r ON rc.restaurante_id = r.id
+      WHERE cr.activa = 1 AND r.activo = 1
+      ORDER BY cr.nombre
     `);
 
     // Import CategoryIcons utility
@@ -969,7 +974,10 @@ router.get('/restaurantes/:id/editar', requireAdmin, async (req, res) => {
 });
 
 // Procesar edición de restaurante
-router.post('/restaurantes/:id/editar', requireAdmin, upload.none(), [
+router.post('/restaurantes/:id/editar', requireAdmin, upload.fields([
+  { name: 'imagen_logo', maxCount: 1 },
+  { name: 'imagen_banner', maxCount: 1 }
+]), [
   body('nombre').notEmpty().withMessage('El nombre es requerido'),
   body('apellido').notEmpty().withMessage('El apellido es requerido'),
   body('email').optional().isEmail().withMessage('Email inválido'),
@@ -1000,6 +1008,30 @@ router.post('/restaurantes/:id/editar', requireAdmin, upload.none(), [
     if (dias_operacion && Array.isArray(dias_operacion) && dias_operacion.length > 0) {
         diasOperacionJSON = JSON.stringify(dias_operacion.map(dia => parseInt(dia)));
     }
+
+    // Procesar imágenes
+    let imagenLogoPath = currentData[0].imagen_logo;
+    let imagenBannerPath = currentData[0].imagen_banner;
+
+    if (req.files && req.files.imagen_logo && req.files.imagen_logo[0]) {
+        const logoFile = req.files.imagen_logo[0];
+        const logoExtension = path.extname(logoFile.originalname);
+        const logoFilename = `restaurant-logo-${restaurantId}-${Date.now()}${logoExtension}`;
+        // Mover el archivo a la carpeta correcta
+        const fs = require('fs').promises;
+        await fs.rename(logoFile.path, path.join('public/uploads', logoFilename));
+        imagenLogoPath = logoFilename;
+    }
+
+    if (req.files && req.files.imagen_banner && req.files.imagen_banner[0]) {
+        const bannerFile = req.files.imagen_banner[0];
+        const bannerExtension = path.extname(bannerFile.originalname);
+        const bannerFilename = `restaurant-banner-${restaurantId}-${Date.now()}${bannerExtension}`;
+        // Mover el archivo a la carpeta correcta
+        const fs = require('fs').promises;
+        await fs.rename(bannerFile.path, path.join('public/uploads', bannerFilename));
+        imagenBannerPath = bannerFilename;
+    }
     
     // Get current data for logging
     const [currentData] = await connection.execute(`
@@ -1026,13 +1058,15 @@ router.post('/restaurantes/:id/editar', requireAdmin, upload.none(), [
     await connection.execute(
       `UPDATE restaurantes SET
         nombre = ?, descripcion = ?, direccion = ?, telefono = ?, email_contacto = ?,
-        horario_apertura = ?, horario_cierre = ?, dias_operacion = ?, activo = ?, verificado = ?
+        horario_apertura = ?, horario_cierre = ?, dias_operacion = ?, activo = ?, verificado = ?,
+        imagen_logo = ?, imagen_banner = ?
        WHERE id = ?`,
       [
         restaurante_nombre, restaurante_descripcion, restaurante_direccion,
         restaurante_telefono || null, req.body.email_contacto || null,
         horario_apertura || '09:00:00', horario_cierre || '22:00:00',
         diasOperacionJSON, activo ? 1 : 0, verificado ? 1 : 0,
+        imagenLogoPath, imagenBannerPath,
         restaurantId
       ]
     );
@@ -2403,17 +2437,86 @@ router.get('/pedidos/:id/chat', requireAdmin, async (req, res) => {
 
 // Eliminar usuario
 router.delete('/usuarios/:id/eliminar', requireAdmin, async (req, res) => {
+  const connection = await db.getConnection();
   try {
     const userId = req.params.id;
-    const [result] = await db.execute('DELETE FROM usuarios WHERE id = ?', [userId]);
+
+    await connection.beginTransaction();
+
+    // Primero eliminar referencias en tablas relacionadas
+    // 1. Calificaciones donde el usuario es cliente
+    await connection.execute('DELETE FROM calificaciones WHERE cliente_id = ?', [userId]);
+
+    // 2. Calificaciones donde el usuario es repartidor (set to NULL)
+    await connection.execute('UPDATE calificaciones SET repartidor_id = NULL WHERE repartidor_id = ?', [userId]);
+
+    // 3. Items de pedido
+    await connection.execute('DELETE FROM items_pedido WHERE pedido_id IN (SELECT id FROM pedidos WHERE cliente_id = ?)', [userId]);
+
+    // 4. Mensajes de pedido
+    await connection.execute('DELETE FROM mensajes_pedido WHERE remitente_id = ?', [userId]);
+
+    // 5. Pedidos del cliente
+    await connection.execute('DELETE FROM pedidos WHERE cliente_id = ?', [userId]);
+
+    // 6. Comprobantes de pago del repartidor
+    await connection.execute('DELETE FROM comprobantes_pago WHERE restaurante_id IN (SELECT id FROM restaurantes WHERE usuario_id = ?)', [userId]);
+
+    // 7. Cobros semanales del restaurante
+    await connection.execute('DELETE FROM cobros_semanales WHERE restaurante_id IN (SELECT id FROM restaurantes WHERE usuario_id = ?)', [userId]);
+
+    // 8. Productos del restaurante
+    await connection.execute('DELETE FROM productos WHERE restaurante_id IN (SELECT id FROM restaurantes WHERE usuario_id = ?)', [userId]);
+
+    // 9. Categorías de productos del restaurante
+    await connection.execute('DELETE FROM categorias_productos WHERE restaurante_id IN (SELECT id FROM restaurantes WHERE usuario_id = ?)', [userId]);
+
+    // 10. Restaurante-categorías
+    await connection.execute('DELETE FROM restaurante_categorias WHERE restaurante_id IN (SELECT id FROM restaurantes WHERE usuario_id = ?)', [userId]);
+
+    // 11. Ventas diarias del restaurante
+    await connection.execute('DELETE FROM ventas_diarias WHERE restaurante_id IN (SELECT id FROM restaurantes WHERE usuario_id = ?)', [userId]);
+
+    // 12. Comisiones del repartidor
+    await connection.execute('DELETE FROM comisiones WHERE repartidor_id IN (SELECT id FROM drivers WHERE user_id = ?)', [userId]);
+
+    // 13. Drivers
+    await connection.execute('DELETE FROM drivers WHERE user_id = ?', [userId]);
+
+    // 14. Restaurantes
+    await connection.execute('DELETE FROM restaurantes WHERE usuario_id = ?', [userId]);
+
+    // 15. Suscripciones push
+    await connection.execute('DELETE FROM push_subscriptions WHERE usuario_id = ?', [userId]);
+
+    // Finalmente eliminar el usuario
+    const [result] = await connection.execute('DELETE FROM usuarios WHERE id = ?', [userId]);
+
+    await connection.commit();
+
     if (result.affectedRows > 0) {
-      res.json({ success: true });
+      // Log de actividad administrativa
+      await logAdminActivity(
+        req.session.user.id,
+        'eliminar_usuario',
+        `Usuario eliminado: ID ${userId}`,
+        'usuario',
+        userId,
+        null,
+        null,
+        req
+      );
+
+      res.json({ success: true, message: 'Usuario eliminado exitosamente' });
     } else {
       res.json({ success: false, message: 'Usuario no encontrado' });
     }
   } catch (error) {
+    await connection.rollback();
     console.error('Error eliminando usuario:', error);
-    res.json({ success: false, message: 'Error eliminando usuario' });
+    res.json({ success: false, message: 'Error eliminando usuario: ' + error.message });
+  } finally {
+    connection.release();
   }
 });
 
