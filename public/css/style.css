@@ -622,13 +622,17 @@ footer .social-links a:hover {
     pointer-events: none;
 }
 
-/* On PC, position it below the header */
+/* On PC, position it at bottom-right */
 @media (min-width: 768px) {
     .custom-toast-container {
-        top: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        margin-top: 50px;
+        bottom: 20px;
+        right: 20px;
+        top: auto;
+        left: auto;
+        transform: none;
+        margin-top: 0;
+        width: 400px;
+        max-width: 90vw;
     }
 }
 
@@ -640,6 +644,9 @@ footer .social-links a:hover {
         transform: translateX(-50%);
         width: 90vw;
         max-width: 400px;
+        top: auto;
+        right: auto;
+        margin-top: 0;
     }
 }
 

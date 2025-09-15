@@ -677,7 +677,7 @@ function updateCartDropdown() {
 }
 
 // Notifications
-function showToast(message, type = 'success') {
+function showToast(message, type = 'success', size = 'normal') {
   // Remove any existing toasts
   const existingToast = document.querySelector('.custom-toast-container');
   if (existingToast) {
@@ -688,7 +688,22 @@ function showToast(message, type = 'success') {
   toastContainer.className = 'custom-toast-container';
 
   const toast = document.createElement('div');
-  toast.className = `toast align-items-center text-white bg-${type} border-0`;
+  const isLarge = size === 'large';
+
+  // Clases base para el toast
+  let toastClasses = `toast align-items-center text-white bg-${type} border-0`;
+
+  // Posicionamiento y tamaño según el parámetro size
+  if (isLarge) {
+    // Para ubicación confirmada: abajo a la derecha, más pequeño, no se auto-oculta
+    toastClasses += ' bottom-0 end-0 m-3';
+    toast.style.minWidth = '300px';
+    toast.style.fontSize = '0.9rem';
+    toast.style.fontWeight = '500';
+    toast.style.zIndex = '9999';
+  }
+
+  toast.className = toastClasses;
   toast.setAttribute('role', 'alert');
   toast.setAttribute('aria-live', 'assertive');
   toast.setAttribute('aria-atomic', 'true');
@@ -696,29 +711,40 @@ function showToast(message, type = 'success') {
   const toastBody = document.createElement('div');
   toastBody.className = 'd-flex';
 
-  const messageDiv = document.createElement('div');
-  messageDiv.className = 'toast-body';
-  messageDiv.textContent = message;
+  // Contenido del toast con icono apropiado
+  const iconClass = type === 'success' ? 'fas fa-check-circle' :
+                   type === 'error' ? 'fas fa-exclamation-triangle' :
+                   type === 'warning' ? 'fas fa-exclamation-circle' :
+                   'fas fa-info-circle';
 
-  const closeButton = document.createElement('button');
-  closeButton.type = 'button';
-  closeButton.className = 'btn-close btn-close-white me-2 m-auto';
-  closeButton.setAttribute('data-bs-dismiss', 'toast');
-  closeButton.setAttribute('aria-label', 'Close');
+  toastBody.innerHTML = `
+      <div class="toast-icon me-2">
+          <i class="${iconClass} fs-5"></i>
+      </div>
+      <div class="toast-body flex-grow-1">
+          <strong>${message}</strong>
+      </div>
+      <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="toast"></button>
+  `;
 
-  toastBody.appendChild(messageDiv);
-  toastBody.appendChild(closeButton);
   toast.appendChild(toastBody);
   toastContainer.appendChild(toast);
   document.body.appendChild(toastContainer);
 
-  const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+  // Los toasts grandes no se auto-ocultan
+  const bsToast = new bootstrap.Toast(toast, {
+    autohide: !isLarge,
+    delay: isLarge ? 0 : 3000
+  });
   bsToast.show();
 
-  setTimeout(() => {
-    bsToast.hide();
-  }, 3000);
+  if (!isLarge) {
+    setTimeout(() => {
+      bsToast.hide();
+    }, 3000);
+  }
 
+  const closeButton = toast.querySelector('.btn-close');
   closeButton.addEventListener('click', () => {
     bsToast.hide();
   });
@@ -762,8 +788,6 @@ async function toggleCartSidebar(event) {
   }
   
   isCartToggleInProgress = true;
-  
-  console.log('toggleCartSidebar called');
   
   const overlay = document.getElementById('cartOverlay');
   const sidebar = document.getElementById('cartSidebar');
@@ -984,10 +1008,7 @@ function initializeCartSidebarEvents() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-  await initializeApp();
-  initializeAllCartEventListeners();
-});
+
 
 // Función para actualizar los datos del carrito
 function updateCartData() {

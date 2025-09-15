@@ -132,6 +132,9 @@
                 </div>
                 <div class="card-body">
                     <form id="changePasswordForm" action="/auth/change-password" method="POST">
+                        <!-- CSRF Token -->
+                        <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+
                         <div class="row g-3">
                             <div class="col-md-12">
                                 <label for="current_password" class="form-label">Contraseña Actual *</label>
@@ -216,22 +219,31 @@
 <!-- Switch movido al header de la tarjeta de perfil -->
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
   // Inicializar switch push según suscripción existente
   const switchElem = document.getElementById('pushNotificationsSwitch');
   const help = document.getElementById('pushPermissionHelp');
+
   if (switchElem && 'serviceWorker' in navigator && 'PushManager' in window) {
+    // Verificar permisos del navegador
     if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
       // Mostrar ayuda si ya está denegado el permiso
       if (help) help.classList.remove('d-none');
       switchElem.checked = false;
       switchElem.disabled = false; // Permitimos click para reintentar tras habilitar en navegador
     }
-    navigator.serviceWorker.ready.then(function(registration) {
-      registration.pushManager.getSubscription().then(function(subscription) {
-        switchElem.checked = !!subscription;
-      });
-    });
+
+    // Inicializar el servicio de notificaciones push
+    if (window.pushNotificationService) {
+      await window.pushNotificationService.initialize();
+
+      // Verificar si hay suscripción activa
+      const hasSubscription = window.pushNotificationService.isEnabled();
+      switchElem.checked = hasSubscription;
+
+      console.log('[PROFILE] Switch inicializado:', hasSubscription ? 'ON' : 'OFF');
+    }
+
     // Bind handler
     switchElem.addEventListener('change', () => togglePushNotifications(switchElem));
   }
@@ -341,7 +353,7 @@ function showNotification(message, type = 'success') {
     });
 }
 
-function togglePushNotifications(checkbox) {
+async function togglePushNotifications(checkbox) {
   // Validaciones básicas
   if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
     showNotification('Tu navegador no soporta notificaciones push.', 'danger');
@@ -349,36 +361,55 @@ function togglePushNotifications(checkbox) {
     return;
   }
 
-  if (checkbox.checked) {
-    // Pedir permiso primero
-    Notification.requestPermission().then(permission => {
-      if (permission !== 'granted') {
-        showNotification('Permiso denegado. Habilita las notificaciones del sitio y vuelve a intentar.', 'danger');
-        const help = document.getElementById('pushPermissionHelp');
-        if (help) help.classList.remove('d-none');
-        checkbox.checked = false;
+  // Verificar que el servicio esté disponible
+  if (!window.pushNotificationService) {
+    showNotification('Servicio de notificaciones no disponible.', 'danger');
+    checkbox.checked = false;
+    return;
+  }
+
+  try {
+    if (checkbox.checked) {
+      // Activar notificaciones
+      console.log('[PROFILE] Activando notificaciones push...');
+
+      // Inicializar el servicio si no está inicializado
+      await window.pushNotificationService.initialize();
+
+      // Verificar si ya está habilitado
+      if (window.pushNotificationService.isEnabled()) {
+        showNotification('Las notificaciones push ya están activadas.', 'info');
         return;
       }
-      // Suscribir
-      if (typeof subscribeUserToPush === 'function') {
-        Promise.resolve(subscribeUserToPush())
-          .then(() => showNotification('Notificaciones activadas. Recibirás avisos de pedidos y novedades.', 'success'))
-          .catch(() => {
-            checkbox.checked = false;
-            showNotification('No se pudo activar las notificaciones.', 'danger');
-          });
-      } else {
-        // Fallback sin implementación
-        showNotification('Notificaciones activadas. Recibirás avisos de pedidos y novedades.', 'success');
-      }
-    });
-  } else {
-    if (typeof unsubscribeUserFromPush === 'function') {
-      Promise.resolve(unsubscribeUserFromPush()).finally(() => {
-        showNotification('Notificaciones desactivadas.', 'info');
-      });
+
+      // Solicitar permisos y suscribir
+      await window.pushNotificationService.requestPermission();
+
+      showNotification('Notificaciones push activadas exitosamente.', 'success');
+      console.log('[PROFILE] Notificaciones activadas correctamente');
+
     } else {
-      showNotification('Notificaciones desactivadas.', 'info');
+      // Desactivar notificaciones
+      console.log('[PROFILE] Desactivando notificaciones push...');
+
+      await window.pushNotificationService.unsubscribe();
+
+      showNotification('Notificaciones push desactivadas.', 'info');
+      console.log('[PROFILE] Notificaciones desactivadas correctamente');
+    }
+  } catch (error) {
+    console.error('[PROFILE] Error toggling push notifications:', error);
+
+    // Revertir el estado del checkbox en caso de error
+    checkbox.checked = !checkbox.checked;
+
+    // Mostrar mensaje de error específico
+    if (error.message.includes('denegado') || error.message.includes('denied')) {
+      showNotification('Permiso denegado. Habilita las notificaciones en la configuración del navegador.', 'warning');
+      const help = document.getElementById('pushPermissionHelp');
+      if (help) help.classList.remove('d-none');
+    } else {
+      showNotification('Error al cambiar el estado de las notificaciones: ' + error.message, 'danger');
     }
   }
 }

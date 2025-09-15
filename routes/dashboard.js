@@ -1150,7 +1150,8 @@ router.post('/drivers/add', requireRestaurant, requireVerifiedRestaurant, [
     await connection.beginTransaction();
 
     // Create user with 'repartidor' role
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const { PasswordUtils } = require('../utils/security');
+    const hashedPassword = await PasswordUtils.hashPassword(password);
     const [userResult] = await connection.execute(
       `INSERT INTO usuarios (nombre, apellido, email, password, tipo_usuario, telefono)
        VALUES (?, ?, ?, ?, 'repartidor', ?)`

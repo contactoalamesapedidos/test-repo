@@ -34,6 +34,9 @@
                     <% } %>
 
                     <form action="/auth/login" method="POST">
+                        <!-- CSRF Token -->
+                        <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+
                         <!-- Email -->
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
@@ -41,7 +44,7 @@
                                 <span class="input-group-text bg-light border-end-0">
                                     <i class="fas fa-envelope text-muted"></i>
                                 </span>
-                                <input type="email" class="form-control border-start-0" 
+                                <input type="email" class="form-control border-start-0"
                                        id="email" name="email" placeholder="tu@email.com" required>
                             </div>
                         </div>
@@ -53,9 +56,9 @@
                                 <span class="input-group-text bg-light border-end-0">
                                     <i class="fas fa-lock text-muted"></i>
                                 </span>
-                                <input type="password" class="form-control border-start-0 border-end-0" 
+                                <input type="password" class="form-control border-start-0 border-end-0"
                                        id="password" name="password" placeholder="Tu contraseña" required>
-                                <button class="btn btn-outline-secondary border-start-0" type="button" 
+                                <button class="btn btn-outline-secondary border-start-0" type="button"
                                         onclick="togglePassword('password')">
                                     <i class="fas fa-eye" id="password-toggle"></i>
                                 </button>
@@ -123,4 +126,4 @@
         document.getElementById('email').value = email;
         document.getElementById('password').value = password;
     }
-</script> 
+</script>

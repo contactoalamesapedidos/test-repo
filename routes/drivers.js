@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
 const { sendNotificationToUser } = require('./push');
+const logger = require('../utils/logger');
 
 // Multer config for receipt uploads
 const storage = multer.diskStorage({
@@ -31,7 +32,10 @@ router.get('/registro', async (req, res) => {
             activePage: 'driver-register'
         });
     } catch (error) {
-        console.error('Error al obtener la lista de restaurantes para el registro:', error);
+        logger.error('Error obteniendo restaurantes para registro', {
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
         res.status(500).render('error', { message: 'No se pudo cargar la página de registro.' });
     }
 });
@@ -51,7 +55,8 @@ router.post('/registro', async (req, res) => {
         }
 
         // 2. Hashear contraseña
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const { PasswordUtils } = require('../utils/security');
+        const hashedPassword = await PasswordUtils.hashPassword(password);
 
         // 3. Crear nuevo usuario
         const [result] = await connection.execute(
@@ -74,7 +79,11 @@ router.post('/registro', async (req, res) => {
 
     } catch (error) {
         await connection.rollback();
-        console.error('Error en el registro de repartidor:', error);
+        logger.error('Error en registro de repartidor', {
+            message: error.message,
+            email: email,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
         res.status(500).render('error', { message: 'Ocurrió un error durante el registro.' });
     } finally {
         if (connection) {
@@ -102,7 +111,11 @@ async function getAssignedOrdersCount(req, res, next) {
                 res.locals.assignedOrders = 0;
             }
         } catch (error) {
-            console.error('Error obteniendo conteo de pedidos asignados:', error);
+            logger.error('Error obteniendo conteo de pedidos asignados', {
+                userId: userId,
+                message: error.message,
+                stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            });
             res.locals.assignedOrders = 0;
         }
     }
@@ -173,7 +186,11 @@ router.get('/estadisticas', async (req, res) => {
             activePage: 'estadisticas'
         });
     } catch (error) {
-        console.error('Error en estadísticas de repartidor:', error);
+        logger.error('Error en estadísticas de repartidor', {
+            userId: req.session.user?.id,
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
         res.render('error', {
             title: 'Error',
             message: 'Error cargando las estadísticas del repartidor',
@@ -219,12 +236,7 @@ router.get('/', async (req, res) => {
             WHERE p.repartidor_id = ? AND p.estado IN ('preparando', 'en_camino') ORDER BY p.fecha_pedido ASC
         `, [driverId]);
 
-        console.log('📊 Dashboard repartidor - Coordenadas actuales:', {
-            driverId: driver.driver_id,
-            current_latitude: driver.current_latitude,
-            current_longitude: driver.current_longitude,
-            pedidosCount: pedidos.length
-        });
+
 
         // Verificar y asegurar que las coordenadas estén disponibles
         pedidos.forEach(pedido => {
@@ -277,7 +289,11 @@ router.get('/', async (req, res) => {
             activePage: 'dashboard'
         });
     } catch (error) {
-        console.error('Error en dashboard de repartidor:', error);
+        logger.error('Error en dashboard de repartidor', {
+            userId: req.session.user?.id,
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
         res.render('error', {
             title: 'Error',
             message: 'Error cargando el panel de control del repartidor',
@@ -314,7 +330,11 @@ router.get('/historial', async (req, res) => {
             activePage: 'historial'
         });
     } catch (error) {
-        console.error('Error en el historial de entregas:', error);
+        logger.error('Error en historial de entregas', {
+            userId: req.session.user?.id,
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
         res.status(500).render('error', { message: 'Error al cargar el historial de entregas.' });
     }
 });
@@ -351,7 +371,11 @@ router.post('/status', async (req, res) => {
 
         res.json({ success: true, message: `Estado actualizado.` });
     } catch (error) {
-        console.error('Error actualizando estado del repartidor:', error);
+        logger.error('Error actualizando estado del repartidor', {
+            userId: req.session.user?.id,
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
         res.status(500).json({ success: false, message: 'Error interno del servidor al actualizar estado.' });
     } finally {
         if (connection) {
@@ -398,7 +422,11 @@ router.get('/comisiones', async (req, res) => {
             activePage: 'comisiones'
         });
     } catch (error) {
-        console.error('Error al obtener comisiones del repartidor:', error);
+        logger.error('Error obteniendo comisiones del repartidor', {
+            userId: req.session.user?.id,
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
         res.status(500).render('error', { message: 'Error al cargar la página de comisiones.' });
     }
 });
@@ -461,7 +489,11 @@ router.post('/comisiones/pagar', upload.single('comprobante'), async (req, res) 
 
     } catch (error) {
         await connection.rollback();
-        console.error('Error al solicitar pago de comisiones:', error);
+        logger.error('Error solicitando pago de comisiones', {
+            userId: req.session.user?.id,
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
         res.status(500).render('error', { message: 'Error al procesar la solicitud de pago.' });
     } finally {
         if (connection) {
@@ -505,7 +537,11 @@ router.get('/disponibilidad', async (req, res) => {
             activePage: 'disponibilidad'
         });
     } catch (error) {
-        console.error('Error al obtener la disponibilidad:', error);
+        logger.error('Error obteniendo disponibilidad', {
+            userId: req.session.user?.id,
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
         res.status(500).render('error', { message: 'Error al cargar la página de disponibilidad.' });
     }
 });
@@ -550,7 +586,11 @@ router.post('/disponibilidad', async (req, res) => {
         res.redirect('/repartidores/disponibilidad?success=1');
     } catch (error) {
         await connection.rollback();
-        console.error('Error al guardar la disponibilidad:', error);
+        logger.error('Error guardando disponibilidad', {
+            userId: req.session.user?.id,
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
         res.status(500).render('error', { message: 'Error al guardar la disponibilidad.' });
     } finally {
         if (connection) {
@@ -565,7 +605,7 @@ router.post('/update-location', requireAuth, requireDriver, async (req, res) => 
         const { latitude, longitude } = req.body;
         const userId = req.session.user.id;
 
-        console.log('📍 Recibida actualización de ubicación:', { userId, latitude, longitude });
+
 
         if (!latitude || !longitude) {
             return res.status(400).json({ success: false, message: 'Latitud y longitud requeridas' });
@@ -604,7 +644,11 @@ router.post('/update-location', requireAuth, requireDriver, async (req, res) => 
         res.json({ success: true, message: 'Ubicación actualizada correctamente' });
 
     } catch (error) {
-        console.error('Error actualizando ubicación del repartidor:', error);
+        logger.error('Error actualizando ubicación del repartidor', {
+            userId: req.session.user?.id,
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
         res.status(500).json({ success: false, message: 'Error interno del servidor' });
     }
 });
@@ -653,7 +697,12 @@ router.post('/orders/:id/status', requireAuth, requireDriver, async (req, res) =
         }
 
     } catch (error) {
-        console.error('Error actualizando estado del pedido:', error);
+        logger.error('Error actualizando estado del pedido', {
+            userId: req.session.user?.id,
+            orderId: req.params.id,
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
         res.status(500).json({ success: false, message: 'Error interno del servidor' });
     } finally {
         connection.release();
@@ -684,7 +733,11 @@ router.get('/test-gps', requireAuth, requireDriver, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error en test GPS:', error);
+        logger.error('Error en test GPS', {
+            userId: req.session.user?.id,
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
         res.status(500).json({ success: false, message: 'Error interno del servidor' });
     }
 });
@@ -718,24 +771,16 @@ router.post('/simulate-movement', requireAuth, requireDriver, async (req, res) =
                     [driverId]
                 );
 
-                console.log(`📡 [SERVIDOR] Emitiendo actualización GPS para repartidor ${driverId} a ${activeOrders.length} pedidos`);
-
                 // Emitir actualización a todas las salas de pedidos activos
                 activeOrders.forEach(order => {
-                    console.log(`📡 [SERVIDOR] Enviando actualización a sala order-${order.id}`);
                     io.to(`order-${order.id}`).emit('driver-location-update', {
                         driverId: driverId,
                         latitude: parseFloat(latitude),
                         longitude: parseFloat(longitude),
                         orderId: order.id
                     });
-                    console.log(`✅ [SERVIDOR] Actualización enviada: driverId=${driverId}, lat=${latitude}, lng=${longitude}, orderId=${order.id}`);
                 });
-            } else {
-                console.log('❌ [SERVIDOR] No se encontró driver para userId:', userId);
             }
-        } else {
-            console.log('❌ [SERVIDOR] Socket.IO no disponible en la aplicación');
         }
 
         res.json({
@@ -745,7 +790,11 @@ router.post('/simulate-movement', requireAuth, requireDriver, async (req, res) =
         });
 
     } catch (error) {
-        console.error('Error simulando movimiento:', error);
+        logger.error('Error simulando movimiento', {
+            userId: req.session.user?.id,
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
         res.status(500).json({ success: false, message: 'Error interno del servidor' });
     }
 });

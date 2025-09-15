@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 const db = require('../config/databasePool');
 const { transporter, sendEmail } = require('../config/mailer');
@@ -8,6 +7,19 @@ const crypto = require('crypto');
 const { requireAuth, requireGuest, requireAdmin } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
+
+// Security imports
+const {
+    PasswordUtils,
+    SecurityAuditUtils,
+    ValidationUtils,
+    securityLogger
+} = require('../utils/security');
+const {
+    csrfProtection,
+    authRateLimit,
+    authSlowDown
+} = require('../middleware/security');
 
 // Configuración de Nodemailer (usar variables de entorno en producción)
 // const transporter = nodemailer.createTransport({
@@ -35,44 +47,80 @@ router.get('/login', (req, res) => {
 
 // Handle login con validación y sanitización
 router.post('/login', [
+    csrfProtection,
     body('email').isEmail().withMessage('Email inválido').trim(),
     body('password').isLength({ min: 1 }).withMessage('La contraseña es requerida').trim(),
     body('remember').optional().toBoolean()
 ], async (req, res) => {
-    // Rate limiting aplicado en server.js
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+        // Log failed login attempt
+        securityLogger.logFailedLogin(
+            req.body.email || 'unknown',
+            SecurityAuditUtils.getClientIP(req),
+            req.get('User-Agent')
+        );
         return res.redirect('/auth/login?error=Email o contraseña incorrectos');
     }
 
     const { email, password, remember } = req.body;
+    const sanitizedEmail = ValidationUtils.sanitizeEmail(email);
 
     try {
-        // Buscar usuario con email exacto primero
+        // Buscar usuario con email sanitizado
         let [users] = await db.execute(
             'SELECT * FROM usuarios WHERE email = ?',
-            [email]
+            [sanitizedEmail]
         );
 
         // Si no se encuentra, buscar sin distinguir mayúsculas/minúsculas
         if (users.length === 0) {
             [users] = await db.execute(
                 'SELECT * FROM usuarios WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))',
-                [email]
+                [sanitizedEmail]
             );
         }
 
         if (users.length === 0) {
+            // Log failed login attempt
+            securityLogger.logFailedLogin(
+                sanitizedEmail,
+                SecurityAuditUtils.getClientIP(req),
+                req.get('User-Agent')
+            );
             return res.redirect('/auth/login?error=Email o contraseña incorrectos');
         }
 
         const user = users[0];
 
-        const isMatch = await bcrypt.compare(password, user.password);
+        // Check if user is active
+        if (!user.activo) {
+            securityLogger.logFailedLogin(
+                sanitizedEmail,
+                SecurityAuditUtils.getClientIP(req),
+                req.get('User-Agent')
+            );
+            return res.redirect('/auth/login?error=Cuenta inactiva. Contacta al administrador.');
+        }
+
+        const isMatch = await PasswordUtils.verifyPassword(password, user.password);
 
         if (!isMatch) {
+            // Log failed login attempt
+            securityLogger.logFailedLogin(
+                sanitizedEmail,
+                SecurityAuditUtils.getClientIP(req),
+                req.get('User-Agent')
+            );
             return res.redirect('/auth/login?error=Email o contraseña incorrectos');
         }
+
+        // Log successful login
+        securityLogger.logSuccessfulLogin(
+            user.id,
+            SecurityAuditUtils.getClientIP(req),
+            req.get('User-Agent')
+        );
 
         // Guardar todos los campos relevantes en la sesión
         req.session.user = {
@@ -87,8 +135,6 @@ router.post('/login', [
             fecha_registro: user.fecha_registro,
             recibir_notificaciones: user.recibir_notificaciones
         };
-
-
 
         if (remember) {
             req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -109,6 +155,11 @@ router.post('/login', [
 
     } catch (error) {
         console.error('Error en el login:', error);
+        // Log security event
+        SecurityAuditUtils.logSecurityEvent('login_error', {
+            email: sanitizedEmail,
+            error: error.message
+        }, req).catch(err => console.error('Security audit error:', err));
         res.redirect('/auth/login?error=Error interno del servidor');
     }
 });
@@ -160,7 +211,7 @@ router.post('/register', [
             });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await PasswordUtils.hashPassword(password);
 
         const [result] = await db.execute(
             'INSERT INTO usuarios (nombre, apellido, email, password, telefono, ciudad, tipo_usuario) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -235,7 +286,7 @@ router.post('/register-restaurant', [
             });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await PasswordUtils.hashPassword(password);
 
         const [userResult] = await connection.execute(
             'INSERT INTO usuarios (nombre, apellido, email, password, tipo_usuario, ciudad) VALUES (?, ?, ?, ?, ?, ?)',
@@ -404,12 +455,12 @@ router.post('/change-password', requireAuth, [
         const [users] = await db.execute('SELECT password FROM usuarios WHERE id = ?', [userId]);
         const user = users[0];
 
-        const isMatch = await bcrypt.compare(current_password, user.password);
+        const isMatch = await PasswordUtils.verifyPassword(current_password, user.password);
         if (!isMatch) {
             return res.redirect('/auth/profile?error=La contraseña actual es incorrecta');
         }
 
-        const hashedNewPassword = await bcrypt.hash(new_password, 10);
+        const hashedNewPassword = await PasswordUtils.hashPassword(new_password);
         await db.execute('UPDATE usuarios SET password = ? WHERE id = ?', [hashedNewPassword, userId]);
 
         res.redirect('/auth/profile?message=Contraseña actualizada exitosamente');
@@ -571,7 +622,7 @@ router.post('/reset-password/:token', [
         }
 
         const user = users[0];
-        const hashedPassword = await bcrypt.hash(req.body.password, 10);
+        const hashedPassword = await PasswordUtils.hashPassword(req.body.password);
 
         await db.execute(
             'UPDATE usuarios SET password = ?, reset_password_token = NULL, reset_password_expires = NULL WHERE id = ?',
@@ -666,7 +717,7 @@ router.post('/register-driver', async (req, res, next) => {
         }
         
         // Hashear la contraseña
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await PasswordUtils.hashPassword(password);
         
         // Crear el usuario
         const [result] = await connection.execute(

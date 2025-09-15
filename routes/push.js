@@ -2,20 +2,21 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
 const { vapidKeys, webpush } = require('../config/vapid');
+const logger = require('../utils/logger');
 
 // Middleware para verificar autenticación
 function requireAuth(req, res, next) {
-    console.log('[AUTH] Verificando autenticación...');
-    console.log('[AUTH] Session exists:', !!req.session);
-    console.log('[AUTH] Session user exists:', !!(req.session && req.session.user));
-    console.log('[AUTH] Session user:', req.session && req.session.user ? req.session.user : 'NULL');
-    console.log('[AUTH] Headers:', JSON.stringify(req.headers, null, 2));
+    logger.debug('[AUTH] Verificando autenticación', {
+        hasSession: !!req.session,
+        hasUser: !!(req.session && req.session.user),
+        userId: req.session?.user?.id
+    });
 
     if (req.session && req.session.user) {
-        console.log('[AUTH] ✅ Usuario autenticado:', req.session.user.id);
+        logger.debug('[AUTH] Usuario autenticado', { userId: req.session.user.id });
         next();
     } else {
-        console.log('[AUTH] ❌ Usuario no autenticado');
+        logger.warn('[AUTH] Usuario no autenticado');
         res.status(401).json({
             success: false,
             message: 'No autorizado - sesión no encontrada',
@@ -148,79 +149,146 @@ router.post('/unsubscribe', requireAuth, async (req, res) => {
 // Enviar notificación a un usuario específico
 async function sendNotificationToUser(userId, notificationData) {
     try {
-        console.log('[PUSH] [sendNotificationToUser] Buscando suscripción para usuario', userId, 'con datos:', notificationData);
+        logger.debug('[PUSH] Iniciando envío de notificación', { userId, title: notificationData.title });
 
         // Verificar configuración VAPID
         if (!vapidKeys || !vapidKeys.publicKey || !vapidKeys.privateKey) {
-            console.error('[PUSH] ❌ Claves VAPID no configuradas');
+            logger.error('[PUSH] Claves VAPID no configuradas');
             return false;
         }
 
-        // Obtener la suscripción push del usuario
-        const [rows] = await db.execute('SELECT * FROM push_subscriptions WHERE usuario_id = ?', [userId]);
+        // Verificar que el usuario existe y tiene preferencias de notificación activadas
+        const [userCheck] = await db.execute(
+            'SELECT id, nombre, recibir_notificaciones FROM usuarios WHERE id = ?',
+            [userId]
+        );
+
+        if (userCheck.length === 0) {
+            logger.warn('[PUSH] Usuario no encontrado', { userId });
+            return false;
+        }
+
+        const user = userCheck[0];
+        logger.debug('[PUSH] Usuario encontrado', { userId, nombre: user.nombre });
+
+        // Verificar preferencias de notificación
+        if (Number(user.recibir_notificaciones) !== 1) {
+            logger.debug('[PUSH] Usuario tiene notificaciones desactivadas', { userId });
+            return false;
+        }
+
+        // Obtener suscripciones activas del usuario
+        const [rows] = await db.execute(
+            'SELECT id, subscription_data, fecha_creacion FROM push_subscriptions WHERE usuario_id = ? ORDER BY fecha_creacion DESC',
+            [userId]
+        );
+
         if (rows.length === 0) {
-            console.log(`[PUSH] ⚠️ No hay suscripción push para el usuario ${userId}`);
+            logger.debug('[PUSH] No hay suscripciones push activas', { userId });
             return false;
         }
 
-        console.log(`[PUSH] 📋 Encontradas ${rows.length} suscripciones para usuario ${userId}`);
+        logger.debug('[PUSH] Suscripciones encontradas', { userId, count: rows.length });
         let anySuccess = false;
+        let validSubscriptions = 0;
 
         for (const row of rows) {
+            logger.debug('[PUSH] Procesando suscripción', { subscriptionId: row.id });
+
             let subscription = row.subscription_data;
             if (typeof subscription === 'string') {
                 try {
                     subscription = JSON.parse(subscription);
                 } catch (e) {
-                    console.error('[PUSH] ❌ Error parseando la suscripción push (id=' + row.id + '):', e);
+                    logger.error('[PUSH] Error parseando suscripción', { subscriptionId: row.id, error: e.message });
+                    // Eliminar suscripción corrupta
+                    await db.execute('DELETE FROM push_subscriptions WHERE id = ?', [row.id]);
                     continue;
                 }
             }
 
-            if (!subscription || !subscription.endpoint) {
-                console.error('[PUSH] ❌ Suscripción inválida (id=' + row.id + ') para usuario', userId, subscription);
+            // Validar estructura de la suscripción
+            if (!subscription || !subscription.endpoint || !subscription.keys) {
+                logger.error('[PUSH] Suscripción inválida', { subscriptionId: row.id });
+                // Eliminar suscripción inválida
+                await db.execute('DELETE FROM push_subscriptions WHERE id = ?', [row.id]);
                 continue;
             }
 
+            // Verificar que el endpoint sea válido
+            if (!subscription.endpoint || typeof subscription.endpoint !== 'string' || subscription.endpoint.length < 10) {
+                logger.error('[PUSH] Endpoint inválido', { subscriptionId: row.id });
+                await db.execute('DELETE FROM push_subscriptions WHERE id = ?', [row.id]);
+                continue;
+            }
+
+            validSubscriptions++;
+
             try {
-                console.log('[PUSH] 📤 Enviando notificación push al usuario', userId, 'suscripción id=', row.id);
-                console.log('[PUSH] 📝 Payload:', JSON.stringify(notificationData));
-                console.log('[PUSH] 🔗 Endpoint:', subscription.endpoint.substring(0, 50) + '...');
+                // Preparar payload con metadatos adicionales
+                const enhancedPayload = {
+                    ...notificationData,
+                    userId: userId,
+                    timestamp: new Date().toISOString(),
+                    subscriptionId: row.id
+                };
 
-                const result = await webpush.sendNotification(subscription, JSON.stringify(notificationData));
-                console.log('[PUSH] ✅ Resultado del envío:', result);
-                console.log('[PUSH] 🎉 Notificación enviada correctamente al usuario', userId, 'suscripción id=', row.id);
+                const result = await webpush.sendNotification(subscription, JSON.stringify(enhancedPayload));
+                logger.info('[PUSH] Notificación enviada exitosamente', {
+                    userId,
+                    subscriptionId: row.id,
+                    title: notificationData.title
+                });
                 anySuccess = true;
+
             } catch (error) {
-                console.error('[PUSH] ❌ Error enviando notificación push al usuario', userId, 'suscripción id=', row.id);
+                logger.error('[PUSH] Error enviando notificación', {
+                    userId,
+                    subscriptionId: row.id,
+                    statusCode: error.statusCode,
+                    message: error.message
+                });
 
-                if (error.statusCode) {
-                    console.error('[PUSH] 📊 Código de estado HTTP:', error.statusCode);
-                }
-
+                // Manejar diferentes tipos de errores
                 if (error.statusCode === 410) {
-                    console.log('[PUSH] 🗑️ La suscripción ha expirado o no es válida. Eliminándola de la BD. id=', row.id);
+                    logger.warn('[PUSH] Suscripción expirada, eliminándola', { subscriptionId: row.id });
                     try {
                         await db.execute('DELETE FROM push_subscriptions WHERE id = ?', [row.id]);
-                        console.log('[PUSH] ✅ Suscripción eliminada de la BD (id=', row.id, ') para el usuario:', userId);
                     } catch (dbError) {
-                        console.error('[PUSH] ❌ Error eliminando la suscripción de la BD (id=' + row.id + '):', dbError);
+                        logger.error('[PUSH] Error eliminando suscripción expirada', {
+                            subscriptionId: row.id,
+                            error: dbError.message
+                        });
                     }
                 } else if (error.statusCode === 400) {
-                    console.error('[PUSH] ❌ Error 400 - Payload inválido o suscripción malformada');
+                    logger.error('[PUSH] Payload inválido', { subscriptionId: row.id });
+                    await db.execute('DELETE FROM push_subscriptions WHERE id = ?', [row.id]);
                 } else if (error.statusCode === 413) {
-                    console.error('[PUSH] ❌ Error 413 - Payload demasiado grande');
-                } else {
-                    console.error('[PUSH] ❌ Error desconocido:', error.message);
+                    logger.error('[PUSH] Payload demasiado grande', {
+                        subscriptionId: row.id,
+                        payloadSize: JSON.stringify(notificationData).length
+                    });
+                } else if (error.statusCode === 429) {
+                    logger.warn('[PUSH] Rate limit excedido', { subscriptionId: row.id });
                 }
             }
         }
 
-        console.log(`[PUSH] 📊 Resultado final para usuario ${userId}:`, anySuccess ? '✅ ÉXITO' : '❌ FALLÓ');
+        logger.info('[PUSH] Resumen envío', {
+            userId,
+            totalSubscriptions: rows.length,
+            validSubscriptions,
+            success: anySuccess
+        });
+
         return anySuccess;
+
     } catch (error) {
-        console.error('[PUSH] ❌ Error general en sendNotificationToUser para usuario', userId, error);
-        console.error('[PUSH] 📋 Stack trace:', error.stack);
+        logger.error('[PUSH] Error general en sendNotificationToUser', {
+            userId,
+            error: error.message,
+            stack: error.stack
+        });
         return false;
     }
 }
@@ -278,7 +346,7 @@ async function sendNotificationToRestaurant(restaurantId, notificationData) {
             ],
             vibrate: [200, 100, 200, 100, 200],
             data: {
-                url: notificationData.url || (pedido ? `/dashboard/orders/${pedido.id}` : '/dashboard/orders'),
+                url: '/dashboard/orders', // Siempre ir a la lista de pedidos, no al pedido específico
                 pedidoId: pedido ? pedido.id : undefined
             }
         };
@@ -742,6 +810,75 @@ router.post('/test-immediate', requireAuth, async (req, res) => {
                     vapidConfigured: !!(vapidKeys && vapidKeys.publicKey),
                     webpushConfigured: !!webpush
                 }
+            });
+        }
+    });
+
+    // Endpoint para probar notificaciones con reintento
+    router.post('/test-with-retry', async (req, res) => {
+        try {
+            console.log('[TEST-RETRY] === TEST WITH RETRY ===');
+            const { userId, maxRetries = 3 } = req.body;
+
+            if (!userId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'userId es requerido'
+                });
+            }
+
+            const notificationData = {
+                title: '🔄 Test con Reintento',
+                body: `Test enviado con reintento - ${new Date().toLocaleTimeString()}`,
+                icon: '/images/logo-a-la-mesa.png',
+                badge: '/images/logo-a-la-mesa.png',
+                data: { url: '/dashboard/orders' }
+            };
+
+            let attempt = 0;
+            let success = false;
+
+            while (attempt < maxRetries && !success) {
+                attempt++;
+                console.log(`[TEST-RETRY] Intento ${attempt}/${maxRetries}`);
+
+                try {
+                    success = await sendNotificationToUser(userId, {
+                        ...notificationData,
+                        body: `${notificationData.body} (Intento ${attempt})`
+                    });
+
+                    if (success) {
+                        console.log(`[TEST-RETRY] ✅ Éxito en intento ${attempt}`);
+                        break;
+                    } else {
+                        console.log(`[TEST-RETRY] ❌ Falló intento ${attempt}, esperando antes de reintentar...`);
+                        if (attempt < maxRetries) {
+                            await new Promise(resolve => setTimeout(resolve, 2000 * attempt)); // Espera progresiva
+                        }
+                    }
+                } catch (error) {
+                    console.error(`[TEST-RETRY] Error en intento ${attempt}:`, error);
+                    if (attempt < maxRetries) {
+                        await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+                    }
+                }
+            }
+
+            return res.json({
+                success: success,
+                message: success ? `✅ Notificación enviada en intento ${attempt}` : `❌ Fallaron todos los ${maxRetries} intentos`,
+                userId: userId,
+                attempts: attempt,
+                maxRetries: maxRetries,
+                timestamp: new Date().toISOString()
+            });
+
+        } catch (error) {
+            console.error('[TEST-RETRY] Error general:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Error en test con reintento: ' + error.message
             });
         }
     });

@@ -332,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function saveOrderToStorage(orderIds) {
         const storageKey = `driver_${driverData.userId}_order`;
         localStorage.setItem(storageKey, JSON.stringify(orderIds));
-        console.log('💾 Orden guardado en localStorage:', orderIds);
+
     }
 
     // Función para cargar el orden de pedidos desde localStorage
@@ -342,7 +342,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (savedOrder) {
             try {
                 const orderIds = JSON.parse(savedOrder);
-                console.log('📂 Orden cargado desde localStorage:', orderIds);
                 return orderIds;
             } catch (error) {
                 console.error('Error parsing saved order:', error);
@@ -356,7 +355,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function applySavedOrder() {
         const savedOrder = loadOrderFromStorage();
         if (!savedOrder || savedOrder.length === 0) {
-            console.log('ℹ️ No hay orden guardado, usando orden original');
+
             return driverData.pedidos;
         }
 
@@ -380,7 +379,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Agregar cualquier pedido nuevo que no esté en el orden guardado
         orderedPedidos.push(...remainingPedidos);
 
-        console.log('📋 Pedidos reordenados según localStorage:', orderedPedidos.map(p => p.numero_pedido));
+
         return orderedPedidos;
     }
 
@@ -389,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (savedOrder && savedOrder.length > 0) {
         // Actualizar el array de pedidos con el orden guardado
         driverData.pedidos = savedOrder;
-        console.log('✅ Orden guardado aplicado al inicio');
+
     }
 
     // 1. Inicializar el mapa con coordenadas del repartidor
@@ -414,7 +413,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Agregar funcionalidad de clic en el mapa para mover el repartidor
     map.on('click', async function(e) {
         const clickedCoords = [e.latlng.lat, e.latlng.lng];
-        console.log('🖱️ Clic en mapa - Moviendo repartidor a:', clickedCoords);
 
         // Mover o crear marcador del repartidor
         if (!driverMarker) {
@@ -440,12 +438,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const result = await response.json();
             if (result.success) {
-                console.log('✅ Ubicación enviada al servidor correctamente');
+
             } else {
-                console.error('❌ Error enviando ubicación:', result.message);
+
             }
         } catch (error) {
-            console.error('❌ Error de red enviando ubicación:', error);
+
         }
 
         // Actualizar rutas desde la nueva ubicación usando el orden guardado
@@ -460,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showToast('Ubicación del repartidor actualizada y enviada a clientes', 'success');
     });
 
-    console.log('📍 Inicializando mapa con coordenadas del repartidor:', initialCenter);
+
 
     // 2. Mostrar marcador del repartidor y marcador del restaurante si está disponible
     if (driver.status === 'available') {
@@ -543,18 +541,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 3. Si hay pedidos, mostrar marcadores PERO esperar ubicación real para rutas
     if (pedidos.length > 0) {
-        console.log('Mostrando', pedidos.length, 'pedidos en el mapa');
+
         const bounds = [];
         let markersAdded = 0;
 
         // Solo mostrar marcadores inicialmente, NO rutas
         pedidos.forEach((pedido, index) => {
-            console.log(`Procesando pedido ${pedido.numero_pedido}:`, {
-                restaurante_lat: pedido.restaurante_lat,
-                restaurante_lng: pedido.restaurante_lng,
-                cliente_lat: pedido.cliente_lat,
-                cliente_lng: pedido.cliente_lng
-            });
+
 
             // Verificar si tenemos coordenadas válidas
             const hasRestaurantCoords = (pedido.restaurante_lat && pedido.restaurante_lng &&
@@ -615,7 +608,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 bounds.push(restaurantLatLng);
                 markersAdded++;
 
-                console.log(`✅ Agregado marcador restaurante para pedido ${pedido.numero_pedido}`);
+
 
                 // Si tenemos coordenadas del cliente, crear marcador
                 if (hasClientCoords) {
@@ -634,10 +627,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     bounds.push(clientLatLng);
                     markersAdded++;
 
-                    console.log(`✅ Agregado marcador cliente para pedido ${pedido.numero_pedido}`);
-                    console.log(`✅ Pedido ${pedido.numero_pedido}: Mostrado restaurante + cliente`);
+
                 } else {
-                    console.log(`⚠️ Pedido ${pedido.numero_pedido}: Solo restaurante (sin coordenadas del cliente)`);
+
                 }
             } else if (hasClientCoords) {
                 // Caso 2: Solo cliente tiene coordenadas (restaurante no tiene)
@@ -651,32 +643,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 bounds.push(clientLatLng);
                 markersAdded++;
 
-                console.log(`✅ Agregado marcador cliente para pedido ${pedido.numero_pedido}`);
-                console.log(`✅ Pedido ${pedido.numero_pedido}: Mostrado solo cliente (restaurante sin coordenadas)`);
+
             } else {
-                console.warn(`❌ Pedido ${pedido.numero_pedido}: No hay coordenadas disponibles`);
+
             }
         });
 
-        console.log(`📊 Total marcadores agregados inicialmente: ${currentMarkers.length}`);
-
         if (bounds.length > 0) {
             map.fitBounds(bounds, { padding: [50, 50] });
-            console.log(`📍 Mapa ajustado para mostrar ${markersAdded} marcadores`);
         }
 
         // Mostrar mensaje si no hay coordenadas válidas
         if (markersAdded === 0) {
             showToast('No se pudieron cargar las ubicaciones de los pedidos. Verifica que los restaurantes tengan coordenadas configuradas.', 'warning');
-            console.error('❌ No se pudieron mostrar marcadores para ningún pedido');
-        } else {
-            console.log(`✅ Se mostraron ${markersAdded} marcadores en el mapa`);
         }
-
-        // NO iniciar seguimiento aún - esperar ubicación real
-        console.log('⏳ Esperando ubicación GPS real antes de crear rutas...');
     } else {
-        console.log('ℹ️ No hay pedidos para mostrar en el mapa');
         if (driver.status !== 'available') {
             // Solo aplicar filtro gris si no hay pedidos Y no está disponible
             mapContainer.querySelector('.leaflet-pane.leaflet-map-pane').style.filter = 'grayscale(100%)';
@@ -713,7 +694,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
             }, function(error) {
-                console.error('Error de geolocalización:', error);
                 // Mostrar mensaje de error pero continuar con coordenadas guardadas
                 showToast('Error obteniendo ubicación GPS. Usando ubicación guardada.', 'warning');
 
@@ -731,9 +711,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             driverMarker = createDriverMarker(savedCoords[0], savedCoords[1], 'Ubicación guardada (GPS no disponible)')
                                 .addTo(map);
                         }
-                        console.log('⚠️ Usando coordenadas guardadas por error de GPS:', savedCoords);
-                    } else {
-                        console.warn('⚠️ Coordenadas guardadas inválidas:', savedCoords);
                     }
                 }
             }, { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 });
@@ -1508,7 +1485,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 ordersList.appendChild(item);
             });
 
-            console.log('📋 DOM reordenado según localStorage');
+    
         }
     }
 
@@ -1564,15 +1541,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const data = await response.json();
-            console.log('📦 Datos recibidos de API:', data);
 
             if (data.routes && data.routes[0] && data.routes[0].geometry && data.routes[0].geometry.coordinates) {
                 // OSRM devuelve coordenadas en formato [lng, lat], convertir a [lat, lng]
                 const coordinates = data.routes[0].geometry.coordinates;
                 const routePoints = coordinates.map(coord => [coord[1], coord[0]]); // Convertir lng,lat a lat,lng
-
-                console.log('✅ Ruta obtenida con', routePoints.length, 'puntos');
-                console.log('📍 Puntos de ruta:', routePoints);
                 return routePoints;
             } else {
                 console.warn('⚠️ Respuesta de API sin coordenadas válidas:', data);
@@ -1580,7 +1553,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error('❌ Error obteniendo ruta de la API:', error);
-            console.log('🔄 Usando fallback: línea recta entre puntos');
 
             // Mostrar mensaje al usuario
             showToast('Usando ruta directa (API no disponible)', 'warning');

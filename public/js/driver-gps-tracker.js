@@ -1,4 +1,4 @@
-// Driver GPS Tracker - Para simular/envíar actualizaciones de ubicación GPS
+el// Driver GPS Tracker - Para simular/envíar actualizaciones de ubicación GPS
 class DriverGPSTracker {
     constructor() {
         this.watchId = null;
@@ -11,11 +11,10 @@ class DriverGPSTracker {
     // Iniciar seguimiento GPS
     startTracking() {
         if (this.isTracking) {
-            console.log('GPS tracking already active');
             return;
         }
 
-        console.log('Starting GPS tracking...');
+
 
         if ('geolocation' in navigator) {
             // Opciones para obtener ubicación más precisa
@@ -30,7 +29,7 @@ class DriverGPSTracker {
                 (position) => {
                     this.currentPosition = position;
                     this.sendLocationUpdate(position.coords.latitude, position.coords.longitude);
-                    console.log('Initial position obtained:', position.coords);
+
                 },
                 (error) => {
                     console.error('Error getting initial position:', error);
@@ -52,7 +51,7 @@ class DriverGPSTracker {
             );
 
             this.isTracking = true;
-            console.log('GPS tracking started successfully');
+
         } else {
             console.error('Geolocation is not supported by this browser');
             this.fallbackToManualLocation();
@@ -72,7 +71,7 @@ class DriverGPSTracker {
         }
 
         this.isTracking = false;
-        console.log('GPS tracking stopped');
+
     }
 
     // Enviar actualización de ubicación al servidor
@@ -107,7 +106,7 @@ class DriverGPSTracker {
             }
 
             if (result.success) {
-                console.log(`Location updated: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+                // Location updated successfully
             } else {
                 console.error('Failed to update location:', result.message);
             }
@@ -118,7 +117,7 @@ class DriverGPSTracker {
 
     // Fallback para ubicación manual (útil para testing)
     fallbackToManualLocation() {
-        console.log('Using manual location updates (fallback mode)');
+
 
         // Coordenadas de ejemplo - reemplazar con coordenadas reales
         let manualLat = -33.899541;
@@ -170,20 +169,18 @@ function getGPSTrackingStatus() {
 document.addEventListener('DOMContentLoaded', function() {
     // Verificar si estamos en una página de repartidor
     if (window.location.pathname.includes('/repartidores')) {
-        console.log('Driver GPS Tracker loaded - Starting GPS tracking...');
+
         
         // Inicializar WebSocket
         window.socket = io();
         
         // Manejar conexión exitosa
         window.socket.on('connect', () => {
-            console.log('Conectado al servidor WebSocket');
             window.socket.connected = true;
         });
-        
+
         // Manejar desconexión
         window.socket.on('disconnect', () => {
-            console.log('Desconectado del servidor WebSocket');
             window.socket.connected = false;
         });
 
@@ -195,6 +192,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Iniciar seguimiento GPS automáticamente
         gpsTracker.startTracking();
 
-        console.log('GPS tracking started for driver');
+
     }
 });

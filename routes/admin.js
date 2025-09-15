@@ -813,7 +813,7 @@ router.post('/restaurantes/crear', requireAdmin, [
     }
 
     // Create user
-    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    const hashedPassword = await PasswordUtils.hashPassword(req.body.password);
     const [userResult] = await connection.execute(
       `INSERT INTO usuarios (nombre, apellido, email, password, tipo_usuario, telefono)
        VALUES (?, ?, ?, ?, 'restaurante', ?)`,
@@ -1671,12 +1671,11 @@ router.get('/pagos-semanales', requireAdmin, async (req, res) => {
 
     // Obtener lista de restaurantes para filtros
     const [restaurantes] = await db.execute(`
-      SELECT DISTINCT r.id, r.nombre 
-      FROM restaurantes r 
-      JOIN cobros_semanales cs ON r.id = cs.restaurante_id 
-      WHERE YEAR(cs.semana_inicio) = ?
+      SELECT r.id, r.nombre
+      FROM restaurantes r
+      WHERE r.activo = 1 AND r.verificado = 1
       ORDER BY r.nombre
-    `, [currentYear]);
+    `);
 
     // Calcular resumen anual
     const [resumenAnual] = await db.execute(`

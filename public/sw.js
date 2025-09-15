@@ -1,26 +1,32 @@
-// Service Worker para notificaciones push - Versión simplificada
-console.log('Service Worker cargado correctamente - Versión mejorada');
+// Service Worker para notificaciones push - Versión mejorada
+console.log('[SW] Service Worker loaded and starting...');
 
-// Instalar el service worker
+// Instalar Service Worker
 self.addEventListener('install', (event) => {
-    console.log('🔧 Service Worker instalándose...');
-    console.log('📍 Origen:', self.location.origin);
-    console.log('🔗 URL del SW:', self.location.href);
-    self.skipWaiting(); // Forzar activación inmediata
+    console.log('[SW] Installing Service Worker...');
+    self.skipWaiting();
 });
 
-// Activar el service worker
+// Activar Service Worker
 self.addEventListener('activate', (event) => {
-    console.log('🚀 Service Worker activándose...');
-    console.log('📊 Estado del SW:', self.serviceWorker ? 'Disponible' : 'No disponible');
-    event.waitUntil(self.clients.claim()); // Tomar control inmediato
+    console.log('[SW] Activating Service Worker...');
+    event.waitUntil(
+        Promise.all([
+            self.clients.claim(),
+            // Limpiar notificaciones antiguas
+            self.registration.getNotifications().then(notifications => {
+                notifications.forEach(notification => {
+                    notification.close();
+                });
+            })
+        ])
+    );
+    console.log('[SW] Service Worker activated and claimed clients');
 });
 
 // Manejar notificaciones push
 self.addEventListener('push', (event) => {
-    console.log('📨 Notificación push recibida');
-    console.log('📊 Datos del evento:', event);
-    console.log('📝 Datos de la notificación:', event.data ? event.data.text() : 'Sin datos');
+    console.log('[SW] Push event received:', event);
 
     let notificationData = {
         title: 'A la Mesa',
@@ -44,40 +50,86 @@ self.addEventListener('push', (event) => {
         ]
     };
 
-    // Si hay datos en la notificación, usarlos
+    // Procesar datos de la notificación
     if (event.data) {
+        console.log('[SW] Processing push data...');
         try {
             const data = event.data.json();
-            console.log('📋 Datos JSON parseados:', data);
+            console.log('[SW] Push data parsed as JSON:', data);
             notificationData = {
                 ...notificationData,
                 ...data
             };
         } catch (error) {
-            console.error('❌ Error parseando datos de notificación:', error);
-            // Si no se puede parsear como JSON, intentar como texto plano
+            console.warn('[SW] Could not parse push data as JSON, trying text:', error);
             try {
                 const textData = event.data.text();
                 if (textData) {
+                    console.log('[SW] Push data as text:', textData);
                     notificationData.body = textData;
                 }
             } catch (textError) {
-                console.error('❌ Error obteniendo datos como texto:', textError);
+                console.error('[SW] Could not parse push data as text either:', textError);
             }
         }
+    } else {
+        console.log('[SW] No data in push event');
     }
 
-    console.log('🔔 Mostrando notificación con datos:', notificationData);
+    // Verificar permisos antes de mostrar
+    if (!('Notification' in self) || Notification.permission !== 'granted') {
+        console.warn('[SW] Notification permission not granted or not supported');
+        return;
+    }
+
+    console.log('[SW] Permission granted, showing notification...');
+
+    // Asegurar que la notificación tenga propiedades para mostrarse siempre
+    const enhancedNotificationData = {
+        ...notificationData,
+        requireInteraction: true,
+        silent: false,
+        renotify: true,
+        timestamp: Date.now(),
+        noscreen: false,
+        sticky: true,
+        data: {
+            ...notificationData.data,
+            receivedAt: new Date().toISOString()
+        }
+    };
+
+    console.log('[SW] Enhanced notification data:', enhancedNotificationData);
 
     event.waitUntil(
-        self.registration.showNotification(notificationData.title, notificationData)
+        self.registration.showNotification(enhancedNotificationData.title, enhancedNotificationData)
             .then(() => {
-                console.log('✅ Notificación mostrada exitosamente');
+                console.log('[SW] Notification shown successfully');
+
+                // Enviar mensaje al cliente para confirmar
+                return self.clients.matchAll().then(clients => {
+                    console.log('[SW] Notifying', clients.length, 'clients about notification');
+                    clients.forEach(client => {
+                        client.postMessage({
+                            type: 'NOTIFICATION_SHOWN',
+                            data: enhancedNotificationData
+                        });
+                    });
+                });
             })
             .catch((error) => {
-                console.error('❌ Error mostrando notificación:', error);
-                console.error('❌ Detalles del error:', error.message);
-                console.error('❌ Stack trace:', error.stack);
+                console.error('[SW] Error showing notification:', error);
+
+                // Intentar notificar al cliente sobre el error
+                return self.clients.matchAll().then(clients => {
+                    clients.forEach(client => {
+                        client.postMessage({
+                            type: 'NOTIFICATION_ERROR',
+                            error: error.message,
+                            data: enhancedNotificationData
+                        });
+                    });
+                });
             })
     );
 });

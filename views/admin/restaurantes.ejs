@@ -78,8 +78,11 @@
                                 <span class="category-name">Todas</span>
                             </a>
                             <%
-                            // Sort categories alphabetically for better UX
-                            const sortedCategorias = categorias.slice().sort((a, b) => a.nombre.localeCompare(b.nombre));
+                            // Sort categories alphabetically and remove duplicates for better UX
+                            const uniqueCategorias = categorias.filter((cat, index, self) =>
+                                index === self.findIndex(c => c.id === cat.id)
+                            );
+                            const sortedCategorias = uniqueCategorias.sort((a, b) => a.nombre.localeCompare(b.nombre));
                             %>
                             <% sortedCategorias.forEach(cat => { %>
                                 <a href="/admin/restaurantes?search=<%= encodeURIComponent(filtros.search || '') %>&estado=<%= encodeURIComponent(filtros.estado || '') %>&categoria=<%= encodeURIComponent(cat.id) %>" class="category-item <%= filtros.categoria == cat.id ? 'active' : '' %>">

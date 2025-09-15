@@ -11,7 +11,24 @@ const cors = require('cors');
 const hpp = require('hpp');
 const rateLimit = require('express-rate-limit');
 const slowDown = require('express-slow-down');
+const multer = require('multer');
+const logger = require('./utils/logger');
 require('dotenv').config();
+
+// Security imports
+const {
+    csrfProtection,
+    setCSRFToken,
+    sanitizeInput,
+    authRateLimit,
+    apiRateLimit,
+    fileUploadRateLimit,
+    authSlowDown,
+    validateFileUpload,
+    setCSP,
+    SecurityLogger
+} = require('./middleware/security');
+const { SecurityAuditUtils } = require('./utils/security');
 
 // Database connection
 const db = require('./config/database');
@@ -38,6 +55,10 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: false,
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  // Disable other potentially problematic headers for local development
+  hsts: false,
+  noSniff: false,
+  xssFilter: false,
 }));
 app.use(compression());
 
@@ -90,7 +111,7 @@ app.use(cors({
     if (isAllowed) {
       callback(null, true);
     } else {
-      console.log('CORS bloqueado para origin:', origin);
+      logger.warn('[CORS] Origin bloqueado', { origin });
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -188,6 +209,30 @@ if (process.env.DB_HOST && process.env.DB_USER && process.env.DB_PASSWORD && pro
 
 app.use(session(sessionConfig));
 
+// Security middlewares - applied in correct order
+app.use(setCSRFToken); // Set CSRF token for all requests
+app.use(sanitizeInput); // Sanitize all input data
+
+// Only apply CSP in production to avoid blocking local development
+if (process.env.NODE_ENV === 'production') {
+    app.use(setCSP); // Set Content Security Policy
+}
+
+// Security audit middleware
+app.use((req, res, next) => {
+  // Log security events for sensitive operations (solo en desarrollo o con configuración específica)
+  if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
+    if (process.env.NODE_ENV === 'development' || process.env.LOG_SECURITY_EVENTS === 'true') {
+      SecurityAuditUtils.logSecurityEvent('api_request', {
+        method: req.method,
+        path: req.path,
+        userAgent: req.get('User-Agent')
+      }, req).catch(err => logger.error('[SECURITY] Audit error', { error: err.message }));
+    }
+  }
+  next();
+});
+
 // Middleware global para exponer el usuario en todas las vistas
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
@@ -222,34 +267,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rate limiting & slow down
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => {
-    // Excluir la ruta de registro de repartidores del rate limiting
-    return req.path === '/register-driver';
-  }
-});
-
-const authSlowDown = slowDown({
-  windowMs: 15 * 60 * 1000,
-  delayAfter: 10,
-  delayMs: 250,
-  skip: (req) => {
-    // Excluir la ruta de registro de repartidores del slow down
-    return req.path === '/register-driver';
-  }
-});
-
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 300,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// Rate limiting & slow down - using enhanced security versions
+const authLimiter = authRateLimit;
+const apiLimiter = apiRateLimit;
 
 // Routes
 const indexRoutes = require('./routes/index');
@@ -630,7 +650,12 @@ app.use((req, res, next) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error en el servidor:', err.stack);
+  logger.error('Error en el servidor', {
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    url: req.url,
+    method: req.method
+  });
   
   // Verificar si es una petición AJAX
   const isAjax = req.get('X-Requested-With') === 'XMLHttpRequest' || 
