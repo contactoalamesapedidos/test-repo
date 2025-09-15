@@ -227,7 +227,14 @@ router.post('/add', async (req, res) => {
     }
     
     const abierto = estaAbiertoHoy && now >= apertura && now <= cierre;
-    if (!abierto) {
+
+    // En desarrollo, permitir agregar productos incluso si está "cerrado" para testing
+    if (process.env.NODE_ENV !== 'production' && !abierto) {
+      console.log('Desarrollo: Restaurante cerrado pero permitiendo agregar producto');
+      console.log('Día actual:', currentDay, 'Días operación:', diasOperacion);
+      console.log('Horario apertura:', product.horario_apertura, 'cierre:', product.horario_cierre);
+      console.log('Ahora:', now, 'Apertura:', apertura, 'Cierre:', cierre);
+    } else if (!abierto) {
       return res.status(400).json({
         success: false,
         message: 'El restaurante está cerrado en este momento'

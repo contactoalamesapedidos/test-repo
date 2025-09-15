@@ -1,7 +1,10 @@
 <%
     // Helper simple para imágenes
     function getImageUrl(img, fallback) {
-      return img ? '/uploads/' + img : fallback;
+      if (!img) return fallback;
+      // Asegurar que la ruta sea correcta
+      const imagePath = img.startsWith('/') ? img : '/uploads/' + img;
+      return imagePath;
     }
 %>
 <div class="container mt-4">

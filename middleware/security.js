@@ -29,16 +29,33 @@ function csrfProtection(req, res, next) {
         return next();
     }
 
+    // Skip CSRF for API routes that use JSON
+    if (req.is('application/json') || req.headers.accept?.includes('application/json')) {
+        return next();
+    }
+
     const token = req.body._csrf || req.headers['x-csrf-token'] || req.headers['csrf-token'];
 
     if (!token) {
+        console.log('CSRF Debug: No token provided for', req.path, req.method);
         return res.status(403).json({
             success: false,
             message: 'Token CSRF requerido'
         });
     }
 
-    if (!req.session.csrfToken || token !== req.session.csrfToken) {
+    if (!req.session.csrfToken) {
+        console.log('CSRF Debug: No session token for', req.path, req.method);
+        return res.status(403).json({
+            success: false,
+            message: 'Sesión CSRF no encontrada'
+        });
+    }
+
+    if (token !== req.session.csrfToken) {
+        console.log('CSRF Debug: Token mismatch for', req.path, req.method);
+        console.log('Expected:', req.session.csrfToken);
+        console.log('Received:', token);
         return res.status(403).json({
             success: false,
             message: 'Token CSRF inválido'
