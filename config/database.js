@@ -3,28 +3,49 @@ rao// Create connection pool
 const mysql = require('mysql2');
 
 console.log('🔧 Configuración de base de datos:');
-console.log('Host:', process.env.MYSQLHOST || process.env.DB_HOST || 'localhost');
-console.log('Database:', process.env.MYSQLDATABASE || process.env.DB_NAME || 'a_la_mesa');
-console.log('Port:', process.env.MYSQLPORT || process.env.DB_PORT || 3306);
 
-const pool = mysql.createPool({
-  host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
-  user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
-  password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
-  database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'a_la_mesa',
-  port: process.env.MYSQLPORT || process.env.DB_PORT || 3306,
-  waitForConnections: true,
-  connectionLimit: process.env.NODE_ENV === 'production' ? 5 : 10,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
-  acquireTimeout: 60000,
-  timeout: 60000,
-  ssl: process.env.MYSQLHOST ? { rejectUnauthorized: false } : false
-});
+// Check if DATABASE_URL is provided (Railway format)
+if (process.env.DATABASE_URL) {
+  console.log('Using DATABASE_URL format');
+  const pool = mysql.createPool(process.env.DATABASE_URL);
+  // Add additional options for Railway
+  pool.config.connectionConfig = {
+    ...pool.config.connectionConfig,
+    waitForConnections: true,
+    connectionLimit: process.env.NODE_ENV === 'production' ? 5 : 10,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0,
+    acquireTimeout: 60000,
+    timeout: 60000,
+    ssl: { rejectUnauthorized: false }
+  };
+  var promisePool = pool.promise();
+} else {
+  // Fallback to individual variables (for local development)
+  console.log('Host:', process.env.DB_HOST || 'localhost');
+  console.log('Database:', process.env.DB_NAME || 'a_la_mesa');
+  console.log('Port:', process.env.DB_PORT || 3306);
 
-// Create promise-based pool
-const promisePool = pool.promise();
+  const pool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'a_la_mesa',
+    port: process.env.DB_PORT || 3306,
+    waitForConnections: true,
+    connectionLimit: process.env.NODE_ENV === 'production' ? 5 : 10,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0,
+    acquireTimeout: 60000,
+    timeout: 60000,
+    ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost' ? { rejectUnauthorized: false } : false
+  });
+  var promisePool = pool.promise();
+}
+
+// promisePool is already declared above
 
 // Test connection (solo en desarrollo)
 if (process.env.NODE_ENV !== 'production') {
