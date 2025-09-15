@@ -258,14 +258,7 @@ router.get('/search', async (req, res) => {
                        'COUNT(DISTINCT p.id) as total_productos, MIN(p.precio) as precio_minimo');
     }
 
-    sql += ` GROUP BY
-      r.id, r.nombre, r.descripcion, r.imagen_logo, r.imagen_banner,
-      r.direccion, r.ciudad, r.telefono, r.email_contacto,
-      r.horario_apertura, r.horario_cierre, r.tiempo_entrega_min,
-      r.tiempo_entrega_max, r.costo_delivery, r.calificacion_promedio,
-      r.total_calificaciones`;
-
-    // Agregar HAVING si hay condiciones
+    // Agregar HAVING si hay condiciones (después del GROUP BY existente)
     if (havingClause) {
       sql += ` ${havingClause}`;
     }
