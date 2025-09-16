@@ -68,6 +68,9 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(cors({
   origin: function (origin, callback) {
+    // TEMPORAL: Permitir todos los orígenes para testing
+    callback(null, true);
+    /*
     if (!origin) return callback(null, true);
     const isAllowed = allowOrigins.some(allowedOrigin => {
       if (typeof allowedOrigin === 'string') {
@@ -82,6 +85,7 @@ app.use(cors({
     } else {
       callback(new Error('Not allowed by CORS'));
     }
+    */
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
