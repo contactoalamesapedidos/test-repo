@@ -7,7 +7,7 @@
                 </div>
                 <div class="card-body p-4">
                     <% var errorObj = typeof error !== 'undefined' ? error : null; %>
-                    <h5 class="card-title text-muted mb-3"><%= message || 'Ha ocurrido un error inesperado.' %></h5>
+                    <h5 class="card-title text-muted mb-3"><%= errorObj || 'Ha ocurrido un error inesperado.' %></h5>
                     <p class="card-text">Por favor, intenta de nuevo. Si el problema persiste, contacta al soporte.</p>
                     <% if (errorObj && errorObj.stack) { %>
                         <div class="alert alert-light text-start" role="alert">
