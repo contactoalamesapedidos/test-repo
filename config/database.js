@@ -20,7 +20,7 @@ if (process.env.DATABASE_URL) {
     database: url.pathname.substring(1), // Remove leading slash
     port: parseInt(url.port),
     waitForConnections: true,
-    connectionLimit: process.env.NODE_ENV === 'production' ? 2 : 10,
+    connectionLimit: process.env.NODE_ENV === 'production' ? 1 : 10,
     queueLimit: 0,
     enableKeepAlive: true,
     keepAliveInitialDelay: 0,
