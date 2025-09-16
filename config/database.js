@@ -6,9 +6,9 @@ const mysql = require('mysql2');
 let poolConfig;
 
 if (process.env.DATABASE_URL) {
-  // Parse DATABASE_URL (Clever Cloud, Railway, etc.)
+  // Parse DATABASE_URL (Railway - funciona bien con Render)
   const url = new URL(process.env.DATABASE_URL);
-  console.log('🔧 Configuración de base de datos:');
+  console.log('🔧 Configuración de base de datos (Railway):');
   console.log('Host:', url.hostname);
   console.log('Database:', url.pathname.substring(1));
   console.log('Port:', url.port);
@@ -20,13 +20,13 @@ if (process.env.DATABASE_URL) {
     database: url.pathname.substring(1), // Remove leading slash
     port: parseInt(url.port),
     waitForConnections: true,
-    connectionLimit: process.env.NODE_ENV === 'production' ? 1 : 10,
+    connectionLimit: process.env.NODE_ENV === 'production' ? 2 : 10,
     queueLimit: 0,
     enableKeepAlive: true,
     keepAliveInitialDelay: 0,
-    acquireTimeout: 30000, // 30 segundos para Clever Cloud
-    timeout: 30000, // 30 segundos de timeout de query
-    connectTimeout: 30000, // 30 segundos para conectar
+    acquireTimeout: 60000, // 60 segundos para Railway
+    timeout: 60000, // 60 segundos de timeout de query
+    connectTimeout: 60000, // 60 segundos para conectar
     ssl: { rejectUnauthorized: false }
   };
 } else {
