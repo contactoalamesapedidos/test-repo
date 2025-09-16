@@ -48,11 +48,16 @@ const allowOrigins = (process.env.CORS_ORIGINS || '')
   .filter(Boolean);
 
 if (process.env.NODE_ENV === 'production') {
-  // En producción, permitir Vercel y dominios relacionados
+  // En producción, permitir Vercel, Render y dominios relacionados
   allowOrigins.push(/^https:\/\/[a-z0-9\-]+\.vercel\.app$/);
   allowOrigins.push(/^https:\/\/[a-z0-9\-]+\.now\.sh$/);
+  allowOrigins.push(/^https:\/\/[a-z0-9\-]+\.onrender\.com$/);  // Render
   allowOrigins.push('https://a-la-mesa-2-0.vercel.app');
   allowOrigins.push('https://a-la-mesa-2-0-git-master.vercel.app');
+  // Agregar tu dominio específico de Render si lo conoces
+  if (process.env.RENDER_EXTERNAL_URL) {
+    allowOrigins.push(process.env.RENDER_EXTERNAL_URL);
+  }
 } else {
   // En desarrollo
   allowOrigins.push(/^https:\/\/[a-z0-9]+\.ngrok-free\.app$/);
